@@ -1,16 +1,13 @@
 {
-  "version": 2,
-  "framework": null,
-  "public": false,
   "cleanUrls": true,
-  "routes": [
+  "rewrites": [
     {
-      "src": "^/api/(.*)",
-      "dest": "/api/$1"
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
     },
     {
-      "src": "^/(.*)",
-      "dest": "/public/$1"
+      "source": "/:path*",
+      "destination": "/public/:path*"
     }
   ]
 }

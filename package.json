@@ -4,6 +4,7 @@
   "description": "Intelligent Audio Alignment, Seamless Choreo Extension & Wedding Dance Mashup Studio",
   "main": "server.js",
   "scripts": {
+    "build": "echo 'Build complete'",
     "start": "node server.js",
     "dev": "node server.js"
   },
