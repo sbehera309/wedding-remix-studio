@@ -1,0 +1,20 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+npm-debug.log
+
+# Media cache & large uncompressed audio
+audio_cache/
+*.mov
+performance.mov
+kala_chashma_official.m4a
+performance_audio.m4a
+*.wav
+public/*.wav
+
+# Keep public demos and code
+.DS_Store

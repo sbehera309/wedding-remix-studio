@@ -1,0 +1,21 @@
+{
+  "name": "wedding-remix-studio",
+  "version": "1.0.0",
+  "description": "Intelligent Audio Alignment, Seamless Choreo Extension & Wedding Dance Mashup Studio",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "wedding",
+    "remix",
+    "mashup",
+    "choreography",
+    "dance",
+    "audio-alignment",
+    "web-audio"
+  ],
+  "author": "Antigravity & Sandeep Behera",
+  "license": "MIT"
+}

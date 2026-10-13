@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "framework": null,
+  "public": false,
+  "cleanUrls": true,
+  "routes": [
+    {
+      "src": "^/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "^/(.*)",
+      "dest": "/public/$1"
+    }
+  ]
+}
