@@ -329,11 +329,14 @@
 
       <!-- Action & Playback Bar -->
       <div class="action-bar">
+        <!-- Native High-Resolution Audio Engine Player -->
+        <audio id="masterAudioPlayer" preload="auto" src="/Kala_Chashma_Performance_Extended_Mix.m4a"></audio>
+
         <div class="playback-controls">
           <button class="btn-replay" id="replayBtn" onclick="triggerReplay()" title="Start playback over from 0:00">
             <span>🔁</span> Replay From Start
           </button>
-          <button class="btn-secondary" id="playFullBtn" onclick="triggerPlayFullMix()">
+          <button class="btn-primary highlight" id="playFullBtn" onclick="triggerPlayFullMix()" style="background: linear-gradient(135deg, #10b981, #059669); font-weight: 700; font-size: 14.5px; padding: 10px 18px;">
             <span>▶</span> Play Full Mix
           </button>
           <button class="btn-primary" id="auditionLoopBtn" onclick="triggerAuditionLoop()">
@@ -347,10 +350,13 @@
           </button>
         </div>
 
-        <div class="export-controls" style="display: flex; gap: 10px;">
+        <div class="export-controls" style="display: flex; gap: 10px; align-items: center;">
           <button class="btn-secondary" onclick="openCueSheetModal()">
             <span>📋</span> View Choreography Cue Sheet
           </button>
+          <a href="/Kala_Chashma_Performance_Extended_Mix.m4a" download="Kala_Chashma_Extended_Mix.m4a" class="btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; color: var(--text-main); height: 38px; padding: 0 14px; border-radius: 8px;">
+            <span>🎵</span> Download M4A
+          </a>
           <button class="btn-export" id="exportWavBtn" onclick="triggerExportWav()">
             <span>💾</span> Download Master Mix (WAV)
           </button>

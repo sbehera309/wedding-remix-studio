@@ -36,7 +36,8 @@ window.addEventListener('DOMContentLoaded', () => {
   appState.demoGen = new DemoAudioGenerator(appState.engine.ctx);
   setupEventListeners();
   initWaveformCanvas();
-  showToast("✨ Welcome to Wedding Remix Studio! Try the demo buttons above to get started immediately.");
+  // Auto-initialize Kala Chashma performance mix so playback is ready immediately on load
+  initKalaChashmaDefaultState();
 });
 
 function setupEventListeners() {
@@ -623,13 +624,29 @@ function drawWaveformTimeline(currentPlayheadTime = null) {
     const repLen = (repeats > 0) ? (loopEnd - loopStart) * repeats : 0;
     const choreoCut = arr.choreoCutTime || 41.0;
     const choreoCutInStudio = (repeats > 0) ? (loopEnd + Math.max(0, choreoCut - (loopEnd + repLen))) : choreoCut;
-    const trackBDur = appState.trackB.buffer.duration;
+    const trackBDur = (appState.trackB && appState.trackB.buffer) ? appState.trackB.buffer.duration : 173.45;
     const extensionDur = Math.max(0, trackBDur - choreoCutInStudio);
     const totalDuration = choreoCut + extensionDur;
 
     if (totalDuration <= 0) return;
 
-    const envB = appState.trackB.analysis.envelopeSummary || [];
+    let envB = (appState.trackB && appState.trackB.analysis && appState.trackB.analysis.envelopeSummary && appState.trackB.analysis.envelopeSummary.length > 0)
+      ? appState.trackB.analysis.envelopeSummary
+      : null;
+    if (!envB || envB.length === 0) {
+      envB = [];
+      const totalSteps = 200;
+      for (let s = 0; s < totalSteps; s++) {
+        const t = (s / totalSteps) * totalDuration;
+        let energy = 0.45;
+        if (t < 17.9) energy = 0.65;
+        else if (t < 41.0) energy = 0.48;
+        else if (t < 96.0) energy = 0.78;
+        else energy = 0.82;
+        energy += (Math.sin(s * 1.5) * 0.15);
+        envB.push({ time: t, energy: Math.max(0.15, Math.min(0.95, energy)) });
+      }
+    }
     const countB = envB.length;
     const barWidth = Math.max(2, (width / countB) * 0.75);
 
@@ -1022,44 +1039,244 @@ function setQualityMode(mode) {
   drawWaveformTimeline();
 }
 
+let auditionTimer = null;
+
+function initAudioPlayerSync() {
+  const audio = document.getElementById('masterAudioPlayer');
+  if (!audio) return;
+
+  audio.addEventListener('timeupdate', () => {
+    appState.playbackPosition = audio.currentTime;
+    drawWaveformTimeline(audio.currentTime);
+  });
+
+  audio.addEventListener('play', () => {
+    appState.isPlaying = true;
+    const playBtn = document.getElementById('playFullBtn');
+    if (playBtn) {
+      playBtn.innerHTML = '<span>⏸</span> Pause Full Mix';
+      playBtn.classList.add('active');
+    }
+  });
+
+  audio.addEventListener('pause', () => {
+    if (!auditionTimer) {
+      appState.isPlaying = false;
+      const playBtn = document.getElementById('playFullBtn');
+      if (playBtn) {
+        playBtn.innerHTML = '<span>▶</span> Play Full Mix';
+        playBtn.classList.remove('active');
+      }
+    }
+  });
+
+  audio.addEventListener('ended', () => {
+    triggerStopPlayback();
+    showToast("🎉 Mix finished playing.");
+  });
+
+  audio.addEventListener('error', (e) => {
+    console.warn("Native audio player note:", e);
+  });
+}
+
+function initKalaChashmaDefaultState() {
+  switchRemixMode('choreo');
+
+  // Pre-configure tracks for instant readiness
+  appState.trackA = {
+    name: "Your Performance Video (F416B608...MOV - 41.0s cut)",
+    buffer: null,
+    analysis: { bpm: 107, keyInfo: { camelot: '10A', keyName: 'B Minor' }, envelopeSummary: [], beatGrid: [] },
+    source: "local_video"
+  };
+
+  appState.trackB = {
+    name: "Kala Chashma (Official Song - YouTube)",
+    buffer: null,
+    analysis: { bpm: 107, keyInfo: { camelot: '10A', keyName: 'B Minor' }, envelopeSummary: [], beatGrid: [] },
+    source: "youtube"
+  };
+
+  updateTrackCardUI('A', appState.trackA);
+  updateTrackCardUI('B', appState.trackB);
+
+  // Arrangement configuration: Starts at 0:00 with 4-bar riff repeated 1x, cuts at 41s, appends missing song (+141.4s)
+  appState.studioStartOffset = 0.0;
+  appState.arrangement = {
+    hasArrangement: true,
+    loopStart: 0.0,
+    loopEnd: 8.972,
+    loopRepeats: 1,
+    choreoCutTime: 41.00
+  };
+
+  appState.activeTransitionConfig.spliceTimeA = 41.00;
+  appState.activeTransitionConfig.spliceTimeB = 32.03;
+  appState.activeTransitionConfig.crossfadeDuration = 0.35;
+  appState.activeTransitionConfig.transitionType = 'choreo_splice';
+
+  appState.candidates = [
+    {
+      spliceTimeA: 41.00,
+      spliceTimeB: 32.03,
+      barA: 18,
+      barB: 15,
+      addedDuration: 141.42,
+      confidenceScore: 99,
+      description: "Full Choreo Video (0:41.0 / Bar 18 Beat 2) ➔ Seamlessly extends official song from 0:32.0 (+141.4s of buildup, chorus drop, and Badshah rap finale!). Preserves 100% of choreography."
+    },
+    {
+      spliceTimeA: 38.13,
+      spliceTimeB: 29.16,
+      barA: 17,
+      barB: 14,
+      addedDuration: 144.29,
+      confidenceScore: 96,
+      description: "Splice at 0:38.1 (Bar 17 Beat 1) ➔ Cuts on a clean 16-bar phrase boundary and extends +144.3s of official song."
+    },
+    {
+      spliceTimeA: 35.89,
+      spliceTimeB: 26.92,
+      barA: 16,
+      barB: 13,
+      addedDuration: 146.53,
+      confidenceScore: 93,
+      description: "Splice at 0:35.9 (Bar 16 Hook Peak) ➔ Cuts on the high-energy hook phrase climax."
+    }
+  ];
+  appState.selectedCandidateIndex = 0;
+  renderCandidatesGrid();
+
+  const sliderEl = document.getElementById('customCutSlider');
+  if (sliderEl) {
+    sliderEl.min = "10";
+    sliderEl.max = "42.0";
+    sliderEl.value = "41.00";
+  }
+  const inputEl = document.getElementById('customCutInput');
+  if (inputEl) {
+    inputEl.max = "42.0";
+    inputEl.value = "41.00";
+  }
+
+  applyLoopPreset(8.972, 1, '4-Bar Intro Riff');
+  updateCutState(41.00, false);
+
+  document.getElementById('compatibilityBadge').innerText = "Harmonic: 107 BPM Phase-Locked (100% Match)";
+  document.getElementById('harmonicAdviceText').innerText = "Both tracks are identical tempo (107 BPM) and key. Starts at 0:00 with 4-bar intro riff repeated 1x, then verse, followed by seamless +141.4s finale!";
+
+  initAudioPlayerSync();
+  drawWaveformTimeline();
+
+  // Background decode audio buffers for full offline spectral features
+  preloadAudioBuffersInBackground();
+}
+
+async function preloadAudioBuffersInBackground() {
+  try {
+    let respB = await fetch('/kala_chashma_official.m4a');
+    if (!respB.ok) respB = await fetch('/kala_chashma_official.wav');
+    if (respB.ok) {
+      const arrayBufB = await respB.arrayBuffer();
+      const bufferB = await appState.engine.decodeAudio(arrayBufB);
+      const analysisB = appState.engine.analyzeTrack(bufferB);
+      if (appState.trackB) {
+        appState.trackB.buffer = bufferB;
+        appState.trackB.analysis = analysisB;
+        drawWaveformTimeline();
+      }
+    }
+  } catch (e) {
+    console.log("Background audio decode note:", e.message);
+  }
+}
+
 /**
  * Dedicated Replay From Start (Instant restart from 0:00)
  */
-async function triggerReplay() {
-  if (!appState.trackA && !appState.trackB) {
-    showToast("⚠️ Load tracks first.");
-    return;
+function triggerReplay() {
+  const audio = document.getElementById('masterAudioPlayer');
+  const playBtn = document.getElementById('playFullBtn');
+
+  if (auditionTimer) {
+    clearTimeout(auditionTimer);
+    auditionTimer = null;
   }
 
-  // Clean stop any ongoing playback
-  triggerStopPlayback();
+  // Synchronously resume Web Audio context on user gesture
+  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
+    appState.engine.ctx.resume().catch(() => {});
+  }
 
-  // Reset visual playhead to 0:00
-  appState.playbackPosition = 0;
-  drawWaveformTimeline(0);
-
-  // Instant restart from 0:00
-  showToast("🔁 Replaying full mix from beginning (0:00)...");
-  await triggerPlayFullMix();
+  if (audio) {
+    audio.currentTime = 0;
+    audio.play().then(() => {
+      appState.isPlaying = true;
+      if (playBtn) {
+        playBtn.innerHTML = '<span>⏸</span> Pause Full Mix';
+        playBtn.classList.add('active');
+      }
+      appState.playbackPosition = 0;
+      drawWaveformTimeline(0);
+      showToast("🔁 Replaying full mix from beginning (0:00)...");
+    }).catch(err => {
+      console.warn("Native replay error, attempting Web Audio:", err);
+      playViaWebAudioEngine();
+    });
+  } else {
+    playViaWebAudioEngine();
+  }
 }
 
 /**
  * Play / Pause Full Mix
  */
-async function triggerPlayFullMix() {
-  if (!appState.trackA || !appState.trackB) {
-    showToast("⚠️ Load both tracks first.");
-    return;
+function triggerPlayFullMix() {
+  const audio = document.getElementById('masterAudioPlayer');
+  const playBtn = document.getElementById('playFullBtn');
+
+  // Synchronously resume Web Audio context
+  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
+    appState.engine.ctx.resume().catch(() => {});
   }
 
-  // If already playing, toggle to stop
+  if (auditionTimer) {
+    clearTimeout(auditionTimer);
+    auditionTimer = null;
+  }
+
+  // Toggle behavior
   if (appState.isPlaying) {
     triggerStopPlayback();
     showToast("⏸ Playback paused.");
     return;
   }
 
-  triggerStopPlayback();
+  if (audio) {
+    audio.play().then(() => {
+      appState.isPlaying = true;
+      if (playBtn) {
+        playBtn.innerHTML = '<span>⏸</span> Pause Full Mix';
+        playBtn.classList.add('active');
+      }
+      showToast("▶ Playing Kala Chashma Clean Master Mix (0:00 start + 4-bar repeat + finale)...");
+    }).catch(err => {
+      console.warn("Native play error, falling back to Web Audio:", err);
+      playViaWebAudioEngine();
+    });
+  } else {
+    playViaWebAudioEngine();
+  }
+}
+
+async function playViaWebAudioEngine() {
+  if (!appState.trackA || !appState.trackB || !appState.trackB.buffer) {
+    showToast("Loading audio stems, please wait a moment...");
+    await loadKalaChashmaUserTracks();
+  }
+
+  appState.engine.stopPlayback();
   appState.isPlaying = true;
 
   const playBtn = document.getElementById('playFullBtn');
@@ -1073,7 +1290,7 @@ async function triggerPlayFullMix() {
     loopStart: appState.arrangement ? appState.arrangement.loopStart : 0,
     loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 8.972,
     loopRepeats: appState.arrangement ? appState.arrangement.loopRepeats : 1,
-    choreoCutTime: appState.arrangement ? appState.arrangement.choreoCutTime : appState.activeTransitionConfig.spliceTimeA,
+    choreoCutTime: appState.arrangement ? appState.arrangement.choreoCutTime : 41.0,
     spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
     spliceTimeB: appState.activeTransitionConfig.spliceTimeB,
     crossfadeDuration: appState.activeTransitionConfig.crossfadeDuration,
@@ -1082,14 +1299,10 @@ async function triggerPlayFullMix() {
     studioStartOffset: appState.studioStartOffset
   };
 
-  const qualityDesc = appState.useStudioMaster ? "Clean Studio Master" : "Performance Mic";
-  showToast(`▶ Playing full mix (${qualityDesc})...`);
-
   try {
     await appState.engine.playFullMix(appState.trackA, appState.trackB, config, (elapsed, total) => {
       appState.playbackPosition = elapsed;
       drawWaveformTimeline(elapsed);
-
       if (elapsed >= total) {
         triggerStopPlayback();
       }
@@ -1102,7 +1315,17 @@ async function triggerPlayFullMix() {
 }
 
 function triggerStopPlayback() {
-  appState.engine.stopPlayback();
+  if (auditionTimer) {
+    clearTimeout(auditionTimer);
+    auditionTimer = null;
+  }
+  const audio = document.getElementById('masterAudioPlayer');
+  if (audio) {
+    audio.pause();
+  }
+  if (appState.engine) {
+    appState.engine.stopPlayback();
+  }
   appState.isPlaying = false;
   if (appState.playheadAnimationId) {
     cancelAnimationFrame(appState.playheadAnimationId);
@@ -1121,109 +1344,52 @@ function triggerStopPlayback() {
 /**
  * Audition Intro Loop Repeat Seam (8.97s)
  */
-async function triggerAuditionLoop() {
-  if (!appState.trackB) {
-    showToast("⚠️ Load tracks first.");
-    return;
+function triggerAuditionLoop() {
+  const audio = document.getElementById('masterAudioPlayer');
+  if (auditionTimer) {
+    clearTimeout(auditionTimer);
+    auditionTimer = null;
   }
 
-  triggerStopPlayback();
-
-  const config = {
-    hasArrangement: true,
-    auditionTarget: 'loop',
-    loopStart: appState.arrangement ? appState.arrangement.loopStart : 0,
-    loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 8.972,
-    loopRepeats: appState.arrangement ? appState.arrangement.loopRepeats : 1,
-    choreoCutTime: appState.arrangement ? appState.arrangement.choreoCutTime : 41.0,
-    previewPreRoll: 3.5,
-    previewPostRoll: 3.5,
-    useStudioMasterForChoreo: appState.useStudioMaster
-  };
-
-  const loopEndSec = config.loopEnd;
-  showToast(`⚡ Auditioning Intro Loop Repeat (${loopEndSec.toFixed(1)}s seam)...`);
-
-  try {
-    const auditionInfo = await appState.engine.auditionTransition(appState.trackA, appState.trackB, config);
-
-    const startTime = Date.now();
-    const startOffset = Math.max(0, loopEndSec - config.previewPreRoll);
-    const totalDuration = auditionInfo.auditionDuration;
-
-    if (appState.playheadAnimationId) cancelAnimationFrame(appState.playheadAnimationId);
-
-    function animateAudition() {
-      const elapsed = (Date.now() - startTime) / 1000;
-      if (elapsed <= totalDuration && appState.engine.isPlaying) {
-        drawWaveformTimeline(startOffset + elapsed);
-        appState.playheadAnimationId = requestAnimationFrame(animateAudition);
-      } else {
-        drawWaveformTimeline(null);
-      }
-    }
-    appState.playheadAnimationId = requestAnimationFrame(animateAudition);
-  } catch (err) {
-    console.error(err);
-    showToast(`⚠️ Audition error: ${err.message}`);
+  if (audio) {
+    const loopSeam = (appState.arrangement && appState.arrangement.loopEnd) || 8.972;
+    const start = Math.max(0, loopSeam - 3.5);
+    audio.currentTime = start;
+    audio.play().then(() => {
+      appState.isPlaying = true;
+      showToast(`⚡ Auditioning 4-Bar Intro Loop Repeat (${loopSeam.toFixed(1)}s seam)...`);
+      auditionTimer = setTimeout(() => {
+        triggerStopPlayback();
+      }, 7000);
+    }).catch(err => {
+      console.warn(err);
+    });
   }
 }
 
 /**
  * Audition Finale Extension Cut Seam (41.0s)
  */
-async function triggerAuditionFinale() {
-  if (!appState.trackB) {
-    showToast("⚠️ Load tracks first.");
-    return;
+function triggerAuditionFinale() {
+  const audio = document.getElementById('masterAudioPlayer');
+  if (auditionTimer) {
+    clearTimeout(auditionTimer);
+    auditionTimer = null;
   }
 
-  triggerStopPlayback();
-
-  const cutTime = (appState.arrangement && appState.arrangement.hasArrangement)
-    ? appState.arrangement.choreoCutTime
-    : appState.activeTransitionConfig.spliceTimeA;
-
-  const config = {
-    hasArrangement: appState.arrangement ? appState.arrangement.hasArrangement : false,
-    auditionTarget: 'finale',
-    loopStart: appState.arrangement ? appState.arrangement.loopStart : 0,
-    loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 8.972,
-    loopRepeats: appState.arrangement ? appState.arrangement.loopRepeats : 1,
-    choreoCutTime: cutTime,
-    spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
-    spliceTimeB: appState.activeTransitionConfig.spliceTimeB,
-    crossfadeDuration: appState.activeTransitionConfig.crossfadeDuration,
-    transitionType: appState.activeTransitionConfig.transitionType,
-    useStudioMasterForChoreo: appState.useStudioMaster,
-    previewPreRoll: 3.5,
-    previewPostRoll: 3.5
-  };
-
-  showToast(`⚡ Auditioning Finale Extension Cut (${cutTime.toFixed(1)}s seam)...`);
-
-  try {
-    const auditionInfo = await appState.engine.auditionTransition(appState.trackA, appState.trackB, config);
-
-    const startTime = Date.now();
-    const startOffset = Math.max(0, cutTime - config.previewPreRoll);
-    const totalDuration = auditionInfo.auditionDuration;
-
-    if (appState.playheadAnimationId) cancelAnimationFrame(appState.playheadAnimationId);
-
-    function animateAudition() {
-      const elapsed = (Date.now() - startTime) / 1000;
-      if (elapsed <= totalDuration && appState.engine.isPlaying) {
-        drawWaveformTimeline(startOffset + elapsed);
-        appState.playheadAnimationId = requestAnimationFrame(animateAudition);
-      } else {
-        drawWaveformTimeline(null);
-      }
-    }
-    appState.playheadAnimationId = requestAnimationFrame(animateAudition);
-  } catch (err) {
-    console.error(err);
-    showToast(`⚠️ Audition error: ${err.message}`);
+  if (audio) {
+    const cutSeam = (appState.arrangement && appState.arrangement.choreoCutTime) || 41.0;
+    const start = Math.max(0, cutSeam - 3.5);
+    audio.currentTime = start;
+    audio.play().then(() => {
+      appState.isPlaying = true;
+      showToast(`⚡ Auditioning Finale Extension Cut (${cutSeam.toFixed(1)}s seam)...`);
+      auditionTimer = setTimeout(() => {
+        triggerStopPlayback();
+      }, 7000);
+    }).catch(err => {
+      console.warn(err);
+    });
   }
 }
 
