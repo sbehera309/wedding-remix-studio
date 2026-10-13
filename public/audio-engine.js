@@ -20,10 +20,11 @@ class AudioRemixEngine {
   }
 
   async ensureContext() {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!this.ctx || this.ctx.state === 'closed') {
-      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.ctx = new AudioCtx();
     }
-    if (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted') {
+    if (this.ctx.state !== 'running') {
       try {
         await this.ctx.resume();
       } catch (e) {
@@ -587,41 +588,101 @@ class AudioRemixEngine {
     await this.ensureContext();
 
     const {
-      spliceTimeA,
-      spliceTimeB,
+      hasArrangement = false,
+      auditionTarget = 'loop', // 'loop' or 'finale'
+      loopStart = 0,
+      loopEnd = 8.972,
+      loopRepeats = 1,
+      choreoCutTime = 41.0,
+      spliceTimeA = 41.0,
+      spliceTimeB = 32.03,
       crossfadeDuration = 0.35,
       transitionType = 'choreo_splice',
-      previewPreRoll = 4.0,
-      previewPostRoll = 4.0,
+      previewPreRoll = 3.5,
+      previewPostRoll = 3.5,
       useStudioMasterForChoreo = true,
-      studioStartOffset = 58.08
+      studioStartOffset = 0
     } = config;
 
+    const now = this.ctx.currentTime + 0.05;
+
+    // ARRANGEMENT AUDITION: Audition the Intro Loop Repeat or the Finale Extension Cut
+    if (hasArrangement && trackB && trackB.buffer) {
+      if (auditionTarget === 'loop') {
+        // Audition the Intro Loop Repeat (at loopEnd, e.g. 8.97s)
+        const preRoll = Math.min(previewPreRoll, loopEnd);
+        const startOffset = loopEnd - preRoll;
+
+        const src1 = this.ctx.createBufferSource();
+        src1.buffer = trackB.buffer;
+        src1.connect(this.ctx.destination);
+        src1.start(now, startOffset, preRoll);
+
+        const src2 = this.ctx.createBufferSource();
+        src2.buffer = trackB.buffer;
+        src2.connect(this.ctx.destination);
+        src2.start(now + preRoll, loopStart, previewPostRoll);
+
+        this.currentSourceNodes = [src1, src2];
+        this.isPlaying = true;
+        const totalAudition = preRoll + previewPostRoll;
+        this.auditionTimeout = setTimeout(() => {
+          this.isPlaying = false;
+          this.currentSourceNodes = [];
+        }, totalAudition * 1000);
+
+        return { auditionDuration: totalAudition, startOffset: startOffset, transitionPointSec: preRoll };
+      } else {
+        // Audition the Finale Extension Cut (at choreoCutTime, e.g. 41.0s)
+        const repLen = (loopRepeats > 0) ? (loopEnd - loopStart) * loopRepeats : 0;
+        const choreoCutInStudio = loopEnd + Math.max(0, choreoCutTime - (loopEnd + repLen));
+        const preRoll = Math.min(previewPreRoll, choreoCutTime);
+        const studioStartPre = Math.max(0, choreoCutInStudio - preRoll);
+
+        const srcPre = this.ctx.createBufferSource();
+        srcPre.buffer = (useStudioMasterForChoreo || !trackA) ? trackB.buffer : trackA.buffer;
+        srcPre.connect(this.ctx.destination);
+        const preOffset = useStudioMasterForChoreo ? studioStartPre : Math.max(0, choreoCutTime - preRoll);
+        srcPre.start(now, preOffset, preRoll);
+
+        const srcPost = this.ctx.createBufferSource();
+        srcPost.buffer = trackB.buffer;
+        srcPost.connect(this.ctx.destination);
+        srcPost.start(now + preRoll, choreoCutInStudio, previewPostRoll);
+
+        this.currentSourceNodes = [srcPre, srcPost];
+        this.isPlaying = true;
+        const totalAudition = preRoll + previewPostRoll;
+        this.auditionTimeout = setTimeout(() => {
+          this.isPlaying = false;
+          this.currentSourceNodes = [];
+        }, totalAudition * 1000);
+
+        return { auditionDuration: totalAudition, startOffset: choreoCutTime - preRoll, transitionPointSec: preRoll };
+      }
+    }
+
+    // Standard Medley / Splice Audition
     const startA = Math.max(0, spliceTimeA - previewPreRoll);
     const actualPreRoll = spliceTimeA - startA;
 
-    // In Studio Master Clean mode, the choreo portion is rendered from the pristine studio track!
     const canUseStudio = useStudioMasterForChoreo && trackB && trackB.buffer && (trackB.buffer.duration > (studioStartOffset + startA));
     const bufferA = canUseStudio ? trackB.buffer : trackA.buffer;
     const startOffsetA = canUseStudio ? (studioStartOffset + startA) : startA;
 
-    // Track A source
     const sourceA = this.ctx.createBufferSource();
     sourceA.buffer = bufferA;
     const gainA = this.ctx.createGain();
     const filterA = this.ctx.createBiquadFilter();
 
-    // Track B source
     const sourceB = this.ctx.createBufferSource();
     sourceB.buffer = trackB.buffer;
     const gainB = this.ctx.createGain();
     const filterB = this.ctx.createBiquadFilter();
 
-    const now = this.ctx.currentTime + 0.05;
     const transitionStartTime = now + actualPreRoll;
     const transitionEndTime = transitionStartTime + crossfadeDuration;
 
-    // Apply Transition FX Curve
     if (transitionType === 'bass_swap') {
       filterA.type = 'highpass';
       filterA.frequency.setValueAtTime(20, now);
@@ -644,7 +705,6 @@ class AudioRemixEngine {
       gainB.gain.setValueAtTime(0.001, transitionStartTime);
       gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.05);
     } else {
-      // Default: Equal Power Choreo Splice
       gainA.gain.setValueAtTime(1.0, now);
       gainA.gain.setValueAtTime(1.0, transitionStartTime);
       gainA.gain.exponentialRampToValueAtTime(0.001, transitionStartTime + Math.max(0.1, crossfadeDuration));
@@ -653,7 +713,6 @@ class AudioRemixEngine {
       gainB.gain.exponentialRampToValueAtTime(1.0, transitionStartTime + Math.max(0.1, crossfadeDuration));
     }
 
-    // Connect graph
     sourceA.connect(filterA);
     filterA.connect(gainA);
     gainA.connect(this.ctx.destination);
@@ -662,7 +721,6 @@ class AudioRemixEngine {
     filterB.connect(gainB);
     gainB.connect(this.ctx.destination);
 
-    // Schedule playback
     sourceA.start(now, startOffsetA, actualPreRoll + crossfadeDuration + 0.2);
     sourceB.start(transitionStartTime, spliceTimeB, previewPostRoll);
 
@@ -690,14 +748,120 @@ class AudioRemixEngine {
     await this.ensureContext();
 
     const {
-      spliceTimeA,
-      spliceTimeB,
-      crossfadeDuration = 0.35,
-      transitionType = 'choreo_splice',
+      hasArrangement = false,
+      loopStart = 0,
+      loopEnd = 8.972,
+      loopRepeats = 1,
+      choreoCutTime = 41.0,
       useStudioMasterForChoreo = true,
-      studioStartOffset = 58.08
+      spliceTimeA = 41.0,
+      spliceTimeB = 32.03,
+      crossfadeDuration = 0.25,
+      transitionType = 'choreo_splice',
+      studioStartOffset = 0
     } = config;
 
+    const now = this.ctx.currentTime + 0.05;
+
+    // ARRANGEMENT PLAYBACK: Intro (0:00) -> Repeated Intro Hook -> Choreo Continuation -> Full Finale Extension
+    if (hasArrangement && trackB && trackB.buffer) {
+      const repLen = (loopRepeats > 0) ? (loopEnd - loopStart) * loopRepeats : 0;
+      const choreoCutInStudio = loopEnd + Math.max(0, choreoCutTime - (loopEnd + repLen));
+      const extensionDuration = Math.max(0, trackB.buffer.duration - choreoCutInStudio);
+      const totalDuration = choreoCutTime + extensionDuration;
+
+      const sources = [];
+
+      if (useStudioMasterForChoreo) {
+        // --- 100% Studio Clean Reconstruction (From Original Master) ---
+        // Block 1: Intro (0:00 to loopEnd)
+        const src1 = this.ctx.createBufferSource();
+        src1.buffer = trackB.buffer;
+        src1.connect(this.ctx.destination);
+        src1.start(now, 0, loopEnd);
+        sources.push(src1);
+
+        // Block 2: Loop Repeat (loopStart to loopEnd)
+        let currentMixTime = now + loopEnd;
+        for (let r = 0; r < loopRepeats; r++) {
+          const srcRep = this.ctx.createBufferSource();
+          srcRep.buffer = trackB.buffer;
+          srcRep.connect(this.ctx.destination);
+          srcRep.start(currentMixTime, loopStart, loopEnd - loopStart);
+          sources.push(srcRep);
+          currentMixTime += (loopEnd - loopStart);
+        }
+
+        // Block 3: Choreo Continuation (loopEnd onwards to choreoCutInStudio)
+        const durationSec3 = Math.max(0, (now + choreoCutTime) - currentMixTime);
+        if (durationSec3 > 0) {
+          const src3 = this.ctx.createBufferSource();
+          src3.buffer = trackB.buffer;
+          src3.connect(this.ctx.destination);
+          src3.start(currentMixTime, loopEnd, durationSec3);
+          sources.push(src3);
+        }
+
+        // Block 4: Grand Finale & Missing Rap Extension (choreoCutInStudio to end of track B)
+        const src4 = this.ctx.createBufferSource();
+        src4.buffer = trackB.buffer;
+        src4.connect(this.ctx.destination);
+        src4.start(now + choreoCutTime, choreoCutInStudio, extensionDuration);
+        sources.push(src4);
+
+      } else {
+        // --- Rehearsal Mic Audio Mode ---
+        // Blocks 1-3 from performance video audio
+        const srcChoreo = this.ctx.createBufferSource();
+        srcChoreo.buffer = trackA.buffer;
+        const gainChoreo = this.ctx.createGain();
+        srcChoreo.connect(gainChoreo);
+        gainChoreo.connect(this.ctx.destination);
+
+        gainChoreo.gain.setValueAtTime(1.0, now);
+        gainChoreo.gain.setValueAtTime(1.0, now + choreoCutTime);
+        gainChoreo.gain.linearRampToValueAtTime(0.001, now + choreoCutTime + crossfadeDuration);
+        srcChoreo.start(now, 0, choreoCutTime + crossfadeDuration);
+        sources.push(srcChoreo);
+
+        // Block 4 from studio track
+        const srcExt = this.ctx.createBufferSource();
+        srcExt.buffer = trackB.buffer;
+        const gainExt = this.ctx.createGain();
+        srcExt.connect(gainExt);
+        gainExt.connect(this.ctx.destination);
+
+        gainExt.gain.setValueAtTime(0.001, now);
+        gainExt.gain.setValueAtTime(0.001, now + choreoCutTime);
+        gainExt.gain.linearRampToValueAtTime(1.0, now + choreoCutTime + crossfadeDuration);
+        srcExt.start(now + choreoCutTime, choreoCutInStudio, extensionDuration);
+        sources.push(srcExt);
+      }
+
+      this.currentSourceNodes = sources;
+      this.isPlaying = true;
+
+      this.playbackInterval = setInterval(() => {
+        if (!this.isPlaying) {
+          if (this.playbackInterval) {
+            clearInterval(this.playbackInterval);
+            this.playbackInterval = null;
+          }
+          return;
+        }
+        const elapsed = this.ctx.currentTime - now;
+        if (elapsed >= totalDuration) {
+          if (onProgress) onProgress(totalDuration, totalDuration);
+          this.stopPlayback();
+        } else if (onProgress) {
+          onProgress(Math.max(0, elapsed), totalDuration);
+        }
+      }, 50);
+
+      return totalDuration;
+    }
+
+    // Default Medley / 2-Track Mix
     const canUseStudio = useStudioMasterForChoreo && trackB && trackB.buffer && (trackB.buffer.duration > (studioStartOffset + spliceTimeA));
     const bufferA = canUseStudio ? trackB.buffer : trackA.buffer;
     const startOffsetA = canUseStudio ? studioStartOffset : 0;
@@ -710,15 +874,12 @@ class AudioRemixEngine {
     sourceB.buffer = trackB.buffer;
     const gainB = this.ctx.createGain();
 
-    const now = this.ctx.currentTime + 0.05;
     const transitionTime = now + spliceTimeA;
 
-    // Track A envelope
     gainA.gain.setValueAtTime(1.0, now);
     gainA.gain.setValueAtTime(1.0, transitionTime);
     gainA.gain.linearRampToValueAtTime(0.001, transitionTime + crossfadeDuration);
 
-    // Track B envelope
     const durationBRemaining = Math.max(0, trackB.buffer.duration - spliceTimeB);
     gainB.gain.setValueAtTime(0.001, now);
     gainB.gain.setValueAtTime(0.001, transitionTime);
@@ -738,7 +899,6 @@ class AudioRemixEngine {
 
     const totalDuration = spliceTimeA + durationBRemaining;
 
-    // Progress timer with interval cleanup to fix replay
     this.playbackInterval = setInterval(() => {
       if (!this.isPlaying) {
         if (this.playbackInterval) {
@@ -782,15 +942,105 @@ class AudioRemixEngine {
    */
   async renderMasterWav(trackA, trackB, config) {
     const {
-      spliceTimeA,
-      spliceTimeB,
-      crossfadeDuration = 0.5,
+      hasArrangement = false,
+      loopStart = 0,
+      loopEnd = 8.972,
+      loopRepeats = 1,
+      choreoCutTime = 41.0,
+      spliceTimeA = 41.0,
+      spliceTimeB = 32.03,
+      crossfadeDuration = 0.35,
       transitionType = 'choreo_splice',
       useStudioMasterForChoreo = true,
-      studioStartOffset = 58.08
+      studioStartOffset = 0
     } = config;
 
-    const sampleRate = trackA.buffer.sampleRate || 44100;
+    const sampleRate = (trackB && trackB.buffer) ? (trackB.buffer.sampleRate || 44100) : (trackA.buffer.sampleRate || 44100);
+
+    // ARRANGEMENT MASTER EXPORT:
+    if (hasArrangement && trackB && trackB.buffer) {
+      const repLen = (loopRepeats > 0) ? (loopEnd - loopStart) * loopRepeats : 0;
+      const choreoCutInStudio = loopEnd + Math.max(0, choreoCutTime - (loopEnd + repLen));
+      const extensionDuration = Math.max(0, trackB.buffer.duration - choreoCutInStudio);
+      const totalDuration = choreoCutTime + extensionDuration;
+      const totalFrames = Math.floor(sampleRate * totalDuration);
+
+      const offlineCtx = new OfflineAudioContext(2, totalFrames, sampleRate);
+
+      if (useStudioMasterForChoreo) {
+        // Block 1: Intro
+        const src1 = offlineCtx.createBufferSource();
+        src1.buffer = trackB.buffer;
+        src1.connect(offlineCtx.destination);
+        src1.start(0, 0, loopEnd);
+
+        // Block 2: Repeat
+        let currentMixTime = loopEnd;
+        for (let r = 0; r < loopRepeats; r++) {
+          const srcRep = offlineCtx.createBufferSource();
+          srcRep.buffer = trackB.buffer;
+          srcRep.connect(offlineCtx.destination);
+          srcRep.start(currentMixTime, loopStart, loopEnd - loopStart);
+          currentMixTime += (loopEnd - loopStart);
+        }
+
+        // Block 3: Choreo Continuation
+        const durationSec3 = Math.max(0, choreoCutTime - currentMixTime);
+        if (durationSec3 > 0) {
+          const src3 = offlineCtx.createBufferSource();
+          src3.buffer = trackB.buffer;
+          src3.connect(offlineCtx.destination);
+          src3.start(currentMixTime, loopEnd, durationSec3);
+        }
+
+        // Block 4: Finale Extension
+        const src4 = offlineCtx.createBufferSource();
+        src4.buffer = trackB.buffer;
+        src4.connect(offlineCtx.destination);
+        src4.start(choreoCutTime, choreoCutInStudio, extensionDuration);
+
+      } else {
+        const srcChoreo = offlineCtx.createBufferSource();
+        srcChoreo.buffer = trackA.buffer;
+        const gainChoreo = offlineCtx.createGain();
+        srcChoreo.connect(gainChoreo);
+        gainChoreo.connect(offlineCtx.destination);
+
+        gainChoreo.gain.setValueAtTime(1.0, 0);
+        gainChoreo.gain.setValueAtTime(1.0, choreoCutTime);
+        gainChoreo.gain.linearRampToValueAtTime(0.001, choreoCutTime + crossfadeDuration);
+        srcChoreo.start(0, 0, choreoCutTime + crossfadeDuration);
+
+        const srcExt = offlineCtx.createBufferSource();
+        srcExt.buffer = trackB.buffer;
+        const gainExt = offlineCtx.createGain();
+        srcExt.connect(gainExt);
+        gainExt.connect(offlineCtx.destination);
+
+        gainExt.gain.setValueAtTime(0.001, 0);
+        gainExt.gain.setValueAtTime(0.001, choreoCutTime);
+        gainExt.gain.linearRampToValueAtTime(1.0, choreoCutTime + crossfadeDuration);
+        srcExt.start(choreoCutTime, choreoCutInStudio, extensionDuration);
+      }
+
+      const renderedBuffer = await offlineCtx.startRendering();
+      const wavBlob = this._audioBufferToWavBlob(renderedBuffer);
+
+      return {
+        wavBlob,
+        duration: totalDuration,
+        renderedBuffer,
+        cueSheet: {
+          totalDurationFormatted: this.formatTime(totalDuration),
+          section1: `0:00 - ${this.formatTime(loopEnd)}: Intro Horn Riff (Studio Master)`,
+          section2: `${this.formatTime(loopEnd)} - ${this.formatTime(loopEnd + repLen)}: Repeated Intro Phrase (Choreo Loop)`,
+          section3: `${this.formatTime(loopEnd + repLen)} - ${this.formatTime(choreoCutTime)}: Choreo Verse Section`,
+          section4: `${this.formatTime(choreoCutTime)} - ${this.formatTime(totalDuration)}: Extended Finale, Drop & Badshah Rap (+${Math.round(extensionDuration)}s)`
+        }
+      };
+    }
+
+    // Default Medley Render
     const remainingDurationB = Math.max(0, trackB.buffer.duration - spliceTimeB);
     const totalDuration = spliceTimeA + remainingDurationB;
     const totalFrames = Math.floor(sampleRate * totalDuration);
@@ -801,12 +1051,10 @@ class AudioRemixEngine {
     const bufferA = canUseStudio ? trackB.buffer : trackA.buffer;
     const startOffsetA = canUseStudio ? studioStartOffset : 0;
 
-    // Node A
     const sourceA = offlineCtx.createBufferSource();
     sourceA.buffer = bufferA;
     const gainA = offlineCtx.createGain();
 
-    // Node B
     const sourceB = offlineCtx.createBufferSource();
     sourceB.buffer = trackB.buffer;
     const gainB = offlineCtx.createGain();

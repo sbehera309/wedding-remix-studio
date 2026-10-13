@@ -21,3 +21,10 @@ public/*.wav
 .DS_Store
 .vercel
 .env*
+
+# Scratch analysis scripts
+*.py
+*.js
+!server.js
+!public/**/*.js
+

@@ -10,10 +10,17 @@ const appState = {
   trackA: null, // { name, buffer, analysis, sourceUrl }
   trackB: null, // { name, buffer, analysis, sourceUrl }
   useStudioMaster: true, // Reconstruct choreo from pristine studio audio
-  studioStartOffset: 58.08, // Kala Chashma choreo hook offset in official track
+  studioStartOffset: 0.0, // Official track starts at 0:00 (Intro horn riff)
+  arrangement: {
+    hasArrangement: true,
+    loopStart: 0.0,
+    loopEnd: 8.972, // 4-bar intro riff in Kala Chashma (107 BPM)
+    loopRepeats: 1, // Repeated 1x in choreo video
+    choreoCutTime: 41.00 // Where video abruptly cuts off
+  },
   activeTransitionConfig: {
-    spliceTimeA: 38.13,
-    spliceTimeB: 96.21,
+    spliceTimeA: 41.00,
+    spliceTimeB: 32.03, // 8.972 + (41.0 - 17.944) = 32.03s in official song
     crossfadeDuration: 0.35,
     transitionType: 'choreo_splice'
   },
@@ -264,40 +271,50 @@ async function loadKalaChashmaUserTracks() {
     updateTrackCardUI('A', appState.trackA);
     updateTrackCardUI('B', appState.trackB);
 
-    // Precise downbeat splice configuration:
-    // Performance ends at 41.0s. Bar 17 is at 38.13s (aligns to 96.21s in official track)
-    appState.activeTransitionConfig.spliceTimeA = 38.13;
-    appState.activeTransitionConfig.spliceTimeB = 96.21;
+    // Precise choreography arrangement configuration:
+    // Starts at 0:00. 4-bar intro riff (8.97s) is repeated 1x. Choreo verse continues to 41.0s.
+    // At 41.0s, seamlessly appends +141.4s of the official song (starting from 0:32.0).
+    appState.studioStartOffset = 0.0;
+    appState.arrangement = {
+      hasArrangement: true,
+      loopStart: 0.0,
+      loopEnd: 8.972,
+      loopRepeats: 1,
+      choreoCutTime: 41.00
+    };
+
+    appState.activeTransitionConfig.spliceTimeA = 41.00;
+    appState.activeTransitionConfig.spliceTimeB = 32.03;
     appState.activeTransitionConfig.crossfadeDuration = 0.35;
     appState.activeTransitionConfig.transitionType = 'choreo_splice';
 
     appState.candidates = [
       {
-        spliceTimeA: 38.13,
-        spliceTimeB: 96.21,
-        barA: 17,
-        barB: 43,
-        addedDuration: 77.24,
+        spliceTimeA: 41.00,
+        spliceTimeB: 32.03,
+        barA: 18,
+        barB: 15,
+        addedDuration: 141.42,
         confidenceScore: 99,
-        description: "Splice at 0:38.1 (Bar 17 Beat 1) -> Picks up at 1:36.2 in official Kala Chashma, adding +77.2s of Badshah's rap verse and grand finale!"
+        description: "Full Choreo Video (0:41.0 / Bar 18 Beat 2) ➔ Seamlessly extends official song from 0:32.0 (+141.4s of buildup, chorus drop, and Badshah rap finale!). Preserves 100% of choreography."
       },
       {
-        spliceTimeA: 40.37,
-        spliceTimeB: 98.45,
-        barA: 18,
-        barB: 44,
-        addedDuration: 75.00,
-        confidenceScore: 95,
-        description: "Splice at 0:40.4 (Bar 18 Beat 1) -> Takes maximum performance choreo right before video cut-off, then transitions into the rest of the song."
+        spliceTimeA: 38.13,
+        spliceTimeB: 29.16,
+        barA: 17,
+        barB: 14,
+        addedDuration: 144.29,
+        confidenceScore: 96,
+        description: "Splice at 0:38.1 (Bar 17 Beat 1) ➔ Cuts on a clean 16-bar phrase boundary and extends +144.3s of official song."
       },
       {
         spliceTimeA: 35.89,
-        spliceTimeB: 93.97,
+        spliceTimeB: 26.92,
         barA: 16,
-        barB: 42,
-        addedDuration: 79.48,
-        confidenceScore: 92,
-        description: "Splice at 0:35.9 (Bar 16 Hook Peak) -> Transitions right on the main chorus drop climax."
+        barB: 13,
+        addedDuration: 146.53,
+        confidenceScore: 93,
+        description: "Splice at 0:35.9 (Bar 16 Hook Peak) ➔ Cuts on the high-energy hook phrase climax."
       }
     ];
 
@@ -307,21 +324,23 @@ async function loadKalaChashmaUserTracks() {
     // Initialize interactive cut scrubber & impact metrics
     const sliderEl = document.getElementById('customCutSlider');
     if (sliderEl) {
-      sliderEl.min = "5";
+      sliderEl.min = "10";
       sliderEl.max = bufferA.duration.toFixed(1);
-      sliderEl.value = "38.13";
+      sliderEl.value = "41.00";
     }
     const inputEl = document.getElementById('customCutInput');
     if (inputEl) {
       inputEl.max = bufferA.duration.toFixed(1);
-      inputEl.value = "38.13";
+      inputEl.value = "41.00";
     }
-    updateCutState(38.13, false);
+
+    applyLoopPreset(8.972, 1, '4-Bar Intro Riff');
+    updateCutState(41.00, false);
 
     document.getElementById('compatibilityBadge').innerText = "Harmonic: 107 BPM Phase-Locked (100% Match)";
-    document.getElementById('harmonicAdviceText').innerText = "Both tracks are identical tempo (107 BPM) and key. Downbeat Beat 1 alignment is 100% seamless.";
+    document.getElementById('harmonicAdviceText').innerText = "Both tracks are identical tempo (107 BPM) and key. Starts at 0:00 with 4-bar intro riff repeated 1x, then verse, followed by seamless +141.4s finale!";
 
-    showToast("🎉 Loaded your Kala Chashma performance! Splice locked at 38.1s adding 77.2s of missing song.");
+    showToast("🎉 Loaded Kala Chashma! 0:00 start + 4-bar riff repeat + 41s choreo + 141s missing finale ready.");
   } catch (err) {
     console.error(err);
     showToast("⚠️ Could not load Kala Chashma audio: " + err.message);
@@ -593,98 +612,294 @@ function drawWaveformTimeline(currentPlayheadTime = null) {
   ctx.fillStyle = '#090b10';
   ctx.fillRect(0, 0, width, height);
 
-  const spliceTimeA = appState.activeTransitionConfig.spliceTimeA;
-  const spliceTimeB = appState.activeTransitionConfig.spliceTimeB;
-  const remainingDurationB = Math.max(0, appState.trackB.buffer.duration - spliceTimeB);
-  const totalDuration = spliceTimeA + remainingDurationB;
+  const arr = appState.arrangement;
+  const hasArr = arr && arr.hasArrangement;
 
-  if (totalDuration <= 0) return;
+  if (hasArr && appState.trackB && appState.trackB.analysis) {
+    // === Arrangement 4-Block Visual Timeline ===
+    const loopStart = arr.loopStart || 0;
+    const loopEnd = arr.loopEnd || 8.972;
+    const repeats = arr.loopRepeats !== undefined ? arr.loopRepeats : 1;
+    const repLen = (repeats > 0) ? (loopEnd - loopStart) * repeats : 0;
+    const choreoCut = arr.choreoCutTime || 41.0;
+    const choreoCutInStudio = (repeats > 0) ? (loopEnd + Math.max(0, choreoCut - (loopEnd + repLen))) : choreoCut;
+    const trackBDur = appState.trackB.buffer.duration;
+    const extensionDur = Math.max(0, trackBDur - choreoCutInStudio);
+    const totalDuration = choreoCut + extensionDur;
 
-  const spliceX = (spliceTimeA / totalDuration) * width;
-  const crossfadeWidth = (appState.activeTransitionConfig.crossfadeDuration / totalDuration) * width;
+    if (totalDuration <= 0) return;
 
-  // 1. Draw Waveform A (Choreo Edit / Song 1)
-  const envA = appState.trackA.analysis.envelopeSummary;
-  const countA = envA.length;
-  for (let i = 0; i < countA; i++) {
-    const pt = envA[i];
-    if (pt.time > spliceTimeA) continue; // Only draw active portion
-    const x = (pt.time / totalDuration) * width;
-    const barHeight = Math.min(height * 0.45, pt.energy * height * 0.9);
+    const envB = appState.trackB.analysis.envelopeSummary || [];
+    const countB = envB.length;
+    const barWidth = Math.max(2, (width / countB) * 0.75);
 
-    const grad = ctx.createLinearGradient(0, (height / 2) - barHeight, 0, (height / 2) + barHeight);
-    grad.addColorStop(0, '#f472b6');
-    grad.addColorStop(1, '#db2777');
-    ctx.fillStyle = grad;
-    ctx.fillRect(x, (height / 2) - barHeight / 2, Math.max(2, width / countA * 0.8), barHeight);
-  }
-
-  // 2. Draw Waveform B (Original Continuation / Song 2)
-  const envB = appState.trackB.analysis.envelopeSummary;
-  const countB = envB.length;
-  for (let i = 0; i < countB; i++) {
-    const pt = envB[i];
-    if (pt.time < spliceTimeB) continue; // Only draw starting from continuation point
-    const relativeTimeInMix = spliceTimeA + (pt.time - spliceTimeB);
-    const x = (relativeTimeInMix / totalDuration) * width;
-    const barHeight = Math.min(height * 0.45, pt.energy * height * 0.9);
-
-    const grad = ctx.createLinearGradient(0, (height / 2) - barHeight, 0, (height / 2) + barHeight);
-    grad.addColorStop(0, '#22d3ee');
-    grad.addColorStop(1, '#0891b2');
-    ctx.fillStyle = grad;
-    ctx.fillRect(x, (height / 2) - barHeight / 2, Math.max(2, width / countB * 0.8), barHeight);
-  }
-
-  // 3. Draw Beat Grid Markers
-  ctx.strokeStyle = 'rgba(168, 85, 247, 0.25)';
-  ctx.lineWidth = 1;
-  appState.trackA.analysis.beatGrid.forEach(beat => {
-    if (beat.time <= spliceTimeA && beat.isDownbeat) {
-      const bx = (beat.time / totalDuration) * width;
-      ctx.beginPath();
-      ctx.moveTo(bx, 10);
-      ctx.lineTo(bx, height - 10);
-      ctx.stroke();
+    // Block 1: Intro (0:00 to loopEnd) - Indigo / Purple
+    for (let i = 0; i < countB; i++) {
+      const pt = envB[i];
+      if (pt.time <= loopEnd) {
+        const x = (pt.time / totalDuration) * width;
+        const barHeight = Math.min(height * 0.44, pt.energy * height * 0.88);
+        const grad = ctx.createLinearGradient(0, (height / 2) - barHeight, 0, (height / 2) + barHeight);
+        grad.addColorStop(0, '#818cf8');
+        grad.addColorStop(1, '#6366f1');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, (height / 2) - barHeight / 2, barWidth, barHeight);
+      }
     }
-  });
 
-  // 4. Draw Transition Zone & Splice Marker
-  // Crossfade band
-  ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
-  ctx.fillRect(spliceX, 0, crossfadeWidth, height);
+    // Block 2: Loop Repeat (loopEnd to loopEnd + repLen) - Warm Amber / Gold
+    if (repeats > 0 && repLen > 0) {
+      for (let i = 0; i < countB; i++) {
+        const pt = envB[i];
+        if (pt.time <= loopEnd) {
+          const x = ((loopEnd + pt.time) / totalDuration) * width;
+          const barHeight = Math.min(height * 0.44, pt.energy * height * 0.88);
+          const grad = ctx.createLinearGradient(0, (height / 2) - barHeight, 0, (height / 2) + barHeight);
+          grad.addColorStop(0, '#fbbf24');
+          grad.addColorStop(1, '#d97706');
+          ctx.fillStyle = grad;
+          ctx.fillRect(x, (height / 2) - barHeight / 2, barWidth, barHeight);
+        }
+      }
+    }
 
-  // Splice line
-  ctx.strokeStyle = '#10b981';
-  ctx.lineWidth = 2.5;
-  ctx.setLineDash([4, 2]);
-  ctx.beginPath();
-  ctx.moveTo(spliceX, 0);
-  ctx.lineTo(spliceX, height);
-  ctx.stroke();
-  ctx.setLineDash([]);
+    // Block 3: Choreo Verse (loopEnd + repLen to choreoCut) - Vibrant Pink / Rose
+    const verseStartInMix = loopEnd + repLen;
+    for (let i = 0; i < countB; i++) {
+      const pt = envB[i];
+      if (pt.time >= loopEnd && pt.time <= choreoCutInStudio) {
+        const mixTime = verseStartInMix + (pt.time - loopEnd);
+        if (mixTime <= choreoCut) {
+          const x = (mixTime / totalDuration) * width;
+          const barHeight = Math.min(height * 0.44, pt.energy * height * 0.88);
+          const grad = ctx.createLinearGradient(0, (height / 2) - barHeight, 0, (height / 2) + barHeight);
+          grad.addColorStop(0, '#f472b6');
+          grad.addColorStop(1, '#db2777');
+          ctx.fillStyle = grad;
+          ctx.fillRect(x, (height / 2) - barHeight / 2, barWidth, barHeight);
+        }
+      }
+    }
 
-  // Splice indicator label
-  ctx.fillStyle = '#10b981';
-  ctx.font = 'bold 11px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(`SPLICE: ${appState.engine.formatTime(spliceTimeA)}`, spliceX, 16);
+    // Block 4: Missing Grand Finale Extension (choreoCut to totalDuration) - Electric Cyan / Emerald
+    for (let i = 0; i < countB; i++) {
+      const pt = envB[i];
+      if (pt.time >= choreoCutInStudio) {
+        const mixTime = choreoCut + (pt.time - choreoCutInStudio);
+        const x = (mixTime / totalDuration) * width;
+        const barHeight = Math.min(height * 0.44, pt.energy * height * 0.88);
+        const grad = ctx.createLinearGradient(0, (height / 2) - barHeight, 0, (height / 2) + barHeight);
+        grad.addColorStop(0, '#22d3ee');
+        grad.addColorStop(1, '#0891b2');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, (height / 2) - barHeight / 2, barWidth, barHeight);
+      }
+    }
 
-  // 5. Draw Animated Playhead
-  if (currentPlayheadTime !== null) {
-    const playheadX = (currentPlayheadTime / totalDuration) * width;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
+    // Seam 1: Loop Repeat Seam (at loopEnd)
+    if (repeats > 0) {
+      const loopX = (loopEnd / totalDuration) * width;
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 2]);
+      ctx.beginPath();
+      ctx.moveTo(loopX, 0);
+      ctx.lineTo(loopX, height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`LOOP: ${loopEnd.toFixed(1)}s`, loopX, 14);
+    }
+
+    // Seam 2: Choreo Cut / Finale Splice Seam (at choreoCut)
+    const cutX = (choreoCut / totalDuration) * width;
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([4, 2]);
     ctx.beginPath();
-    ctx.moveTo(playheadX, 0);
-    ctx.lineTo(playheadX, height);
+    ctx.moveTo(cutX, 0);
+    ctx.lineTo(cutX, height);
     ctx.stroke();
+    ctx.setLineDash([]);
 
-    document.getElementById('playheadTimeDisplay').innerText = 
-      `${appState.engine.formatTime(currentPlayheadTime)} / ${appState.engine.formatTime(totalDuration)}`;
+    ctx.fillStyle = '#10b981';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`FINALE SPLICE: ${choreoCut.toFixed(1)}s`, cutX, 16);
+
+    // Playhead
+    if (currentPlayheadTime !== null) {
+      const playheadX = (currentPlayheadTime / totalDuration) * width;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(playheadX, 0);
+      ctx.lineTo(playheadX, height);
+      ctx.stroke();
+
+      document.getElementById('playheadTimeDisplay').innerText = 
+        `${appState.engine.formatTime(currentPlayheadTime)} / ${appState.engine.formatTime(totalDuration)}`;
+    } else {
+      document.getElementById('playheadTimeDisplay').innerText = 
+        `Total Master: ${appState.engine.formatTime(totalDuration)}`;
+    }
+
   } else {
-    document.getElementById('playheadTimeDisplay').innerText = 
-      `Total Mix: ${appState.engine.formatTime(totalDuration)}`;
+    // === Default Standard 2-Track Waveform Timeline ===
+    const spliceTimeA = appState.activeTransitionConfig.spliceTimeA;
+    const spliceTimeB = appState.activeTransitionConfig.spliceTimeB;
+    const remainingDurationB = Math.max(0, appState.trackB.buffer.duration - spliceTimeB);
+    const totalDuration = spliceTimeA + remainingDurationB;
+
+    if (totalDuration <= 0) return;
+
+    const spliceX = (spliceTimeA / totalDuration) * width;
+    const crossfadeWidth = (appState.activeTransitionConfig.crossfadeDuration / totalDuration) * width;
+
+    // Waveform A
+    const envA = appState.trackA.analysis.envelopeSummary || [];
+    const countA = envA.length;
+    for (let i = 0; i < countA; i++) {
+      const pt = envA[i];
+      if (pt.time > spliceTimeA) continue;
+      const x = (pt.time / totalDuration) * width;
+      const barHeight = Math.min(height * 0.45, pt.energy * height * 0.9);
+      const grad = ctx.createLinearGradient(0, (height / 2) - barHeight, 0, (height / 2) + barHeight);
+      grad.addColorStop(0, '#f472b6');
+      grad.addColorStop(1, '#db2777');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, (height / 2) - barHeight / 2, Math.max(2, width / countA * 0.8), barHeight);
+    }
+
+    // Waveform B
+    const envB = appState.trackB.analysis.envelopeSummary || [];
+    const countB = envB.length;
+    for (let i = 0; i < countB; i++) {
+      const pt = envB[i];
+      if (pt.time < spliceTimeB) continue;
+      const relativeTimeInMix = spliceTimeA + (pt.time - spliceTimeB);
+      const x = (relativeTimeInMix / totalDuration) * width;
+      const barHeight = Math.min(height * 0.45, pt.energy * height * 0.9);
+      const grad = ctx.createLinearGradient(0, (height / 2) - barHeight, 0, (height / 2) + barHeight);
+      grad.addColorStop(0, '#22d3ee');
+      grad.addColorStop(1, '#0891b2');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, (height / 2) - barHeight / 2, Math.max(2, width / countB * 0.8), barHeight);
+    }
+
+    // Splice Marker
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([4, 2]);
+    ctx.beginPath();
+    ctx.moveTo(spliceX, 0);
+    ctx.lineTo(spliceX, height);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#10b981';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`SPLICE: ${appState.engine.formatTime(spliceTimeA)}`, spliceX, 16);
+
+    // Playhead
+    if (currentPlayheadTime !== null) {
+      const playheadX = (currentPlayheadTime / totalDuration) * width;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(playheadX, 0);
+      ctx.lineTo(playheadX, height);
+      ctx.stroke();
+
+      document.getElementById('playheadTimeDisplay').innerText = 
+        `${appState.engine.formatTime(currentPlayheadTime)} / ${appState.engine.formatTime(totalDuration)}`;
+    } else {
+      document.getElementById('playheadTimeDisplay').innerText = 
+        `Total Mix: ${appState.engine.formatTime(totalDuration)}`;
+    }
+  }
+}
+
+/**
+ * Interactive Loop Preset Handlers
+ */
+function applyLoopPreset(loopEnd, repeats, label) {
+  appState.arrangement.loopStart = 0.0;
+  appState.arrangement.loopEnd = loopEnd;
+  appState.arrangement.loopRepeats = repeats;
+  appState.arrangement.hasArrangement = (repeats > 0 || loopEnd > 0);
+
+  // Update preset buttons active state
+  document.querySelectorAll('#choreoArrangementLab .cut-presets-bar:first-of-type .btn-cut-preset').forEach(b => b.classList.remove('active'));
+  if (repeats === 1 && Math.abs(loopEnd - 8.972) < 0.2) document.getElementById('loop4BarBtn')?.classList.add('active');
+  else if (repeats === 1 && Math.abs(loopEnd - 17.944) < 0.2) document.getElementById('loop8BarBtn')?.classList.add('active');
+  else if (repeats === 1 && Math.abs(loopEnd - 4.486) < 0.2) document.getElementById('loop2BarBtn')?.classList.add('active');
+  else if (repeats === 0) document.getElementById('loopNoneBtn')?.classList.add('active');
+
+  updateArrangementUI();
+  updateCutImpactCard();
+  drawWaveformTimeline();
+
+  showToast(`🧩 Intro Loop: ${label}`);
+}
+
+function updateArrangementUI() {
+  const arr = appState.arrangement;
+  if (!arr || !arr.hasArrangement) return;
+
+  const loopStart = arr.loopStart || 0;
+  const loopEnd = arr.loopEnd || 8.972;
+  const repeats = arr.loopRepeats !== undefined ? arr.loopRepeats : 1;
+  const repLen = (repeats > 0) ? (loopEnd - loopStart) * repeats : 0;
+  const choreoCut = arr.choreoCutTime || 41.0;
+  const choreoCutInStudio = (repeats > 0) ? (loopEnd + Math.max(0, choreoCut - (loopEnd + repLen))) : choreoCut;
+  const trackBDur = (appState.trackB && appState.trackB.buffer) ? appState.trackB.buffer.duration : 173.45;
+  const extensionDur = Math.max(0, trackBDur - choreoCutInStudio);
+  const totalDuration = choreoCut + extensionDur;
+
+  // Block 1
+  const t1 = document.getElementById('seqTime1');
+  if (t1) t1.innerText = `0:00.0 - ${appState.engine.formatTime(loopEnd)}`;
+
+  // Block 2
+  const t2 = document.getElementById('seqTime2');
+  const title2 = document.getElementById('seqTitle2');
+  if (t2) {
+    if (repeats > 0) {
+      t2.innerText = `${appState.engine.formatTime(loopEnd)} - ${appState.engine.formatTime(loopEnd + repLen)}`;
+      if (title2) title2.innerText = `Repeated Riff (+${repLen.toFixed(1)}s)`;
+    } else {
+      t2.innerText = `(No Repeat - 0:00)`;
+      if (title2) title2.innerText = `Straight Intro`;
+    }
+  }
+
+  // Block 3
+  const t3 = document.getElementById('seqTime3');
+  if (t3) t3.innerText = `${appState.engine.formatTime(loopEnd + repLen)} - ${appState.engine.formatTime(choreoCut)}`;
+
+  // Block 4
+  const t4 = document.getElementById('seqTime4');
+  if (t4) t4.innerText = `${appState.engine.formatTime(choreoCut)} - ${appState.engine.formatTime(totalDuration)} (+${Math.round(extensionDur)}s)`;
+
+  // Cut Pill
+  const pill = document.getElementById('cutBarDisplay');
+  if (pill) {
+    pill.innerText = repeats > 0 ? `Intro Match: 0:00 + 4-Bar Loop` : `Intro Match: 0:00 Direct`;
+  }
+
+  // Audition buttons text
+  const audLoopBtn = document.getElementById('auditionLoopBtn');
+  if (audLoopBtn) {
+    audLoopBtn.innerHTML = `<span>⚡</span> Audition Intro Loop (${loopEnd.toFixed(1)}s)`;
+  }
+  const audFinaleBtn = document.getElementById('auditionBtn');
+  if (audFinaleBtn) {
+    audFinaleBtn.innerHTML = `<span>⚡</span> Audition Finale Cut (${choreoCut.toFixed(1)}s)`;
   }
 }
 
@@ -710,7 +925,7 @@ function applyCutPreset(sec, label) {
   document.querySelectorAll('.btn-cut-preset').forEach(btn => btn.classList.remove('active'));
   if (Math.abs(sec - 35.89) < 0.1) document.getElementById('presetHookBtn')?.classList.add('active');
   else if (Math.abs(sec - 38.13) < 0.1) document.getElementById('presetDefaultBtn')?.classList.add('active');
-  else if (Math.abs(sec - 40.37) < 0.1) document.getElementById('presetEndBtn')?.classList.add('active');
+  else if (Math.abs(sec - 41.00) < 0.1) document.getElementById('presetEndBtn')?.classList.add('active');
 
   showToast(`🎯 Applied Cut Preset: ${label} (${sec.toFixed(1)}s)`);
 }
@@ -735,55 +950,54 @@ function updateCutState(spliceA, shouldSnap = false) {
   const clampedSpliceA = Math.max(1.0, Math.min(spliceA, maxDuration));
 
   appState.activeTransitionConfig.spliceTimeA = clampedSpliceA;
+  if (appState.arrangement) {
+    appState.arrangement.choreoCutTime = clampedSpliceA;
+  }
 
-  // In Choreo mode with YouTube studio master:
-  if (appState.currentMode === 'choreo') {
-    appState.activeTransitionConfig.spliceTimeB = appState.studioStartOffset + clampedSpliceA;
+  // Calculate corresponding official song splice
+  if (appState.currentMode === 'choreo' && appState.arrangement) {
+    const arr = appState.arrangement;
+    const repLen = (arr.loopRepeats > 0) ? (arr.loopEnd - arr.loopStart) * arr.loopRepeats : 0;
+    const choreoCutInStudio = (arr.loopRepeats > 0) ? (arr.loopEnd + Math.max(0, clampedSpliceA - (arr.loopEnd + repLen))) : clampedSpliceA;
+    appState.activeTransitionConfig.spliceTimeB = choreoCutInStudio;
   }
 
   // Update UI Inputs
   const sliderEl = document.getElementById('customCutSlider');
   const inputEl = document.getElementById('customCutInput');
   const sliderDisplay = document.getElementById('sliderTimeDisplay');
-  const barDisplay = document.getElementById('cutBarDisplay');
 
   if (sliderEl) sliderEl.value = clampedSpliceA.toFixed(2);
   if (inputEl) inputEl.value = clampedSpliceA.toFixed(2);
   if (sliderDisplay) sliderDisplay.innerText = `${clampedSpliceA.toFixed(2)}s`;
 
-  // Calculate Bar / Beat description
-  if (appState.trackA && appState.trackA.analysis && appState.trackA.analysis.beatGrid) {
-    const grid = appState.trackA.analysis.beatGrid;
-    const closest = grid.reduce((prev, curr) => {
-      return (Math.abs(curr.time - clampedSpliceA) < Math.abs(prev.time - clampedSpliceA)) ? curr : prev;
-    }, grid[0]);
-    if (barDisplay && closest) {
-      barDisplay.innerText = `Bar ${closest.bar} Beat ${closest.beat} (${clampedSpliceA.toFixed(1)}s)`;
-    }
-  } else if (barDisplay) {
-    barDisplay.innerText = `Cut: ${clampedSpliceA.toFixed(1)}s`;
-  }
-
+  updateArrangementUI();
   updateCutImpactCard();
   drawWaveformTimeline();
 }
 
 function updateCutImpactCard() {
-  const spliceA = appState.activeTransitionConfig.spliceTimeA;
-  const spliceB = appState.activeTransitionConfig.spliceTimeB;
+  const arr = appState.arrangement;
+  const loopEnd = (arr && arr.loopEnd) || 8.972;
+  const loopStart = (arr && arr.loopStart) || 0;
+  const repeats = (arr && arr.loopRepeats !== undefined) ? arr.loopRepeats : 1;
+  const repLen = (repeats > 0) ? (loopEnd - loopStart) * repeats : 0;
+  const choreoCut = (arr && arr.choreoCutTime) || appState.activeTransitionConfig.spliceTimeA;
+  const choreoCutInStudio = (repeats > 0) ? (loopEnd + Math.max(0, choreoCut - (loopEnd + repLen))) : choreoCut;
+
   const totalB = (appState.trackB && appState.trackB.buffer) ? appState.trackB.buffer.duration : 173.45;
-  const addedSec = Math.max(0, totalB - spliceB);
-  const totalMixSec = spliceA + addedSec;
+  const addedSec = Math.max(0, totalB - choreoCutInStudio);
+  const totalMixSec = choreoCut + addedSec;
 
   const choreoEl = document.getElementById('impactChoreoDuration');
   const studioEl = document.getElementById('impactStudioSplice');
   const addedEl = document.getElementById('impactAddedDuration');
   const totalEl = document.getElementById('impactTotalDuration');
 
-  if (choreoEl) choreoEl.innerText = `${spliceA.toFixed(1)}s`;
-  if (studioEl) studioEl.innerText = `${appState.engine.formatTime(spliceB)} (${spliceB.toFixed(1)}s)`;
+  if (choreoEl) choreoEl.innerText = `${choreoCut.toFixed(1)}s (${Math.round(choreoCut / 2.243)} Bars)`;
+  if (studioEl) studioEl.innerText = `${appState.engine.formatTime(choreoCutInStudio)} (Bar ${Math.round(choreoCutInStudio / 2.243)})`;
   if (addedEl) addedEl.innerText = `+${addedSec.toFixed(1)}s (${addedSec > 60 ? 'Rap Verse & Finale' : 'Outro'})`;
-  if (totalEl) totalEl.innerText = appState.engine.formatTime(totalMixSec);
+  if (totalEl) totalEl.innerText = `${appState.engine.formatTime(totalMixSec)} (${totalMixSec.toFixed(1)}s)`;
 }
 
 /**
@@ -809,45 +1023,43 @@ function setQualityMode(mode) {
 }
 
 /**
- * Dedicated Replay From Start
+ * Dedicated Replay From Start (Instant restart from 0:00)
  */
-function triggerReplay() {
-  if (!appState.trackA || !appState.trackB) {
-    showToast("⚠️ Load both tracks first.");
+async function triggerReplay() {
+  if (!appState.trackA && !appState.trackB) {
+    showToast("⚠️ Load tracks first.");
     return;
   }
 
-  // Force clean stop
+  // Clean stop any ongoing playback
   triggerStopPlayback();
 
-  // Reset playhead visually to 0:00
+  // Reset visual playhead to 0:00
   appState.playbackPosition = 0;
   drawWaveformTimeline(0);
 
-  // Restart playback cleanly from start
-  setTimeout(() => {
-    triggerPlayFullMix();
-    showToast("🔁 Replaying full mix from beginning (0:00)...");
-  }, 40);
+  // Instant restart from 0:00
+  showToast("🔁 Replaying full mix from beginning (0:00)...");
+  await triggerPlayFullMix();
 }
 
 /**
  * Play / Pause Full Mix
  */
-function triggerPlayFullMix() {
+async function triggerPlayFullMix() {
   if (!appState.trackA || !appState.trackB) {
     showToast("⚠️ Load both tracks first.");
     return;
   }
 
-  // If already playing, clicking toggles to pause/stop
+  // If already playing, toggle to stop
   if (appState.isPlaying) {
     triggerStopPlayback();
     showToast("⏸ Playback paused.");
     return;
   }
 
-  appState.engine.stopPlayback();
+  triggerStopPlayback();
   appState.isPlaying = true;
 
   const playBtn = document.getElementById('playFullBtn');
@@ -857,6 +1069,11 @@ function triggerPlayFullMix() {
   }
 
   const config = {
+    hasArrangement: appState.arrangement ? appState.arrangement.hasArrangement : false,
+    loopStart: appState.arrangement ? appState.arrangement.loopStart : 0,
+    loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 8.972,
+    loopRepeats: appState.arrangement ? appState.arrangement.loopRepeats : 1,
+    choreoCutTime: appState.arrangement ? appState.arrangement.choreoCutTime : appState.activeTransitionConfig.spliceTimeA,
     spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
     spliceTimeB: appState.activeTransitionConfig.spliceTimeB,
     crossfadeDuration: appState.activeTransitionConfig.crossfadeDuration,
@@ -868,14 +1085,20 @@ function triggerPlayFullMix() {
   const qualityDesc = appState.useStudioMaster ? "Clean Studio Master" : "Performance Mic";
   showToast(`▶ Playing full mix (${qualityDesc})...`);
 
-  appState.engine.playFullMix(appState.trackA, appState.trackB, config, (elapsed, total) => {
-    appState.playbackPosition = elapsed;
-    drawWaveformTimeline(elapsed);
+  try {
+    await appState.engine.playFullMix(appState.trackA, appState.trackB, config, (elapsed, total) => {
+      appState.playbackPosition = elapsed;
+      drawWaveformTimeline(elapsed);
 
-    if (elapsed >= total) {
-      triggerStopPlayback();
-    }
-  });
+      if (elapsed >= total) {
+        triggerStopPlayback();
+      }
+    });
+  } catch (err) {
+    console.error("Playback error:", err);
+    triggerStopPlayback();
+    showToast(`⚠️ Playback error: ${err.message}`);
+  }
 }
 
 function triggerStopPlayback() {
@@ -896,48 +1119,116 @@ function triggerStopPlayback() {
 }
 
 /**
- * Audition Cut Point Only (⚡ Plays -4s to +4s around the splice point)
+ * Audition Intro Loop Repeat Seam (8.97s)
  */
-function triggerAuditionTransition() {
-  if (!appState.trackA || !appState.trackB) {
-    showToast("⚠️ Load both tracks first.");
+async function triggerAuditionLoop() {
+  if (!appState.trackB) {
+    showToast("⚠️ Load tracks first.");
     return;
   }
 
   triggerStopPlayback();
 
   const config = {
+    hasArrangement: true,
+    auditionTarget: 'loop',
+    loopStart: appState.arrangement ? appState.arrangement.loopStart : 0,
+    loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 8.972,
+    loopRepeats: appState.arrangement ? appState.arrangement.loopRepeats : 1,
+    choreoCutTime: appState.arrangement ? appState.arrangement.choreoCutTime : 41.0,
+    previewPreRoll: 3.5,
+    previewPostRoll: 3.5,
+    useStudioMasterForChoreo: appState.useStudioMaster
+  };
+
+  const loopEndSec = config.loopEnd;
+  showToast(`⚡ Auditioning Intro Loop Repeat (${loopEndSec.toFixed(1)}s seam)...`);
+
+  try {
+    const auditionInfo = await appState.engine.auditionTransition(appState.trackA, appState.trackB, config);
+
+    const startTime = Date.now();
+    const startOffset = Math.max(0, loopEndSec - config.previewPreRoll);
+    const totalDuration = auditionInfo.auditionDuration;
+
+    if (appState.playheadAnimationId) cancelAnimationFrame(appState.playheadAnimationId);
+
+    function animateAudition() {
+      const elapsed = (Date.now() - startTime) / 1000;
+      if (elapsed <= totalDuration && appState.engine.isPlaying) {
+        drawWaveformTimeline(startOffset + elapsed);
+        appState.playheadAnimationId = requestAnimationFrame(animateAudition);
+      } else {
+        drawWaveformTimeline(null);
+      }
+    }
+    appState.playheadAnimationId = requestAnimationFrame(animateAudition);
+  } catch (err) {
+    console.error(err);
+    showToast(`⚠️ Audition error: ${err.message}`);
+  }
+}
+
+/**
+ * Audition Finale Extension Cut Seam (41.0s)
+ */
+async function triggerAuditionFinale() {
+  if (!appState.trackB) {
+    showToast("⚠️ Load tracks first.");
+    return;
+  }
+
+  triggerStopPlayback();
+
+  const cutTime = (appState.arrangement && appState.arrangement.hasArrangement)
+    ? appState.arrangement.choreoCutTime
+    : appState.activeTransitionConfig.spliceTimeA;
+
+  const config = {
+    hasArrangement: appState.arrangement ? appState.arrangement.hasArrangement : false,
+    auditionTarget: 'finale',
+    loopStart: appState.arrangement ? appState.arrangement.loopStart : 0,
+    loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 8.972,
+    loopRepeats: appState.arrangement ? appState.arrangement.loopRepeats : 1,
+    choreoCutTime: cutTime,
     spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
     spliceTimeB: appState.activeTransitionConfig.spliceTimeB,
     crossfadeDuration: appState.activeTransitionConfig.crossfadeDuration,
     transitionType: appState.activeTransitionConfig.transitionType,
     useStudioMasterForChoreo: appState.useStudioMaster,
-    studioStartOffset: appState.studioStartOffset,
-    previewPreRoll: 4.0,
-    previewPostRoll: 4.0
+    previewPreRoll: 3.5,
+    previewPostRoll: 3.5
   };
 
-  const qualityDesc = appState.useStudioMaster ? "Studio Master" : "Performance Mic";
-  showToast(`⚡ Auditioning cut point (${qualityDesc}, 4s before ➔ 4s after)...`);
-  const auditionInfo = appState.engine.auditionTransition(appState.trackA, appState.trackB, config);
+  showToast(`⚡ Auditioning Finale Extension Cut (${cutTime.toFixed(1)}s seam)...`);
 
-  // Animate audition playhead
-  const startTime = Date.now();
-  const startOffset = Math.max(0, config.spliceTimeA - config.previewPreRoll);
-  const totalDuration = auditionInfo.auditionDuration;
+  try {
+    const auditionInfo = await appState.engine.auditionTransition(appState.trackA, appState.trackB, config);
 
-  if (appState.playheadAnimationId) cancelAnimationFrame(appState.playheadAnimationId);
+    const startTime = Date.now();
+    const startOffset = Math.max(0, cutTime - config.previewPreRoll);
+    const totalDuration = auditionInfo.auditionDuration;
 
-  function animateAudition() {
-    const elapsed = (Date.now() - startTime) / 1000;
-    if (elapsed <= totalDuration && appState.engine.isPlaying) {
-      drawWaveformTimeline(startOffset + elapsed);
-      appState.playheadAnimationId = requestAnimationFrame(animateAudition);
-    } else {
-      drawWaveformTimeline(null);
+    if (appState.playheadAnimationId) cancelAnimationFrame(appState.playheadAnimationId);
+
+    function animateAudition() {
+      const elapsed = (Date.now() - startTime) / 1000;
+      if (elapsed <= totalDuration && appState.engine.isPlaying) {
+        drawWaveformTimeline(startOffset + elapsed);
+        appState.playheadAnimationId = requestAnimationFrame(animateAudition);
+      } else {
+        drawWaveformTimeline(null);
+      }
     }
+    appState.playheadAnimationId = requestAnimationFrame(animateAudition);
+  } catch (err) {
+    console.error(err);
+    showToast(`⚠️ Audition error: ${err.message}`);
   }
-  appState.playheadAnimationId = requestAnimationFrame(animateAudition);
+}
+
+function triggerAuditionTransition() {
+  triggerAuditionFinale();
 }
 
 /**
@@ -956,6 +1247,11 @@ async function triggerExportWav() {
 
   try {
     const config = {
+      hasArrangement: appState.arrangement ? appState.arrangement.hasArrangement : false,
+      loopStart: appState.arrangement ? appState.arrangement.loopStart : 0,
+      loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 8.972,
+      loopRepeats: appState.arrangement ? appState.arrangement.loopRepeats : 1,
+      choreoCutTime: appState.arrangement ? appState.arrangement.choreoCutTime : appState.activeTransitionConfig.spliceTimeA,
       spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
       spliceTimeB: appState.activeTransitionConfig.spliceTimeB,
       crossfadeDuration: appState.activeTransitionConfig.crossfadeDuration,
@@ -996,12 +1292,64 @@ function openCueSheetModal() {
     return;
   }
 
-  const spliceTimeA = appState.activeTransitionConfig.spliceTimeA;
-  const spliceTimeB = appState.activeTransitionConfig.spliceTimeB;
-  const remainingDurationB = Math.max(0, appState.trackB.buffer.duration - spliceTimeB);
-  const totalDuration = spliceTimeA + remainingDurationB;
+  const arr = appState.arrangement;
+  let content = '';
 
-  const content = `
+  if (arr && arr.hasArrangement) {
+    const loopEnd = arr.loopEnd || 8.972;
+    const loopStart = arr.loopStart || 0;
+    const repeats = arr.loopRepeats !== undefined ? arr.loopRepeats : 1;
+    const repLen = (repeats > 0) ? (loopEnd - loopStart) * repeats : 0;
+    const choreoCut = arr.choreoCutTime || 41.0;
+    const choreoCutInStudio = (repeats > 0) ? (loopEnd + Math.max(0, choreoCut - (loopEnd + repLen))) : choreoCut;
+    const trackBDur = (appState.trackB && appState.trackB.buffer) ? appState.trackB.buffer.duration : 173.45;
+    const extensionDur = Math.max(0, trackBDur - choreoCutInStudio);
+    const totalDuration = choreoCut + extensionDur;
+
+    content = `
+==================================================
+  WEDDING DANCE REHEARSAL CUE SHEET
+==================================================
+Song: Kala Chashma (Wedding Choreo Extended Mix)
+Total Mix Duration: ${appState.engine.formatTime(totalDuration)} (${totalDuration.toFixed(1)}s)
+Audio Quality Mode: ${appState.useStudioMaster ? '🌟 Pristine Studio Master (Clean HD Audio)' : '📹 Performance Phone Mic Audio'}
+Tempo / BPM:        ${appState.trackB ? appState.trackB.analysis.bpm : 107} BPM (1 Bar = 2.24s, 8-count = 4.49s)
+Intro Loop Pattern: ${repeats > 0 ? `4-Bar Intro Riff repeated 1x (+${repLen.toFixed(1)}s)` : 'Straight Intro (No Repeat)'}
+Choreo Cut Point:   ${appState.engine.formatTime(choreoCut)} (${choreoCut.toFixed(1)}s)
+
+BLOCK 1: INTRO HORN RIFF (Bar 1-4)
+--------------------------------------------------
+[ 0:00.0 - ${appState.engine.formatTime(loopEnd)} ]
+* Dancers prepare for entrance / position on stage.
+* 4-bar iconic brass fanfare.
+
+BLOCK 2: CHOREO LOOP REPEAT (Bar 5-8)
+--------------------------------------------------
+[ ${appState.engine.formatTime(loopEnd)} - ${appState.engine.formatTime(loopEnd + repLen)} ]
+* Intro horn riff repeated for choreography entrance / bridal party pose!
+* Dancers make entry formation.
+
+BLOCK 3: CHOREOGRAPHY VERSE (Bar 9-18)
+--------------------------------------------------
+[ ${appState.engine.formatTime(loopEnd + repLen)} - ${appState.engine.formatTime(choreoCut)} ]
+* Dancers execute rehearsed wedding choreography exactly as practiced.
+* Smooth vocals and rhythm section up to video cutoff point.
+
+BLOCK 4: EXTENDED GRAND FINALE & RAP (Bar 15-Outro)
+--------------------------------------------------
+[ ${appState.engine.formatTime(choreoCut)} - ${appState.engine.formatTime(totalDuration)} ] (+${Math.round(extensionDur)}s)
+* Continues seamlessly from ${appState.engine.formatTime(choreoCutInStudio)} of the official studio track!
+* Includes the massive chorus drop, Badshah's rap verse, and high-energy outro.
+* Entire family / bridal party rushes the stage for the celebratory finish!
+==================================================
+`.trim();
+  } else {
+    const spliceTimeA = appState.activeTransitionConfig.spliceTimeA;
+    const spliceTimeB = appState.activeTransitionConfig.spliceTimeB;
+    const remainingDurationB = Math.max(0, appState.trackB.buffer.duration - spliceTimeB);
+    const totalDuration = spliceTimeA + remainingDurationB;
+
+    content = `
 ==================================================
   WEDDING DANCE REHEARSAL CUE SHEET
 ==================================================
@@ -1011,28 +1359,18 @@ Transition Type:    ${appState.activeTransitionConfig.transitionType.toUpperCase
 Tempo / BPM:        Track 1: ${appState.trackA.analysis.bpm} BPM | Track 2: ${appState.trackB.analysis.bpm} BPM
 Cut / Splice Point: ${appState.engine.formatTime(spliceTimeA)} (${spliceTimeA.toFixed(2)}s)
 
-SECTION 1: CHOREOGRAPHY REMIX EDIT (${appState.useStudioMaster ? 'Studio Clean Master' : 'Rehearsal Mic'})
+SECTION 1: TRACK 1 ACTIVE REGION
 --------------------------------------------------
 [ 0:00.0 - ${appState.engine.formatTime(spliceTimeA)} ]
-* Intro, verses & choreography rehearsed from performance video.
-* Dancers execute steps exactly as practiced in video.
-* Downbeats locked to 8-count counts.
+* Choreo / Entrance section.
 
-TRANSITION / SPLICE POINT:
---------------------------------------------------
-[ ${appState.engine.formatTime(spliceTimeA)} ]
-* Seamless transition kicks in!
-* Crossfade Duration: ${appState.activeTransitionConfig.crossfadeDuration}s
-* Phase lock: Downbeat Beat 1 of next bar.
-
-SECTION 2: EXTENDED GRAND FINALE & OUTRO
+SECTION 2: TRACK 2 EXTENDED REGION
 --------------------------------------------------
 [ ${appState.engine.formatTime(spliceTimeA)} - ${appState.engine.formatTime(totalDuration)} ]
-* Continues from ${appState.engine.formatTime(spliceTimeB)} of full original song.
-* Grand Finale, extended chorus, and outro missed from original video.
-* Entire bridal party / family joins stage for the final celebratory finish!
+* Continues from ${appState.engine.formatTime(spliceTimeB)} of full song to grand finale.
 ==================================================
 `.trim();
+  }
 
   document.getElementById('cueSheetContent').innerText = content;
   document.getElementById('cueSheetModal').style.display = 'flex';
