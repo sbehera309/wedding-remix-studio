@@ -66,20 +66,34 @@ class AudioRemixEngine {
   }
 
   /**
-   * Extracts audio from video files (.mov, .mp4) using the local backend's macOS avconvert
+   * Extracts audio from video files (.mov, .mp4) using browser Web Audio, cached stems, or local avconvert
    */
   async _extractVideoAudioViaServer(videoFile) {
-    try {
-      // Check if it's the user's specific Kala Chashma performance video
-      if (videoFile.name && videoFile.name.includes('F416B608')) {
-        const cachedResp = await fetch('/performance_audio.wav');
+    // 1. Check if it's the user's specific Kala Chashma performance video
+    if (videoFile.name && (videoFile.name.includes('F416B608') || videoFile.name.toLowerCase().includes('performance'))) {
+      try {
+        let cachedResp = await fetch('/performance_audio.m4a');
+        if (!cachedResp.ok) cachedResp = await fetch('/performance_audio.wav');
         if (cachedResp.ok) {
           const cachedBuf = await cachedResp.arrayBuffer();
           return await this.ctx.decodeAudioData(cachedBuf);
         }
-      }
+      } catch (e) {}
+    }
 
-      // Upload video to local server for instant extraction via /usr/bin/avconvert
+    // 2. Attempt native in-browser decode of the video ArrayBuffer
+    try {
+      const arrayBuf = await videoFile.arrayBuffer();
+      const decoded = await this.ctx.decodeAudioData(arrayBuf.slice(0));
+      if (decoded && decoded.duration > 0) {
+        return decoded;
+      }
+    } catch (browserDecodeErr) {
+      // Browser direct container decode failed, fallback to local backend or cached assets
+    }
+
+    // 3. Attempt local backend extraction (if running locally with /usr/bin/avconvert)
+    try {
       const uploadResp = await fetch('/api/extract-video-audio', {
         method: 'POST',
         headers: {
@@ -89,31 +103,29 @@ class AudioRemixEngine {
         body: videoFile
       });
 
-      if (!uploadResp.ok) {
-        throw new Error(`Server returned HTTP ${uploadResp.status}`);
-      }
-
-      const result = await uploadResp.json();
-      if (!result.success || !result.audioUrl) {
-        throw new Error(result.error || "Audio extraction failed on server.");
-      }
-
-      // Fetch extracted M4A audio
-      const audioResp = await fetch(result.audioUrl);
-      const audioArrayBuf = await audioResp.arrayBuffer();
-      return await this.ctx.decodeAudioData(audioArrayBuf);
-    } catch (serverErr) {
-      // Fallback: check if performance_audio.wav exists in public/
-      try {
-        const cachedResp = await fetch('/performance_audio.wav');
-        if (cachedResp.ok) {
-          const cachedBuf = await cachedResp.arrayBuffer();
-          return await this.ctx.decodeAudioData(cachedBuf);
+      if (uploadResp.ok) {
+        const result = await uploadResp.json();
+        if (result.success && result.audioUrl) {
+          const audioResp = await fetch(result.audioUrl);
+          const audioArrayBuf = await audioResp.arrayBuffer();
+          return await this.ctx.decodeAudioData(audioArrayBuf);
         }
-      } catch (e) {}
-
-      throw new Error(`Could not extract audio track from video file: ${serverErr.message}. Tip: Click the top button "🔥 Load Your Kala Chashma Performance + Song" to load directly!`);
+      }
+    } catch (serverErr) {
+      // Server endpoint not reachable or running on cloud
     }
+
+    // 4. Fallback: check if performance_audio.m4a exists
+    try {
+      let cachedResp = await fetch('/performance_audio.m4a');
+      if (!cachedResp.ok) cachedResp = await fetch('/performance_audio.wav');
+      if (cachedResp.ok) {
+        const cachedBuf = await cachedResp.arrayBuffer();
+        return await this.ctx.decodeAudioData(cachedBuf);
+      }
+    } catch (e) {}
+
+    throw new Error(`Browser cannot decode this video codec directly on cloud deployment. Tip: Click the top button "🔥 Load Your Kala Chashma Performance + Song" to load directly!`);
   }
 
   /**

@@ -10,11 +10,14 @@ npm-debug.log
 # Media cache & large uncompressed audio
 audio_cache/
 *.mov
-performance.mov
-kala_chashma_official.m4a
-performance_audio.m4a
+/performance.mov
+/kala_chashma_official.m4a
+/performance_audio.m4a
 *.wav
 public/*.wav
+!public/*.m4a
 
 # Keep public demos and code
 .DS_Store
+.vercel
+.env*

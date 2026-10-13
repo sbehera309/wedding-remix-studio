@@ -233,12 +233,14 @@ async function loadKalaChashmaUserTracks() {
   document.getElementById('deckStatusB').innerText = "Loading Official Track...";
 
   try {
-    const respA = await fetch('/performance_audio.wav');
+    let respA = await fetch('/performance_audio.m4a');
+    if (!respA.ok) respA = await fetch('/performance_audio.wav');
     const arrayBufA = await respA.arrayBuffer();
     const bufferA = await appState.engine.decodeAudio(arrayBufA);
     const analysisA = appState.engine.analyzeTrack(bufferA);
 
-    const respB = await fetch('/kala_chashma_official.wav');
+    let respB = await fetch('/kala_chashma_official.m4a');
+    if (!respB.ok) respB = await fetch('/kala_chashma_official.wav');
     const arrayBufB = await respB.arrayBuffer();
     const bufferB = await appState.engine.decodeAudio(arrayBufB);
     const analysisB = appState.engine.analyzeTrack(bufferB);
