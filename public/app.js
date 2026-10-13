@@ -18,6 +18,7 @@ const appState = {
     loopRepeats: 1, // Repeated 1x in choreo video (+2.24s)
     choreoCutTime: 41.00 // Where video ends choreo
   },
+  arrangementBlocks: [],
   activeTransitionConfig: {
     spliceTimeA: 41.00,
     spliceTimeB: 38.76, // 41.0 - 2.243 = 38.76s in official song
@@ -613,6 +614,95 @@ function drawWaveformTimeline(currentPlayheadTime = null) {
   ctx.fillStyle = '#090b10';
   ctx.fillRect(0, 0, width, height);
 
+  // If using interactive arranged blocks, render each block's waveform slices and boundaries
+  if (appState.arrangementBlocks && appState.arrangementBlocks.length > 0) {
+    let totalDuration = 0;
+    for (let b of appState.arrangementBlocks) {
+      totalDuration += Math.max(0.01, b.endTime - b.startTime);
+    }
+    if (totalDuration <= 0) return;
+
+    let envB = (appState.trackB && appState.trackB.analysis && appState.trackB.analysis.envelopeSummary && appState.trackB.analysis.envelopeSummary.length > 0)
+      ? appState.trackB.analysis.envelopeSummary
+      : null;
+    if (!envB || envB.length === 0) {
+      envB = [];
+      const totalSteps = 220;
+      for (let s = 0; s < totalSteps; s++) {
+        const t = (s / totalSteps) * 173.45;
+        let energy = 0.45;
+        if (t < 17.9) energy = 0.65;
+        else if (t < 41.0) energy = 0.48;
+        else if (t < 96.0) energy = 0.78;
+        else energy = 0.82;
+        energy += (Math.sin(s * 1.5) * 0.15);
+        envB.push({ time: t, energy: Math.max(0.15, Math.min(0.95, energy)) });
+      }
+    }
+
+    let currentMixTime = 0;
+    for (let blkIdx = 0; blkIdx < appState.arrangementBlocks.length; blkIdx++) {
+      const blk = appState.arrangementBlocks[blkIdx];
+      const blkDur = Math.max(0.01, blk.endTime - blk.startTime);
+      const blkStartInMix = currentMixTime;
+      const blkColor = blk.tagColor || '#818cf8';
+
+      const stepsInBlock = Math.max(2, Math.round((blkDur / totalDuration) * 220));
+      const blkPixelWidth = (blkDur / totalDuration) * width;
+      const stepPixelWidth = Math.max(2, blkPixelWidth / stepsInBlock);
+
+      for (let s = 0; s < stepsInBlock; s++) {
+        const blkTimeOffset = (s / stepsInBlock) * blkDur;
+        const sourceTime = blk.startTime + blkTimeOffset;
+        const mixTime = blkStartInMix + blkTimeOffset;
+        const x = (mixTime / totalDuration) * width;
+
+        let nearestEnv = envB.find(p => Math.abs(p.time - sourceTime) < 1.0) || { energy: 0.5 };
+        const barHeight = Math.min(height * 0.44, nearestEnv.energy * height * 0.88);
+
+        const grad = ctx.createLinearGradient(0, (height / 2) - barHeight, 0, (height / 2) + barHeight);
+        grad.addColorStop(0, blkColor);
+        grad.addColorStop(1, '#0e111a');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, (height / 2) - barHeight / 2, Math.max(1.5, stepPixelWidth * 0.8), barHeight);
+      }
+
+      // Draw boundary line between blocks
+      if (blkIdx > 0) {
+        const seamX = (blkStartInMix / totalDuration) * width;
+        ctx.strokeStyle = blkColor;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 2]);
+        ctx.beginPath();
+        ctx.moveTo(seamX, 0);
+        ctx.lineTo(seamX, height);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      currentMixTime += blkDur;
+    }
+
+    // Playhead
+    if (currentPlayheadTime !== null) {
+      const playheadX = (currentPlayheadTime / totalDuration) * width;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(playheadX, 0);
+      ctx.lineTo(playheadX, height);
+      ctx.stroke();
+
+      document.getElementById('playheadTimeDisplay').innerText = 
+        `${appState.engine.formatTime(currentPlayheadTime)} / ${appState.engine.formatTime(totalDuration)}`;
+    } else {
+      document.getElementById('playheadTimeDisplay').innerText = 
+        `Total Master: ${appState.engine.formatTime(totalDuration)}`;
+    }
+
+    return;
+  }
+
   const arr = appState.arrangement;
   const hasArr = arr && arr.hasArrangement;
 
@@ -1040,6 +1130,422 @@ function setQualityMode(mode) {
   drawWaveformTimeline();
 }
 
+// ==========================================
+// Interactive Music Piece Arranger & Slicer
+// ==========================================
+
+function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
+  const blocks = [
+    {
+      id: 'bar_1',
+      name: 'Bar 1: Intro Brass Fanfare',
+      desc: 'Iconic opening 4-beat horn hook',
+      tag: 'INTRO',
+      tagColor: '#a855f7',
+      startTime: 0.00,
+      endTime: 2.243,
+      isDuplicated: false
+    }
+  ];
+
+  if (includeDuplicatedIntro) {
+    blocks.push({
+      id: 'bar_1_dup',
+      name: 'Bar 1 Repeat: Choreo Extra Riff',
+      desc: 'Repeated opening brass hook (Choreo pattern)',
+      tag: 'REPEAT',
+      tagColor: '#f59e0b',
+      startTime: 0.00,
+      endTime: 2.243,
+      isDuplicated: true
+    });
+  }
+
+  blocks.push(
+    {
+      id: 'bar_2',
+      name: 'Bar 2: Intro Brass Phrase 2',
+      desc: 'Second brass reply bar (4 beats)',
+      tag: 'INTRO',
+      tagColor: '#a855f7',
+      startTime: 2.243,
+      endTime: 4.486,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_3',
+      name: 'Bar 3: Intro Brass Phrase 3',
+      desc: 'Ascending brass horn fill',
+      tag: 'INTRO',
+      tagColor: '#a855f7',
+      startTime: 4.486,
+      endTime: 6.729,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_4',
+      name: 'Bar 4: Brass End & Pre-roll Pause',
+      desc: 'Horn decay & anticipatory silence',
+      tag: 'INTRO',
+      tagColor: '#a855f7',
+      startTime: 6.729,
+      endTime: 8.972,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_5',
+      name: 'Bar 5: Build-up Drum Roll & Horns',
+      desc: 'Snare roll & vocal risers',
+      tag: 'BUILD',
+      tagColor: '#ec4899',
+      startTime: 8.972,
+      endTime: 11.215,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_6',
+      name: 'Bar 6: Dhol Drop Beat 1',
+      desc: 'Heavy Punjabi Dhol beat begins',
+      tag: 'DROP',
+      tagColor: '#10b981',
+      startTime: 11.215,
+      endTime: 13.458,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_7',
+      name: 'Bar 7: Dhol Drop Beat 2',
+      desc: 'Dhol rhythm groove continuation',
+      tag: 'DROP',
+      tagColor: '#10b981',
+      startTime: 13.458,
+      endTime: 15.701,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_8',
+      name: 'Bar 8: Rap Intro ("Tere Naa Diyaan...")',
+      desc: 'Amar Arshi vocal pickup',
+      tag: 'VERSE',
+      tagColor: '#06b6d4',
+      startTime: 15.701,
+      endTime: 17.944,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_9',
+      name: 'Bar 9: Rap Verse ("Tu Chandigarh Toh...")',
+      desc: 'Lead vocal verse 1st line',
+      tag: 'VERSE',
+      tagColor: '#06b6d4',
+      startTime: 17.944,
+      endTime: 20.187,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_10',
+      name: 'Bar 10: Rap Build ("Tainu Dekh Ke...")',
+      desc: 'Vocal inflection leading into chorus drop',
+      tag: 'BUILD',
+      tagColor: '#ec4899',
+      startTime: 20.187,
+      endTime: 22.430,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_11_12',
+      name: 'Bars 11-12: Chorus Main Drop ("Kaala Chashma...")',
+      desc: 'The signature hook drop (8 beats)',
+      tag: 'CHORUS',
+      tagColor: '#f97316',
+      startTime: 22.430,
+      endTime: 26.916,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_13_14',
+      name: 'Bars 13-14: Chorus Phrase 2 ("Gore Mukhde Te...")',
+      desc: 'Main chorus response hook',
+      tag: 'CHORUS',
+      tagColor: '#f97316',
+      startTime: 26.916,
+      endTime: 31.402,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_15_16',
+      name: 'Bars 15-16: Hook Climax & Vocal Peak',
+      desc: 'High energy vocal climax & drum roll',
+      tag: 'CHORUS',
+      tagColor: '#f97316',
+      startTime: 31.402,
+      endTime: 35.888,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_17_18',
+      name: 'Bars 17-18: Chorus Outro (Choreo Cut-Off)',
+      desc: 'End of rehearsed performance video (38.8s - 40.37s)',
+      tag: 'CHOREO',
+      tagColor: '#8b5cf6',
+      startTime: 35.888,
+      endTime: 40.374,
+      isDuplicated: false
+    },
+    {
+      id: 'bar_finale',
+      name: 'Extended Finale: Verse 2, Badshah Rap & Outro',
+      desc: 'Full studio continuation to end (+133s)',
+      tag: 'FINALE',
+      tagColor: '#10b981',
+      startTime: 40.374,
+      endTime: 173.45,
+      isDuplicated: false
+    }
+  );
+
+  return blocks;
+}
+
+function renderArrangementBlocksUI() {
+  const container = document.getElementById('blocksListContainer');
+  if (!container) return;
+
+  if (!appState.arrangementBlocks || appState.arrangementBlocks.length === 0) {
+    container.innerHTML = '<p class="text-xs text-muted" style="padding: 12px;">No blocks arranged. Click a preset button above to load pieces.</p>';
+    return;
+  }
+
+  const html = appState.arrangementBlocks.map((blk, idx) => {
+    const dur = (blk.endTime - blk.startTime).toFixed(2);
+    const tagBg = blk.tagColor || '#818cf8';
+    const isFirst = idx === 0;
+    const isLast = idx === appState.arrangementBlocks.length - 1;
+
+    return `
+      <div class="music-block-card" id="blockCard_${idx}" data-index="${idx}" data-id="${blk.id}">
+        <div class="block-card-header">
+          <span class="block-index-badge">#${idx + 1}</span>
+          <span class="block-tag-badge" style="background: ${tagBg}22; color: ${tagBg}; border: 1px solid ${tagBg}55;">
+            ${blk.tag}
+          </span>
+          <span style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-left: auto;">
+            ${dur}s
+          </span>
+        </div>
+        <div class="block-title-row">
+          <div class="block-name" title="${blk.name}">${blk.name}</div>
+          <div class="block-desc">${blk.desc || ''}</div>
+        </div>
+        <div class="block-time-bar">
+          <span>⏱ Time Span:</span>
+          <span>${appState.engine.formatTime(blk.startTime)} - ${appState.engine.formatTime(blk.endTime)}</span>
+        </div>
+        <div class="block-toolbar">
+          <button type="button" class="btn-block-action solo" onclick="soloBlock(${idx})" title="Listen to just this section">
+            <span>🔊</span> Solo
+          </button>
+          <button type="button" class="btn-block-action duplicate" onclick="duplicateBlock(${idx})" title="Duplicate/repeat this section">
+            <span>🔁</span> Duplicate
+          </button>
+          <button type="button" class="btn-block-action move" onclick="moveBlock(${idx}, -1)" ${isFirst ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''} title="Move earlier in song">
+            <span>◀</span> Move
+          </button>
+          <button type="button" class="btn-block-action move" onclick="moveBlock(${idx}, 1)" ${isLast ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''} title="Move later in song">
+            <span>▶</span> Move
+          </button>
+          <button type="button" class="btn-block-action delete" onclick="deleteBlock(${idx})" title="Cut out / remove this section">
+            <span>✂️</span> Cut
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = html;
+  updateTotalBlocksSummary();
+}
+
+function updateTotalBlocksSummary() {
+  if (!appState.arrangementBlocks) return;
+  let totalDur = 0;
+  for (let b of appState.arrangementBlocks) {
+    totalDur += Math.max(0.01, b.endTime - b.startTime);
+  }
+
+  const impactTotal = document.getElementById('impactTotalDuration');
+  if (impactTotal) {
+    impactTotal.innerText = `${appState.engine.formatTime(totalDur)} (${totalDur.toFixed(1)}s)`;
+  }
+}
+
+function duplicateBlock(idx) {
+  if (!appState.arrangementBlocks || !appState.arrangementBlocks[idx]) return;
+  const original = appState.arrangementBlocks[idx];
+  const clone = {
+    ...original,
+    id: `${original.id}_dup_${Date.now()}`,
+    name: original.name.includes('Repeat') ? original.name : `${original.name} (Repeat)`,
+    desc: `Duplicated / repeated section`,
+    tag: 'REPEAT',
+    tagColor: '#f59e0b',
+    isDuplicated: true
+  };
+
+  appState.arrangementBlocks.splice(idx + 1, 0, clone);
+  renderArrangementBlocksUI();
+  drawWaveformTimeline();
+  showToast(`🔁 Duplicated "${original.name}" (inserted at #${idx + 2})`);
+}
+
+function moveBlock(idx, dir) {
+  if (!appState.arrangementBlocks) return;
+  const targetIdx = idx + dir;
+  if (targetIdx < 0 || targetIdx >= appState.arrangementBlocks.length) return;
+
+  const temp = appState.arrangementBlocks[idx];
+  appState.arrangementBlocks[idx] = appState.arrangementBlocks[targetIdx];
+  appState.arrangementBlocks[targetIdx] = temp;
+
+  renderArrangementBlocksUI();
+  drawWaveformTimeline();
+  showToast(`↔️ Moved "${temp.name}" to position #${targetIdx + 1}`);
+}
+
+function deleteBlock(idx) {
+  if (!appState.arrangementBlocks) return;
+  if (appState.arrangementBlocks.length <= 1) {
+    showToast("⚠️ You must have at least one block in the mix.");
+    return;
+  }
+
+  const removed = appState.arrangementBlocks.splice(idx, 1)[0];
+  renderArrangementBlocksUI();
+  drawWaveformTimeline();
+  showToast(`✂️ Cut out / deleted "${removed.name}"`);
+}
+
+async function soloBlock(idx) {
+  if (!appState.arrangementBlocks || !appState.arrangementBlocks[idx]) return;
+  const blk = appState.arrangementBlocks[idx];
+
+  const buf = await ensureTrackBBuffer();
+  if (!buf) {
+    showToast("⚠️ Loading audio buffer for solo audition...");
+    return;
+  }
+
+  // Highlight this card
+  document.querySelectorAll('.music-block-card').forEach(c => c.classList.remove('active-playing'));
+  const card = document.getElementById(`blockCard_${idx}`);
+  if (card) card.classList.add('active-playing');
+
+  showToast(`🔊 Solo audition: ${blk.name} (${blk.startTime.toFixed(2)}s - ${blk.endTime.toFixed(2)}s)`);
+
+  await appState.engine.playBlockSolo(blk, buf, () => {
+    if (card) card.classList.remove('active-playing');
+  });
+}
+
+function resetBlocksToPreset(preset) {
+  document.querySelectorAll('.arranger-presets-group .btn-cut-preset').forEach(b => b.classList.remove('active'));
+
+  if (preset === 'default_rep') {
+    appState.arrangementBlocks = getDefaultKalaChashmaBlocks(true);
+    document.getElementById('presetBlockRep1')?.classList.add('active');
+    showToast("⭐ Preset Applied: Bar 1 Brass Hook Repeat (Verified Choreo)");
+  } else if (preset === 'two_bar_rep') {
+    const blocks = getDefaultKalaChashmaBlocks(false);
+    // Duplicate both Bar 1 and Bar 2
+    const bar1Dup = {
+      id: 'bar_1_dup',
+      name: 'Bar 1 Repeat: Opening Brass',
+      desc: 'Repeated opening hook',
+      tag: 'REPEAT',
+      tagColor: '#f59e0b',
+      startTime: 0.00,
+      endTime: 2.243,
+      isDuplicated: true
+    };
+    const bar2Dup = {
+      id: 'bar_2_dup',
+      name: 'Bar 2 Repeat: Brass Phrase',
+      desc: 'Repeated second brass bar',
+      tag: 'REPEAT',
+      tagColor: '#f59e0b',
+      startTime: 2.243,
+      endTime: 4.486,
+      isDuplicated: true
+    };
+    blocks.splice(2, 0, bar1Dup, bar2Dup);
+    appState.arrangementBlocks = blocks;
+    document.getElementById('presetBlockRep2')?.classList.add('active');
+    showToast("⭐ Preset Applied: Bars 1-2 Full Hook Repeat");
+  } else if (preset === 'straight') {
+    appState.arrangementBlocks = getDefaultKalaChashmaBlocks(false);
+    document.getElementById('presetBlockStraight')?.classList.add('active');
+    showToast("↺ Preset Applied: Straight Original Song (No Repeated Bars)");
+  }
+
+  renderArrangementBlocksUI();
+  drawWaveformTimeline();
+}
+
+function openAddSliceModal() {
+  document.getElementById('addSliceModal').style.display = 'flex';
+}
+
+function closeAddSliceModal() {
+  document.getElementById('addSliceModal').style.display = 'none';
+}
+
+function submitCustomSlice() {
+  const nameInput = document.getElementById('sliceNameInput');
+  const startInput = document.getElementById('sliceStartInput');
+  const endInput = document.getElementById('sliceEndInput');
+  const tagSelect = document.getElementById('sliceTagSelect');
+
+  const name = nameInput.value.trim() || 'Custom Sliced Piece';
+  const startTime = parseFloat(startInput.value);
+  const endTime = parseFloat(endInput.value);
+  const tag = tagSelect.value || 'CUSTOM';
+
+  if (isNaN(startTime) || isNaN(endTime) || endTime <= startTime) {
+    showToast("⚠️ End time must be greater than start time.");
+    return;
+  }
+
+  const tagColors = {
+    INTRO: '#a855f7',
+    HOOK: '#ec4899',
+    BUILD: '#f59e0b',
+    DROP: '#10b981',
+    VERSE: '#06b6d4',
+    CHORUS: '#f97316',
+    FINALE: '#10b981',
+    CUSTOM: '#8b5cf6'
+  };
+
+  const newBlock = {
+    id: `custom_${Date.now()}`,
+    name: name,
+    desc: `Custom slice (${startTime.toFixed(2)}s - ${endTime.toFixed(2)}s)`,
+    tag: tag,
+    tagColor: tagColors[tag] || '#818cf8',
+    startTime: startTime,
+    endTime: endTime,
+    isDuplicated: false
+  };
+
+  if (!appState.arrangementBlocks) appState.arrangementBlocks = [];
+  appState.arrangementBlocks.push(newBlock);
+
+  closeAddSliceModal();
+  renderArrangementBlocksUI();
+  drawWaveformTimeline();
+  showToast(`➕ Added custom piece: "${name}" (${(endTime - startTime).toFixed(2)}s)`);
+}
+
 let auditionTimer = null;
 
 function initAudioPlayerSync() {
@@ -1168,6 +1674,8 @@ function initKalaChashmaDefaultState() {
   document.getElementById('harmonicAdviceText').innerText = "Both tracks are identical tempo (107 BPM) and key. Starts at 0:00 with 1-bar (4-beat) intro riff repeated 1x, then verse, followed by seamless +134.7s finale!";
 
   initAudioPlayerSync();
+  appState.arrangementBlocks = getDefaultKalaChashmaBlocks(true);
+  renderArrangementBlocksUI();
   drawWaveformTimeline();
 
   // Background decode audio buffers for full offline spectral features
@@ -1193,6 +1701,28 @@ async function preloadAudioBuffersInBackground() {
   }
 }
 
+async function ensureTrackBBuffer() {
+  if (appState.trackB && appState.trackB.buffer) return appState.trackB.buffer;
+  try {
+    let respB = await fetch('/kala_chashma_official.m4a');
+    if (!respB.ok) respB = await fetch('/kala_chashma_official.wav');
+    if (respB.ok) {
+      const arrayBufB = await respB.arrayBuffer();
+      const bufferB = await appState.engine.decodeAudio(arrayBufB);
+      const analysisB = appState.engine.analyzeTrack(bufferB);
+      if (appState.trackB) {
+        appState.trackB.buffer = bufferB;
+        appState.trackB.analysis = analysisB;
+        drawWaveformTimeline();
+      }
+      return bufferB;
+    }
+  } catch (e) {
+    console.warn("Could not load official track buffer:", e);
+  }
+  return null;
+}
+
 /**
  * Dedicated Replay From Start (Instant restart from 0:00)
  */
@@ -1208,6 +1738,12 @@ function triggerReplay() {
   // Synchronously resume Web Audio context on user gesture
   if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
     appState.engine.ctx.resume().catch(() => {});
+  }
+
+  // If using arranged blocks, use Web Audio sequencer for 100% dynamic accuracy
+  if (appState.arrangementBlocks && appState.arrangementBlocks.length > 0) {
+    playViaWebAudioEngine();
+    return;
   }
 
   if (audio) {
@@ -1254,6 +1790,12 @@ function triggerPlayFullMix() {
     return;
   }
 
+  // If using arranged blocks, use Web Audio sequencer for 100% dynamic accuracy
+  if (appState.arrangementBlocks && appState.arrangementBlocks.length > 0) {
+    playViaWebAudioEngine();
+    return;
+  }
+
   if (audio) {
     audio.play().then(() => {
       appState.isPlaying = true;
@@ -1261,7 +1803,7 @@ function triggerPlayFullMix() {
         playBtn.innerHTML = '<span>⏸</span> Pause Full Mix';
         playBtn.classList.add('active');
       }
-      showToast("▶ Playing Kala Chashma Clean Master Mix (0:00 start + 1-bar repeat + finale)...");
+      showToast("▶ Playing Kala Chashma Clean Master Mix...");
     }).catch(err => {
       console.warn("Native play error, falling back to Web Audio:", err);
       playViaWebAudioEngine();
@@ -1272,10 +1814,7 @@ function triggerPlayFullMix() {
 }
 
 async function playViaWebAudioEngine() {
-  if (!appState.trackA || !appState.trackB || !appState.trackB.buffer) {
-    showToast("Loading audio stems, please wait a moment...");
-    await loadKalaChashmaUserTracks();
-  }
+  await ensureTrackBBuffer();
 
   appState.engine.stopPlayback();
   appState.isPlaying = true;
@@ -1287,9 +1826,10 @@ async function playViaWebAudioEngine() {
   }
 
   const config = {
+    blocks: appState.arrangementBlocks,
     hasArrangement: appState.arrangement ? appState.arrangement.hasArrangement : false,
     loopStart: appState.arrangement ? appState.arrangement.loopStart : 0,
-    loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 8.972,
+    loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 2.243,
     loopRepeats: appState.arrangement ? appState.arrangement.loopRepeats : 1,
     choreoCutTime: appState.arrangement ? appState.arrangement.choreoCutTime : 41.0,
     spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
@@ -1301,9 +1841,19 @@ async function playViaWebAudioEngine() {
   };
 
   try {
-    await appState.engine.playFullMix(appState.trackA, appState.trackB, config, (elapsed, total) => {
+    await appState.engine.playFullMix(appState.trackA, appState.trackB, config, (elapsed, total, activeIdx) => {
       appState.playbackPosition = elapsed;
       drawWaveformTimeline(elapsed);
+
+      // Highlight active block card in real-time
+      if (activeIdx !== undefined) {
+        const cards = document.querySelectorAll('.music-block-card');
+        cards.forEach((card, idx) => {
+          if (idx === activeIdx) card.classList.add('active-playing');
+          else card.classList.remove('active-playing');
+        });
+      }
+
       if (elapsed >= total) {
         triggerStopPlayback();
       }
@@ -1332,6 +1882,9 @@ function triggerStopPlayback() {
     cancelAnimationFrame(appState.playheadAnimationId);
     appState.playheadAnimationId = null;
   }
+
+  // Remove active-playing highlight from cards
+  document.querySelectorAll('.music-block-card').forEach(c => c.classList.remove('active-playing'));
 
   const playBtn = document.getElementById('playFullBtn');
   if (playBtn) {
@@ -1413,8 +1966,14 @@ async function triggerExportWav() {
   showToast("Rendering high-resolution 44.1kHz stereo master mix...");
 
   try {
-    // If using studio master with verified choreo repeat:
-    if (appState.useStudioMaster && (!appState.arrangement || Math.abs(appState.arrangement.loopEnd - 2.243) < 0.2)) {
+    await ensureTrackBBuffer();
+
+    const isDefaultUnmodifiedRep = appState.useStudioMaster && 
+      appState.arrangementBlocks && 
+      appState.arrangementBlocks.length === 16 && 
+      appState.arrangementBlocks[1] && appState.arrangementBlocks[1].id === 'bar_1_dup';
+
+    if (isDefaultUnmodifiedRep) {
       try {
         const checkWav = await fetch('/Kala_Chashma_Performance_Extended_Mix.wav', { method: 'HEAD' });
         if (checkWav.ok) {
@@ -1428,11 +1987,12 @@ async function triggerExportWav() {
           return;
         }
       } catch (e) {
-        // Fall back to Web Audio rendering
+        // Fall back to offline rendering
       }
     }
 
     const config = {
+      blocks: appState.arrangementBlocks,
       hasArrangement: appState.arrangement ? appState.arrangement.hasArrangement : false,
       loopStart: appState.arrangement ? appState.arrangement.loopStart : 0,
       loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 2.243,
@@ -1453,7 +2013,7 @@ async function triggerExportWav() {
     const a = document.createElement('a');
     a.href = url;
     const modePrefix = appState.useStudioMaster ? "Studio_Master_Clean" : "Performance_Mic";
-    a.download = `Wedding_Performance_${modePrefix}_Mix_${Date.now()}.wav`;
+    a.download = `Kala_Chashma_Custom_Arranged_${modePrefix}_Mix_${Date.now()}.wav`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

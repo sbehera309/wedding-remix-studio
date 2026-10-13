@@ -740,14 +740,48 @@ class AudioRemixEngine {
   }
 
   /**
+   * Solo Audition for a single block/piece of music
+   */
+  async playBlockSolo(block, bufferOrTrack, onEnd) {
+    this.stopPlayback();
+    await this.ensureContext();
+
+    let buffer = null;
+    if (bufferOrTrack && bufferOrTrack.buffer) buffer = bufferOrTrack.buffer;
+    else if (bufferOrTrack && bufferOrTrack.numberOfChannels) buffer = bufferOrTrack;
+
+    if (!buffer) return;
+
+    const now = this.ctx.currentTime + 0.05;
+    const dur = Math.max(0.1, block.endTime - block.startTime);
+
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(this.ctx.destination);
+    src.start(now, block.startTime, dur);
+
+    this.currentSourceNodes = [src];
+    this.isPlaying = true;
+
+    this.auditionTimeout = setTimeout(() => {
+      this.isPlaying = false;
+      this.currentSourceNodes = [];
+      if (onEnd) onEnd();
+    }, dur * 1000);
+
+    return dur;
+  }
+
+  /**
    * Play full master mix from start
-   * Supports Studio Master Clean mode and reliable instant replay
+   * Supports Block Arrangements, Studio Master Clean mode and reliable instant replay
    */
   async playFullMix(trackA, trackB, config, onProgress) {
     this.stopPlayback();
     await this.ensureContext();
 
     const {
+      blocks = null,
       hasArrangement = false,
       loopStart = 0,
       loopEnd = 2.243,
@@ -762,6 +796,57 @@ class AudioRemixEngine {
     } = config;
 
     const now = this.ctx.currentTime + 0.05;
+
+    // DYNAMIC INTERACTIVE BLOCKS ARRANGEMENT PLAYBACK:
+    if (blocks && Array.isArray(blocks) && blocks.length > 0) {
+      const activeBuf = (trackB && trackB.buffer) ? trackB.buffer : (trackA ? trackA.buffer : null);
+      if (activeBuf) {
+        let currentMixTime = now;
+        const sources = [];
+        const blockSchedule = [];
+        let totalDuration = 0;
+
+        for (let i = 0; i < blocks.length; i++) {
+          const blk = blocks[i];
+          const blkDur = Math.max(0.05, blk.endTime - blk.startTime);
+          const src = this.ctx.createBufferSource();
+          src.buffer = activeBuf;
+          src.connect(this.ctx.destination);
+          src.start(currentMixTime, blk.startTime, blkDur);
+          sources.push(src);
+
+          const startOffset = currentMixTime - now;
+          const endOffset = startOffset + blkDur;
+          blockSchedule.push({ index: i, start: startOffset, end: endOffset });
+
+          currentMixTime += blkDur;
+          totalDuration += blkDur;
+        }
+
+        this.currentSourceNodes = sources;
+        this.isPlaying = true;
+
+        this.playbackInterval = setInterval(() => {
+          if (!this.isPlaying) {
+            if (this.playbackInterval) {
+              clearInterval(this.playbackInterval);
+              this.playbackInterval = null;
+            }
+            return;
+          }
+          const elapsed = this.ctx.currentTime - now;
+          if (elapsed >= totalDuration) {
+            if (onProgress) onProgress(totalDuration, totalDuration, -1);
+            this.stopPlayback();
+          } else if (onProgress) {
+            const activeBlk = blockSchedule.find(b => elapsed >= b.start && elapsed < b.end);
+            onProgress(Math.max(0, elapsed), totalDuration, activeBlk ? activeBlk.index : -1);
+          }
+        }, 50);
+
+        return totalDuration;
+      }
+    }
 
     // ARRANGEMENT PLAYBACK: Intro (0:00) -> Repeated Intro Hook -> Choreo Continuation -> Full Finale Extension
     if (hasArrangement && trackB && trackB.buffer) {
@@ -942,6 +1027,7 @@ class AudioRemixEngine {
    */
   async renderMasterWav(trackA, trackB, config) {
     const {
+      blocks = null,
       hasArrangement = false,
       loopStart = 0,
       loopEnd = 8.972,
@@ -956,6 +1042,42 @@ class AudioRemixEngine {
     } = config;
 
     const sampleRate = (trackB && trackB.buffer) ? (trackB.buffer.sampleRate || 44100) : (trackA.buffer.sampleRate || 44100);
+
+    // DYNAMIC INTERACTIVE BLOCKS ARRANGEMENT OFFLINE RENDER:
+    if (blocks && Array.isArray(blocks) && blocks.length > 0) {
+      const activeBuf = (trackB && trackB.buffer) ? trackB.buffer : (trackA ? trackA.buffer : null);
+      if (activeBuf) {
+        let totalDuration = 0;
+        for (let blk of blocks) {
+          totalDuration += Math.max(0.05, blk.endTime - blk.startTime);
+        }
+        const totalFrames = Math.max(1, Math.floor(sampleRate * totalDuration));
+        const offlineCtx = new OfflineAudioContext(2, totalFrames, sampleRate);
+
+        let currentMixTime = 0;
+        for (let blk of blocks) {
+          const blkDur = Math.max(0.05, blk.endTime - blk.startTime);
+          const src = offlineCtx.createBufferSource();
+          src.buffer = activeBuf;
+          src.connect(offlineCtx.destination);
+          src.start(currentMixTime, blk.startTime, blkDur);
+          currentMixTime += blkDur;
+        }
+
+        const renderedBuffer = await offlineCtx.startRendering();
+        const wavBlob = this._audioBufferToWavBlob(renderedBuffer);
+
+        return {
+          wavBlob,
+          duration: totalDuration,
+          renderedBuffer,
+          cueSheet: {
+            totalDurationFormatted: this.formatTime(totalDuration),
+            section1: `Block sequence rendered with ${blocks.length} custom arranged pieces.`
+          }
+        };
+      }
+    }
 
     // ARRANGEMENT MASTER EXPORT:
     if (hasArrangement && trackB && trackB.buffer) {

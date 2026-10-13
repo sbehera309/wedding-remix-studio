@@ -294,6 +294,39 @@
             <strong id="impactTotalDuration">2:55.7 (175.7s)</strong>
           </div>
         </div>
+
+        <!-- Interactive Music Piece Arranger & Slicer -->
+        <div class="block-arranger-header" style="margin-top: 22px;">
+          <div>
+            <h4 style="margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; color: var(--text-main);">
+              <span>🎼</span> Interactive Music Piece Arranger & Slicer
+            </h4>
+            <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-muted);">
+              Identify, duplicate (repeat), rearrange, solo audition, or cut out individual musical sections in real time.
+            </p>
+          </div>
+          <div class="arranger-presets-group">
+            <button type="button" class="btn-add-slice" onclick="openAddSliceModal()">
+              <span>➕</span> Add Custom Slice
+            </button>
+            <button type="button" class="btn-cut-preset active" id="presetBlockRep1" onclick="resetBlocksToPreset('default_rep')">
+              ⭐ Duplicate Bar 1 (Choreo Match)
+            </button>
+            <button type="button" class="btn-cut-preset" id="presetBlockRep2" onclick="resetBlocksToPreset('two_bar_rep')">
+              ⭐ Duplicate Bars 1-2
+            </button>
+            <button type="button" class="btn-cut-preset" id="presetBlockStraight" onclick="resetBlocksToPreset('straight')">
+              ↺ Straight Original
+            </button>
+          </div>
+        </div>
+
+        <!-- Scrollable Music Blocks List -->
+        <div class="blocks-scroll-area">
+          <div class="blocks-list" id="blocksListContainer">
+            <!-- Dynamically populated by renderArrangementBlocksUI() -->
+          </div>
+        </div>
       </div>
 
       <!-- Recommended Candidates -->
@@ -384,6 +417,51 @@
       <div style="display: flex; justify-content: flex-end; gap: 10px;">
         <button class="btn-secondary" onclick="copyCueSheetToClipboard()">Copy to Clipboard</button>
         <button class="btn-secondary" onclick="closeCueSheetModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Custom Slice Modal -->
+  <div class="modal-overlay" id="addSliceModal" style="display: none;">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3>➕ Add Custom Music Slice</h3>
+        <button class="btn-close" onclick="closeAddSliceModal()">&times;</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+        Define a musical slice by start & end timestamps, choose a section label, and insert it into your sequence.
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="control-item">
+          <label for="sliceNameInput">Piece Name / Description</label>
+          <input type="text" id="sliceNameInput" placeholder="e.g. Extra Intro Brass Hook" style="width: 100%; box-sizing: border-box; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 12px; border-radius: 6px;">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="control-item">
+            <label for="sliceStartInput">Start Time (sec)</label>
+            <input type="number" id="sliceStartInput" step="0.05" min="0" value="0.00" style="width: 100%; box-sizing: border-box; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 12px; border-radius: 6px;">
+          </div>
+          <div class="control-item">
+            <label for="sliceEndInput">End Time (sec)</label>
+            <input type="number" id="sliceEndInput" step="0.05" min="0.1" value="2.24" style="width: 100%; box-sizing: border-box; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 12px; border-radius: 6px;">
+          </div>
+        </div>
+        <div class="control-item">
+          <label for="sliceTagSelect">Category Tag</label>
+          <select id="sliceTagSelect" style="width: 100%; box-sizing: border-box; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 12px; border-radius: 6px;">
+            <option value="INTRO">INTRO</option>
+            <option value="HOOK">HOOK</option>
+            <option value="BUILD">BUILD</option>
+            <option value="DROP">DROP</option>
+            <option value="VERSE">VERSE</option>
+            <option value="CHORUS">CHORUS</option>
+            <option value="FINALE">FINALE</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+        <button class="btn-secondary" onclick="closeAddSliceModal()">Cancel</button>
+        <button class="btn-primary" onclick="submitCustomSlice()">Insert Piece</button>
       </div>
     </div>
   </div>
