@@ -178,7 +178,7 @@
         <div class="cut-lab-header">
           <div class="cut-lab-title">
             <h3><span>🧩</span> Choreo Pattern & Studio Master Arrangement</h3>
-            <span class="cut-pill" id="cutBarDisplay">Intro Match: 0:00 + 4-Bar Loop</span>
+            <span class="cut-pill" id="cutBarDisplay">Intro Match: 0:00 + 1-Bar (4 Beats) Loop</span>
           </div>
           <!-- Audio Quality Mode Switcher -->
           <div class="quality-toggle-group">
@@ -196,37 +196,40 @@
         <div class="arrangement-sequence-bar" id="sequenceBar">
           <div class="seq-block intro">
             <span class="seq-tag">Block 1 • Song Intro</span>
-            <span class="seq-title" id="seqTitle1">Horn Riff (Bar 1-4)</span>
-            <span class="seq-time" id="seqTime1">0:00.0 - 0:08.9</span>
+            <span class="seq-title" id="seqTitle1">Horn Riff (Bar 1)</span>
+            <span class="seq-time" id="seqTime1">0:00.0 - 0:02.2</span>
           </div>
           <div class="seq-block repeat">
             <span class="seq-tag">Block 2 • Choreo Repeat</span>
-            <span class="seq-title" id="seqTitle2">Repeated Riff (+8.9s)</span>
-            <span class="seq-time" id="seqTime2">0:08.9 - 0:17.9</span>
+            <span class="seq-title" id="seqTitle2">Repeated Riff (+2.2s)</span>
+            <span class="seq-time" id="seqTime2">0:02.2 - 0:04.5</span>
           </div>
           <div class="seq-block verse">
-            <span class="seq-tag">Block 3 • Choreo Verse</span>
-            <span class="seq-title" id="seqTitle3">Verse Section</span>
-            <span class="seq-time" id="seqTime3">0:17.9 - 0:41.0</span>
+            <span class="seq-tag">Block 3 • Choreo Dance</span>
+            <span class="seq-title" id="seqTitle3">Verse & Hook</span>
+            <span class="seq-time" id="seqTime3">0:04.5 - 0:41.0</span>
           </div>
           <div class="seq-block finale">
             <span class="seq-tag">Block 4 • Missing Finale</span>
             <span class="seq-title" id="seqTitle4">Grand Finale & Rap</span>
-            <span class="seq-time" id="seqTime4">0:41.0 - 3:02.4 (+141s)</span>
+            <span class="seq-time" id="seqTime4">0:41.0 - 2:55.7 (+134.7s)</span>
           </div>
         </div>
 
         <!-- 1. Intro Loop Setting -->
         <div class="cut-presets-bar" style="margin-bottom: 14px;">
           <span class="presets-label">Intro Loop Pattern:</span>
-          <button class="btn-cut-preset active" id="loop4BarBtn" onclick="applyLoopPreset(8.972, 1, '4-Bar Intro Riff')">
-            ⭐ 4-Bar Intro Riff Loop (0:00-8.9s) - Detected Choreo Pattern
+          <button class="btn-cut-preset active" id="loop1BarBtn" onclick="applyLoopPreset(2.243, 1, '1-Bar / 4-Beat Riff')">
+            ⭐ 1-Bar (4 Beats) Riff Repeat (0:00-2.24s) - Verified Choreo Pattern
           </button>
-          <button class="btn-cut-preset" id="loop8BarBtn" onclick="applyLoopPreset(17.944, 1, '8-Bar Full Intro')">
-            8-Bar Full Intro Loop (0:00-17.9s)
+          <button class="btn-cut-preset" id="loop2BeatBtn" onclick="applyLoopPreset(1.121, 1, '2-Beat Stutter')">
+            2-Beat Stutter (0:00-1.12s)
           </button>
           <button class="btn-cut-preset" id="loop2BarBtn" onclick="applyLoopPreset(4.486, 1, '2-Bar Quick Hook')">
-            2-Bar Quick Hook Loop (0:00-4.5s)
+            2-Bar Hook (0:00-4.49s)
+          </button>
+          <button class="btn-cut-preset" id="loop4BarBtn" onclick="applyLoopPreset(8.972, 1, '4-Bar Full Phrase')">
+            4-Bar Phrase (0:00-8.97s)
           </button>
           <button class="btn-cut-preset" id="loopNoneBtn" onclick="applyLoopPreset(0, 0, 'No Repeat')">
             Straight (No Repeat)
@@ -278,17 +281,17 @@
           <div class="impact-divider">➔</div>
           <div class="impact-col">
             <span class="impact-label">Continuation In Official Song:</span>
-            <strong id="impactStudioSplice">0:32.0 (Bar 15)</strong>
+            <strong id="impactStudioSplice">0:38.8 (Bar 18)</strong>
           </div>
           <div class="impact-divider">+</div>
           <div class="impact-col">
             <span class="impact-label">Missing Finale Extension:</span>
-            <strong id="impactAddedDuration" style="color: var(--accent-emerald);">+141.4s (Buildup, Drop & Rap)</strong>
+            <strong id="impactAddedDuration" style="color: var(--accent-emerald);">+134.7s (Verse 2, Drop & Rap)</strong>
           </div>
           <div class="impact-divider">=</div>
           <div class="impact-col">
             <span class="impact-label">Total Clean Master Mix:</span>
-            <strong id="impactTotalDuration">3:02.4 (182.4s)</strong>
+            <strong id="impactTotalDuration">2:55.7 (175.7s)</strong>
           </div>
         </div>
       </div>
@@ -340,7 +343,7 @@
             <span>▶</span> Play Full Mix
           </button>
           <button class="btn-primary" id="auditionLoopBtn" onclick="triggerAuditionLoop()">
-            <span>⚡</span> Audition Intro Loop (8.9s)
+            <span>⚡</span> Audition Intro Loop (2.2s)
           </button>
           <button class="btn-secondary" id="auditionBtn" onclick="triggerAuditionFinale()">
             <span>⚡</span> Audition Finale Cut (41s)

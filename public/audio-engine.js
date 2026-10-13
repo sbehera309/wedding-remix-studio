@@ -750,12 +750,12 @@ class AudioRemixEngine {
     const {
       hasArrangement = false,
       loopStart = 0,
-      loopEnd = 8.972,
+      loopEnd = 2.243,
       loopRepeats = 1,
       choreoCutTime = 41.0,
       useStudioMasterForChoreo = true,
       spliceTimeA = 41.0,
-      spliceTimeB = 32.03,
+      spliceTimeB = 38.76,
       crossfadeDuration = 0.25,
       transitionType = 'choreo_splice',
       studioStartOffset = 0

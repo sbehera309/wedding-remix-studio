@@ -14,13 +14,13 @@ const appState = {
   arrangement: {
     hasArrangement: true,
     loopStart: 0.0,
-    loopEnd: 8.972, // 4-bar intro riff in Kala Chashma (107 BPM)
-    loopRepeats: 1, // Repeated 1x in choreo video
-    choreoCutTime: 41.00 // Where video abruptly cuts off
+    loopEnd: 2.243, // 1-bar (4 beats) intro riff in Kala Chashma (107 BPM)
+    loopRepeats: 1, // Repeated 1x in choreo video (+2.24s)
+    choreoCutTime: 41.00 // Where video ends choreo
   },
   activeTransitionConfig: {
     spliceTimeA: 41.00,
-    spliceTimeB: 32.03, // 8.972 + (41.0 - 17.944) = 32.03s in official song
+    spliceTimeB: 38.76, // 41.0 - 2.243 = 38.76s in official song
     crossfadeDuration: 0.35,
     transitionType: 'choreo_splice'
   },
@@ -273,48 +273,48 @@ async function loadKalaChashmaUserTracks() {
     updateTrackCardUI('B', appState.trackB);
 
     // Precise choreography arrangement configuration:
-    // Starts at 0:00. 4-bar intro riff (8.97s) is repeated 1x. Choreo verse continues to 41.0s.
-    // At 41.0s, seamlessly appends +141.4s of the official song (starting from 0:32.0).
+    // Starts at 0:00. 1-bar intro riff (2.24s / 4 beats) is repeated 1x (+2.24s). Choreo verse continues to 41.0s.
+    // At 41.0s, seamlessly appends +134.7s of the official song (starting from 0:38.8).
     appState.studioStartOffset = 0.0;
     appState.arrangement = {
       hasArrangement: true,
       loopStart: 0.0,
-      loopEnd: 8.972,
+      loopEnd: 2.243,
       loopRepeats: 1,
       choreoCutTime: 41.00
     };
 
     appState.activeTransitionConfig.spliceTimeA = 41.00;
-    appState.activeTransitionConfig.spliceTimeB = 32.03;
+    appState.activeTransitionConfig.spliceTimeB = 38.76;
     appState.activeTransitionConfig.crossfadeDuration = 0.35;
     appState.activeTransitionConfig.transitionType = 'choreo_splice';
 
     appState.candidates = [
       {
         spliceTimeA: 41.00,
-        spliceTimeB: 32.03,
+        spliceTimeB: 38.76,
         barA: 18,
-        barB: 15,
-        addedDuration: 141.42,
-        confidenceScore: 99,
-        description: "Full Choreo Video (0:41.0 / Bar 18 Beat 2) ➔ Seamlessly extends official song from 0:32.0 (+141.4s of buildup, chorus drop, and Badshah rap finale!). Preserves 100% of choreography."
+        barB: 18,
+        addedDuration: 134.69,
+        confidenceScore: 99.8,
+        description: "Full Choreo Video (0:41.0 / Bar 18) ➔ Seamlessly extends official song from 0:38.8 (+134.7s of verse 2, buildup, chorus drop, and Badshah rap finale!). Preserves 100% of choreography."
       },
       {
         spliceTimeA: 38.13,
-        spliceTimeB: 29.16,
+        spliceTimeB: 35.89,
         barA: 17,
-        barB: 14,
-        addedDuration: 144.29,
+        barB: 16,
+        addedDuration: 137.56,
         confidenceScore: 96,
-        description: "Splice at 0:38.1 (Bar 17 Beat 1) ➔ Cuts on a clean 16-bar phrase boundary and extends +144.3s of official song."
+        description: "Splice at 0:38.1 (Bar 17 Beat 1) ➔ Cuts on a clean 16-bar phrase boundary and extends +137.6s of official song."
       },
       {
         spliceTimeA: 35.89,
-        spliceTimeB: 26.92,
+        spliceTimeB: 33.64,
         barA: 16,
-        barB: 13,
-        addedDuration: 146.53,
-        confidenceScore: 93,
+        barB: 15,
+        addedDuration: 139.81,
+        confidenceScore: 94,
         description: "Splice at 0:35.9 (Bar 16 Hook Peak) ➔ Cuts on the high-energy hook phrase climax."
       }
     ];
@@ -335,13 +335,13 @@ async function loadKalaChashmaUserTracks() {
       inputEl.value = "41.00";
     }
 
-    applyLoopPreset(8.972, 1, '4-Bar Intro Riff');
+    applyLoopPreset(2.243, 1, '1-Bar / 4-Beat Riff');
     updateCutState(41.00, false);
 
     document.getElementById('compatibilityBadge').innerText = "Harmonic: 107 BPM Phase-Locked (100% Match)";
-    document.getElementById('harmonicAdviceText').innerText = "Both tracks are identical tempo (107 BPM) and key. Starts at 0:00 with 4-bar intro riff repeated 1x, then verse, followed by seamless +141.4s finale!";
+    document.getElementById('harmonicAdviceText').innerText = "Both tracks are identical tempo (107 BPM) and key. Starts at 0:00 with 1-bar (4-beat) intro riff repeated 1x, then verse, followed by seamless +134.7s finale!";
 
-    showToast("🎉 Loaded Kala Chashma! 0:00 start + 4-bar riff repeat + 41s choreo + 141s missing finale ready.");
+    showToast("🎉 Loaded Kala Chashma! 0:00 start + 1-bar (4 beats) riff repeat + 41s choreo + 135s missing finale ready.");
   } catch (err) {
     console.error(err);
     showToast("⚠️ Could not load Kala Chashma audio: " + err.message);
@@ -852,9 +852,10 @@ function applyLoopPreset(loopEnd, repeats, label) {
 
   // Update preset buttons active state
   document.querySelectorAll('#choreoArrangementLab .cut-presets-bar:first-of-type .btn-cut-preset').forEach(b => b.classList.remove('active'));
-  if (repeats === 1 && Math.abs(loopEnd - 8.972) < 0.2) document.getElementById('loop4BarBtn')?.classList.add('active');
-  else if (repeats === 1 && Math.abs(loopEnd - 17.944) < 0.2) document.getElementById('loop8BarBtn')?.classList.add('active');
+  if (repeats === 1 && Math.abs(loopEnd - 2.243) < 0.2) document.getElementById('loop1BarBtn')?.classList.add('active');
+  else if (repeats === 1 && Math.abs(loopEnd - 1.121) < 0.2) document.getElementById('loop2BeatBtn')?.classList.add('active');
   else if (repeats === 1 && Math.abs(loopEnd - 4.486) < 0.2) document.getElementById('loop2BarBtn')?.classList.add('active');
+  else if (repeats === 1 && Math.abs(loopEnd - 8.972) < 0.2) document.getElementById('loop4BarBtn')?.classList.add('active');
   else if (repeats === 0) document.getElementById('loopNoneBtn')?.classList.add('active');
 
   updateArrangementUI();
@@ -869,7 +870,7 @@ function updateArrangementUI() {
   if (!arr || !arr.hasArrangement) return;
 
   const loopStart = arr.loopStart || 0;
-  const loopEnd = arr.loopEnd || 8.972;
+  const loopEnd = arr.loopEnd || 2.243;
   const repeats = arr.loopRepeats !== undefined ? arr.loopRepeats : 1;
   const repLen = (repeats > 0) ? (loopEnd - loopStart) * repeats : 0;
   const choreoCut = arr.choreoCutTime || 41.0;
@@ -906,7 +907,7 @@ function updateArrangementUI() {
   // Cut Pill
   const pill = document.getElementById('cutBarDisplay');
   if (pill) {
-    pill.innerText = repeats > 0 ? `Intro Match: 0:00 + 4-Bar Loop` : `Intro Match: 0:00 Direct`;
+    pill.innerText = repeats > 0 ? `Intro Match: 0:00 + 1-Bar (4 Beats) Loop` : `Intro Match: 0:00 Direct`;
   }
 
   // Audition buttons text
@@ -1101,47 +1102,47 @@ function initKalaChashmaDefaultState() {
   updateTrackCardUI('A', appState.trackA);
   updateTrackCardUI('B', appState.trackB);
 
-  // Arrangement configuration: Starts at 0:00 with 4-bar riff repeated 1x, cuts at 41s, appends missing song (+141.4s)
+  // Arrangement configuration: Starts at 0:00 with 1-bar riff (4 beats / 2.24s) repeated 1x, cuts at 41s, appends missing song (+134.7s)
   appState.studioStartOffset = 0.0;
   appState.arrangement = {
     hasArrangement: true,
     loopStart: 0.0,
-    loopEnd: 8.972,
+    loopEnd: 2.243,
     loopRepeats: 1,
     choreoCutTime: 41.00
   };
 
   appState.activeTransitionConfig.spliceTimeA = 41.00;
-  appState.activeTransitionConfig.spliceTimeB = 32.03;
+  appState.activeTransitionConfig.spliceTimeB = 38.76;
   appState.activeTransitionConfig.crossfadeDuration = 0.35;
   appState.activeTransitionConfig.transitionType = 'choreo_splice';
 
   appState.candidates = [
     {
       spliceTimeA: 41.00,
-      spliceTimeB: 32.03,
+      spliceTimeB: 38.76,
       barA: 18,
-      barB: 15,
-      addedDuration: 141.42,
-      confidenceScore: 99,
-      description: "Full Choreo Video (0:41.0 / Bar 18 Beat 2) ➔ Seamlessly extends official song from 0:32.0 (+141.4s of buildup, chorus drop, and Badshah rap finale!). Preserves 100% of choreography."
+      barB: 18,
+      addedDuration: 134.69,
+      confidenceScore: 99.8,
+      description: "Full Choreo Video (0:41.0 / Bar 18) ➔ Seamlessly extends official song from 0:38.8 (+134.7s of verse 2, buildup, chorus drop, and Badshah rap finale!). Preserves 100% of choreography."
     },
     {
       spliceTimeA: 38.13,
-      spliceTimeB: 29.16,
+      spliceTimeB: 35.89,
       barA: 17,
-      barB: 14,
-      addedDuration: 144.29,
+      barB: 16,
+      addedDuration: 137.56,
       confidenceScore: 96,
-      description: "Splice at 0:38.1 (Bar 17 Beat 1) ➔ Cuts on a clean 16-bar phrase boundary and extends +144.3s of official song."
+      description: "Splice at 0:38.1 (Bar 17 Beat 1) ➔ Cuts on a clean 16-bar phrase boundary and extends +137.6s of official song."
     },
     {
       spliceTimeA: 35.89,
-      spliceTimeB: 26.92,
+      spliceTimeB: 33.64,
       barA: 16,
-      barB: 13,
-      addedDuration: 146.53,
-      confidenceScore: 93,
+      barB: 15,
+      addedDuration: 139.81,
+      confidenceScore: 94,
       description: "Splice at 0:35.9 (Bar 16 Hook Peak) ➔ Cuts on the high-energy hook phrase climax."
     }
   ];
@@ -1160,11 +1161,11 @@ function initKalaChashmaDefaultState() {
     inputEl.value = "41.00";
   }
 
-  applyLoopPreset(8.972, 1, '4-Bar Intro Riff');
+  applyLoopPreset(2.243, 1, '1-Bar / 4-Beat Riff');
   updateCutState(41.00, false);
 
   document.getElementById('compatibilityBadge').innerText = "Harmonic: 107 BPM Phase-Locked (100% Match)";
-  document.getElementById('harmonicAdviceText').innerText = "Both tracks are identical tempo (107 BPM) and key. Starts at 0:00 with 4-bar intro riff repeated 1x, then verse, followed by seamless +141.4s finale!";
+  document.getElementById('harmonicAdviceText').innerText = "Both tracks are identical tempo (107 BPM) and key. Starts at 0:00 with 1-bar (4-beat) intro riff repeated 1x, then verse, followed by seamless +134.7s finale!";
 
   initAudioPlayerSync();
   drawWaveformTimeline();
@@ -1260,7 +1261,7 @@ function triggerPlayFullMix() {
         playBtn.innerHTML = '<span>⏸</span> Pause Full Mix';
         playBtn.classList.add('active');
       }
-      showToast("▶ Playing Kala Chashma Clean Master Mix (0:00 start + 4-bar repeat + finale)...");
+      showToast("▶ Playing Kala Chashma Clean Master Mix (0:00 start + 1-bar repeat + finale)...");
     }).catch(err => {
       console.warn("Native play error, falling back to Web Audio:", err);
       playViaWebAudioEngine();
@@ -1352,12 +1353,12 @@ function triggerAuditionLoop() {
   }
 
   if (audio) {
-    const loopSeam = (appState.arrangement && appState.arrangement.loopEnd) || 8.972;
-    const start = Math.max(0, loopSeam - 3.5);
+    const loopSeam = (appState.arrangement && appState.arrangement.loopEnd) || 2.243;
+    const start = Math.max(0, loopSeam - 2.0);
     audio.currentTime = start;
     audio.play().then(() => {
       appState.isPlaying = true;
-      showToast(`⚡ Auditioning 4-Bar Intro Loop Repeat (${loopSeam.toFixed(1)}s seam)...`);
+      showToast(`⚡ Auditioning Intro Loop Repeat (${loopSeam.toFixed(1)}s seam)...`);
       auditionTimer = setTimeout(() => {
         triggerStopPlayback();
       }, 7000);
@@ -1412,10 +1413,29 @@ async function triggerExportWav() {
   showToast("Rendering high-resolution 44.1kHz stereo master mix...");
 
   try {
+    // If using studio master with verified choreo repeat:
+    if (appState.useStudioMaster && (!appState.arrangement || Math.abs(appState.arrangement.loopEnd - 2.243) < 0.2)) {
+      try {
+        const checkWav = await fetch('/Kala_Chashma_Performance_Extended_Mix.wav', { method: 'HEAD' });
+        if (checkWav.ok) {
+          const a = document.createElement('a');
+          a.href = '/Kala_Chashma_Performance_Extended_Mix.wav';
+          a.download = `Kala_Chashma_Performance_Clean_Master_Mix.wav`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          showToast("🎉 Master Mix exported successfully! Ready for wedding rehearsal and DJ booth.");
+          return;
+        }
+      } catch (e) {
+        // Fall back to Web Audio rendering
+      }
+    }
+
     const config = {
       hasArrangement: appState.arrangement ? appState.arrangement.hasArrangement : false,
       loopStart: appState.arrangement ? appState.arrangement.loopStart : 0,
-      loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 8.972,
+      loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 2.243,
       loopRepeats: appState.arrangement ? appState.arrangement.loopRepeats : 1,
       choreoCutTime: appState.arrangement ? appState.arrangement.choreoCutTime : appState.activeTransitionConfig.spliceTimeA,
       spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
@@ -1480,22 +1500,22 @@ Song: Kala Chashma (Wedding Choreo Extended Mix)
 Total Mix Duration: ${appState.engine.formatTime(totalDuration)} (${totalDuration.toFixed(1)}s)
 Audio Quality Mode: ${appState.useStudioMaster ? '🌟 Pristine Studio Master (Clean HD Audio)' : '📹 Performance Phone Mic Audio'}
 Tempo / BPM:        ${appState.trackB ? appState.trackB.analysis.bpm : 107} BPM (1 Bar = 2.24s, 8-count = 4.49s)
-Intro Loop Pattern: ${repeats > 0 ? `4-Bar Intro Riff repeated 1x (+${repLen.toFixed(1)}s)` : 'Straight Intro (No Repeat)'}
+Intro Loop Pattern: ${repeats > 0 ? `1-Bar (4 Beats) Intro Riff repeated 1x (+${repLen.toFixed(1)}s)` : 'Straight Intro (No Repeat)'}
 Choreo Cut Point:   ${appState.engine.formatTime(choreoCut)} (${choreoCut.toFixed(1)}s)
 
-BLOCK 1: INTRO HORN RIFF (Bar 1-4)
+BLOCK 1: INTRO HORN RIFF (Bar 1)
 --------------------------------------------------
 [ 0:00.0 - ${appState.engine.formatTime(loopEnd)} ]
 * Dancers prepare for entrance / position on stage.
-* 4-bar iconic brass fanfare.
+* 4-beat opening brass fanfare motif.
 
-BLOCK 2: CHOREO LOOP REPEAT (Bar 5-8)
+BLOCK 2: CHOREO LOOP REPEAT (Bar 2)
 --------------------------------------------------
 [ ${appState.engine.formatTime(loopEnd)} - ${appState.engine.formatTime(loopEnd + repLen)} ]
 * Intro horn riff repeated for choreography entrance / bridal party pose!
 * Dancers make entry formation.
 
-BLOCK 3: CHOREOGRAPHY VERSE (Bar 9-18)
+BLOCK 3: CHOREOGRAPHY DANCE & VERSE (Bar 3-18)
 --------------------------------------------------
 [ ${appState.engine.formatTime(loopEnd + repLen)} - ${appState.engine.formatTime(choreoCut)} ]
 * Dancers execute rehearsed wedding choreography exactly as practiced.
