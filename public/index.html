@@ -173,6 +173,84 @@
         </div>
       </div>
 
+      <!-- Interactive Custom Cut & Audio Quality Lab -->
+      <div class="custom-cut-lab">
+        <div class="cut-lab-header">
+          <div class="cut-lab-title">
+            <h3><span>✂️</span> Custom Cut Location & Audio Quality Control</h3>
+            <span class="cut-pill" id="cutBarDisplay">Bar 17 Beat 1 (0:38.1s)</span>
+          </div>
+          <!-- Audio Quality Mode Switcher -->
+          <div class="quality-toggle-group">
+            <span class="quality-label">Audio Quality:</span>
+            <button type="button" class="btn-quality active" id="qualityStudioBtn" onclick="setQualityMode('studio')">
+              <span>🌟</span> Studio Master Clean Mix (Recommended)
+            </button>
+            <button type="button" class="btn-quality" id="qualityMicBtn" onclick="setQualityMode('mic')">
+              <span>📹</span> Performance Mic Audio
+            </button>
+          </div>
+        </div>
+
+        <div class="cut-scrubber-row">
+          <div class="slider-container">
+            <div class="scrubber-label-row">
+              <label for="customCutSlider" class="scrubber-label">Scrub Cut Location:</label>
+              <span id="sliderTimeDisplay" class="time-bold">38.13s</span>
+            </div>
+            <input type="range" id="customCutSlider" min="5" max="42" step="0.05" value="38.13" oninput="handleCutSliderInput(this.value)">
+          </div>
+
+          <div class="exact-input-group">
+            <label for="customCutInput">Exact Seconds:</label>
+            <div class="number-input-wrap">
+              <input type="number" id="customCutInput" min="1" max="180" step="0.05" value="38.13" onchange="handleCutNumberInput(this.value)">
+              <span class="unit-s">s</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Landmark Preset Buttons -->
+        <div class="cut-presets-bar">
+          <span class="presets-label">Musical Landmarks:</span>
+          <button class="btn-cut-preset" id="presetHookBtn" onclick="applyCutPreset(35.89, 'Bar 16 Hook Peak')">
+            🎵 35.9s (Bar 16 Hook Drop)
+          </button>
+          <button class="btn-cut-preset active" id="presetDefaultBtn" onclick="applyCutPreset(38.13, 'Bar 17 Beat 1')">
+            🎯 38.1s (Bar 17 Beat 1 - Default)
+          </button>
+          <button class="btn-cut-preset" id="presetEndBtn" onclick="applyCutPreset(40.37, 'Bar 18 Video End')">
+            ⏱️ 40.4s (Bar 18 Video End)
+          </button>
+          <button class="btn-cut-preset snap-btn" onclick="snapCutToNearestBeat()">
+            🧲 Snap to Nearest Downbeat
+          </button>
+        </div>
+
+        <!-- Live Cut Summary / Impact -->
+        <div class="cut-impact-card" id="cutImpactCard">
+          <div class="impact-col">
+            <span class="impact-label">Choreo Section:</span>
+            <strong id="impactChoreoDuration">38.1s</strong>
+          </div>
+          <div class="impact-divider">➔</div>
+          <div class="impact-col">
+            <span class="impact-label">Splice Point in YouTube Master:</span>
+            <strong id="impactStudioSplice">1:36.2s (96.2s)</strong>
+          </div>
+          <div class="impact-divider">+</div>
+          <div class="impact-col">
+            <span class="impact-label">Added Extension:</span>
+            <strong id="impactAddedDuration" style="color: var(--accent-emerald);">+77.2s (Outro & Rap)</strong>
+          </div>
+          <div class="impact-divider">=</div>
+          <div class="impact-col">
+            <span class="impact-label">Total Master Mix:</span>
+            <strong id="impactTotalDuration">1:55.3s</strong>
+          </div>
+        </div>
+      </div>
+
       <!-- Recommended Candidates -->
       <div class="candidates-title">💡 Recommended Transition & Splice Points</div>
       <div class="candidates-grid" id="candidatesGrid">
@@ -210,11 +288,14 @@
       <!-- Action & Playback Bar -->
       <div class="action-bar">
         <div class="playback-controls">
-          <button class="btn-primary" id="auditionBtn" onclick="triggerAuditionTransition()">
-            <span>⚡</span> Audition Transition Only (8s)
+          <button class="btn-replay" id="replayBtn" onclick="triggerReplay()" title="Start playback over from 0:00">
+            <span>🔁</span> Replay From Start
           </button>
           <button class="btn-secondary" id="playFullBtn" onclick="triggerPlayFullMix()">
             <span>▶</span> Play Full Mix
+          </button>
+          <button class="btn-primary" id="auditionBtn" onclick="triggerAuditionTransition()">
+            <span>⚡</span> Audition Cut (8s)
           </button>
           <button class="btn-secondary" id="stopBtn" onclick="triggerStopPlayback()">
             <span>⏹</span> Stop

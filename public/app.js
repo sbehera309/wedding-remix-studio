@@ -9,10 +9,12 @@ const appState = {
   demoGen: null,
   trackA: null, // { name, buffer, analysis, sourceUrl }
   trackB: null, // { name, buffer, analysis, sourceUrl }
+  useStudioMaster: true, // Reconstruct choreo from pristine studio audio
+  studioStartOffset: 58.08, // Kala Chashma choreo hook offset in official track
   activeTransitionConfig: {
-    spliceTimeA: 0,
-    spliceTimeB: 0,
-    crossfadeDuration: 0.5,
+    spliceTimeA: 38.13,
+    spliceTimeB: 96.21,
+    crossfadeDuration: 0.35,
     transitionType: 'choreo_splice'
   },
   candidates: [],
@@ -301,7 +303,20 @@ async function loadKalaChashmaUserTracks() {
 
     appState.selectedCandidateIndex = 0;
     renderCandidatesGrid();
-    drawWaveformTimeline();
+
+    // Initialize interactive cut scrubber & impact metrics
+    const sliderEl = document.getElementById('customCutSlider');
+    if (sliderEl) {
+      sliderEl.min = "5";
+      sliderEl.max = bufferA.duration.toFixed(1);
+      sliderEl.value = "38.13";
+    }
+    const inputEl = document.getElementById('customCutInput');
+    if (inputEl) {
+      inputEl.max = bufferA.duration.toFixed(1);
+      inputEl.value = "38.13";
+    }
+    updateCutState(38.13, false);
 
     document.getElementById('compatibilityBadge').innerText = "Harmonic: 107 BPM Phase-Locked (100% Match)";
     document.getElementById('harmonicAdviceText').innerText = "Both tracks are identical tempo (107 BPM) and key. Downbeat Beat 1 alignment is 100% seamless.";
@@ -436,7 +451,16 @@ function runRemixAnalysis() {
   }
 
   renderCandidatesGrid();
-  drawWaveformTimeline();
+
+  const sliderEl = document.getElementById('customCutSlider');
+  const inputEl = document.getElementById('customCutInput');
+  if (sliderEl && trackA && trackA.buffer) {
+    sliderEl.max = trackA.buffer.duration.toFixed(1);
+  }
+  if (inputEl && trackA && trackA.buffer) {
+    inputEl.max = trackA.buffer.duration.toFixed(1);
+  }
+  updateCutState(appState.activeTransitionConfig.spliceTimeA, false);
 }
 
 /**
@@ -480,6 +504,7 @@ function renderCandidatesGrid() {
       if (appState.currentMode === 'choreo') {
         appState.activeTransitionConfig.spliceTimeA = cand.spliceTimeA;
         appState.activeTransitionConfig.spliceTimeB = cand.spliceTimeB;
+        updateCutState(cand.spliceTimeA, false);
       } else {
         appState.activeTransitionConfig.spliceTimeA = cand.timeA;
         appState.activeTransitionConfig.spliceTimeB = cand.timeB;
@@ -488,9 +513,9 @@ function renderCandidatesGrid() {
         document.getElementById('transitionTypeSelect').value = cand.style;
         document.getElementById('crossfadeDurationInput').value = cand.crossfadeDuration;
         document.getElementById('crossfadeDurationVal').innerText = `${cand.crossfadeDuration}s`;
+        updateCutState(cand.timeA, false);
       }
       renderCandidatesGrid();
-      drawWaveformTimeline();
       showToast(`Selected: ${title}`);
     });
 
@@ -528,13 +553,8 @@ function initWaveformCanvas() {
     const clickedTime = ratio * totalDuration;
 
     if (clickedTime <= appState.trackA.buffer.duration) {
-      // Snap to nearest downbeat in Track A
-      const nearestDownbeat = appState.trackA.analysis.beatGrid.reduce((prev, curr) => {
-        return (Math.abs(curr.time - clickedTime) < Math.abs(prev.time - clickedTime)) ? curr : prev;
-      });
-      appState.activeTransitionConfig.spliceTimeA = nearestDownbeat.time;
-      showToast(`Snapped Splice Point to Track 1 Bar ${nearestDownbeat.bar} (${appState.engine.formatTime(nearestDownbeat.time)})`);
-      drawWaveformTimeline();
+      updateCutState(clickedTime, false);
+      showToast(`✂️ Cut Point relocated to ${clickedTime.toFixed(2)}s`);
     }
   });
 
@@ -669,7 +689,214 @@ function drawWaveformTimeline(currentPlayheadTime = null) {
 }
 
 /**
- * Audition Transition (⚡ Plays -4s to +4s around the splice point)
+ * Interactive Cut Control Handlers
+ */
+function handleCutSliderInput(val) {
+  const numVal = parseFloat(val);
+  updateCutState(numVal, false);
+}
+
+function handleCutNumberInput(val) {
+  const numVal = parseFloat(val);
+  if (!isNaN(numVal) && numVal > 0) {
+    updateCutState(numVal, false);
+  }
+}
+
+function applyCutPreset(sec, label) {
+  updateCutState(sec, false);
+
+  // Update preset button active styling
+  document.querySelectorAll('.btn-cut-preset').forEach(btn => btn.classList.remove('active'));
+  if (Math.abs(sec - 35.89) < 0.1) document.getElementById('presetHookBtn')?.classList.add('active');
+  else if (Math.abs(sec - 38.13) < 0.1) document.getElementById('presetDefaultBtn')?.classList.add('active');
+  else if (Math.abs(sec - 40.37) < 0.1) document.getElementById('presetEndBtn')?.classList.add('active');
+
+  showToast(`🎯 Applied Cut Preset: ${label} (${sec.toFixed(1)}s)`);
+}
+
+function snapCutToNearestBeat() {
+  if (!appState.trackA || !appState.trackA.analysis || !appState.trackA.analysis.beatGrid) {
+    showToast("⚠️ Load audio tracks first to snap to downbeat grid.");
+    return;
+  }
+  const currentSplice = appState.activeTransitionConfig.spliceTimeA;
+  const grid = appState.trackA.analysis.beatGrid;
+  const nearest = grid.reduce((prev, curr) => {
+    return (Math.abs(curr.time - currentSplice) < Math.abs(prev.time - currentSplice)) ? curr : prev;
+  });
+
+  updateCutState(nearest.time, false);
+  showToast(`🧲 Snapped Cut to Bar ${nearest.bar} Beat ${nearest.beat} (${nearest.time.toFixed(2)}s)`);
+}
+
+function updateCutState(spliceA, shouldSnap = false) {
+  const maxDuration = (appState.trackA && appState.trackA.buffer) ? appState.trackA.buffer.duration : 42.0;
+  const clampedSpliceA = Math.max(1.0, Math.min(spliceA, maxDuration));
+
+  appState.activeTransitionConfig.spliceTimeA = clampedSpliceA;
+
+  // In Choreo mode with YouTube studio master:
+  if (appState.currentMode === 'choreo') {
+    appState.activeTransitionConfig.spliceTimeB = appState.studioStartOffset + clampedSpliceA;
+  }
+
+  // Update UI Inputs
+  const sliderEl = document.getElementById('customCutSlider');
+  const inputEl = document.getElementById('customCutInput');
+  const sliderDisplay = document.getElementById('sliderTimeDisplay');
+  const barDisplay = document.getElementById('cutBarDisplay');
+
+  if (sliderEl) sliderEl.value = clampedSpliceA.toFixed(2);
+  if (inputEl) inputEl.value = clampedSpliceA.toFixed(2);
+  if (sliderDisplay) sliderDisplay.innerText = `${clampedSpliceA.toFixed(2)}s`;
+
+  // Calculate Bar / Beat description
+  if (appState.trackA && appState.trackA.analysis && appState.trackA.analysis.beatGrid) {
+    const grid = appState.trackA.analysis.beatGrid;
+    const closest = grid.reduce((prev, curr) => {
+      return (Math.abs(curr.time - clampedSpliceA) < Math.abs(prev.time - clampedSpliceA)) ? curr : prev;
+    }, grid[0]);
+    if (barDisplay && closest) {
+      barDisplay.innerText = `Bar ${closest.bar} Beat ${closest.beat} (${clampedSpliceA.toFixed(1)}s)`;
+    }
+  } else if (barDisplay) {
+    barDisplay.innerText = `Cut: ${clampedSpliceA.toFixed(1)}s`;
+  }
+
+  updateCutImpactCard();
+  drawWaveformTimeline();
+}
+
+function updateCutImpactCard() {
+  const spliceA = appState.activeTransitionConfig.spliceTimeA;
+  const spliceB = appState.activeTransitionConfig.spliceTimeB;
+  const totalB = (appState.trackB && appState.trackB.buffer) ? appState.trackB.buffer.duration : 173.45;
+  const addedSec = Math.max(0, totalB - spliceB);
+  const totalMixSec = spliceA + addedSec;
+
+  const choreoEl = document.getElementById('impactChoreoDuration');
+  const studioEl = document.getElementById('impactStudioSplice');
+  const addedEl = document.getElementById('impactAddedDuration');
+  const totalEl = document.getElementById('impactTotalDuration');
+
+  if (choreoEl) choreoEl.innerText = `${spliceA.toFixed(1)}s`;
+  if (studioEl) studioEl.innerText = `${appState.engine.formatTime(spliceB)} (${spliceB.toFixed(1)}s)`;
+  if (addedEl) addedEl.innerText = `+${addedSec.toFixed(1)}s (${addedSec > 60 ? 'Rap Verse & Finale' : 'Outro'})`;
+  if (totalEl) totalEl.innerText = appState.engine.formatTime(totalMixSec);
+}
+
+/**
+ * Quality Mode Switcher (Clean Studio Master vs Rehearsal Phone Mic)
+ */
+function setQualityMode(mode) {
+  const isStudio = mode === 'studio';
+  appState.useStudioMaster = isStudio;
+
+  const studioBtn = document.getElementById('qualityStudioBtn');
+  const micBtn = document.getElementById('qualityMicBtn');
+
+  if (studioBtn) studioBtn.classList.toggle('active', isStudio);
+  if (micBtn) micBtn.classList.toggle('active', !isStudio);
+
+  if (isStudio) {
+    showToast("🌟 Studio Clean Reconstruction Mode: Choreo arrangement rendered from 100% pristine YouTube master!");
+  } else {
+    showToast("📹 Performance Mic Mode: Uses rehearsal phone audio for choreo section.");
+  }
+
+  drawWaveformTimeline();
+}
+
+/**
+ * Dedicated Replay From Start
+ */
+function triggerReplay() {
+  if (!appState.trackA || !appState.trackB) {
+    showToast("⚠️ Load both tracks first.");
+    return;
+  }
+
+  // Force clean stop
+  triggerStopPlayback();
+
+  // Reset playhead visually to 0:00
+  appState.playbackPosition = 0;
+  drawWaveformTimeline(0);
+
+  // Restart playback cleanly from start
+  setTimeout(() => {
+    triggerPlayFullMix();
+    showToast("🔁 Replaying full mix from beginning (0:00)...");
+  }, 40);
+}
+
+/**
+ * Play / Pause Full Mix
+ */
+function triggerPlayFullMix() {
+  if (!appState.trackA || !appState.trackB) {
+    showToast("⚠️ Load both tracks first.");
+    return;
+  }
+
+  // If already playing, clicking toggles to pause/stop
+  if (appState.isPlaying) {
+    triggerStopPlayback();
+    showToast("⏸ Playback paused.");
+    return;
+  }
+
+  appState.engine.stopPlayback();
+  appState.isPlaying = true;
+
+  const playBtn = document.getElementById('playFullBtn');
+  if (playBtn) {
+    playBtn.innerHTML = '<span>⏸</span> Pause Full Mix';
+    playBtn.classList.add('active');
+  }
+
+  const config = {
+    spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
+    spliceTimeB: appState.activeTransitionConfig.spliceTimeB,
+    crossfadeDuration: appState.activeTransitionConfig.crossfadeDuration,
+    transitionType: appState.activeTransitionConfig.transitionType,
+    useStudioMasterForChoreo: appState.useStudioMaster,
+    studioStartOffset: appState.studioStartOffset
+  };
+
+  const qualityDesc = appState.useStudioMaster ? "Clean Studio Master" : "Performance Mic";
+  showToast(`▶ Playing full mix (${qualityDesc})...`);
+
+  appState.engine.playFullMix(appState.trackA, appState.trackB, config, (elapsed, total) => {
+    appState.playbackPosition = elapsed;
+    drawWaveformTimeline(elapsed);
+
+    if (elapsed >= total) {
+      triggerStopPlayback();
+    }
+  });
+}
+
+function triggerStopPlayback() {
+  appState.engine.stopPlayback();
+  appState.isPlaying = false;
+  if (appState.playheadAnimationId) {
+    cancelAnimationFrame(appState.playheadAnimationId);
+    appState.playheadAnimationId = null;
+  }
+
+  const playBtn = document.getElementById('playFullBtn');
+  if (playBtn) {
+    playBtn.innerHTML = '<span>▶</span> Play Full Mix';
+    playBtn.classList.remove('active');
+  }
+
+  drawWaveformTimeline(null);
+}
+
+/**
+ * Audition Cut Point Only (⚡ Plays -4s to +4s around the splice point)
  */
 function triggerAuditionTransition() {
   if (!appState.trackA || !appState.trackB) {
@@ -677,17 +904,21 @@ function triggerAuditionTransition() {
     return;
   }
 
-  appState.engine.stopPlayback();
+  triggerStopPlayback();
+
   const config = {
     spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
     spliceTimeB: appState.activeTransitionConfig.spliceTimeB,
     crossfadeDuration: appState.activeTransitionConfig.crossfadeDuration,
     transitionType: appState.activeTransitionConfig.transitionType,
+    useStudioMasterForChoreo: appState.useStudioMaster,
+    studioStartOffset: appState.studioStartOffset,
     previewPreRoll: 4.0,
     previewPostRoll: 4.0
   };
 
-  showToast("⚡ Auditioning transition (4s before ➔ 4s after)...");
+  const qualityDesc = appState.useStudioMaster ? "Studio Master" : "Performance Mic";
+  showToast(`⚡ Auditioning cut point (${qualityDesc}, 4s before ➔ 4s after)...`);
   const auditionInfo = appState.engine.auditionTransition(appState.trackA, appState.trackB, config);
 
   // Animate audition playhead
@@ -710,39 +941,6 @@ function triggerAuditionTransition() {
 }
 
 /**
- * Play Full Reconstructed Mix
- */
-function triggerPlayFullMix() {
-  if (!appState.trackA || !appState.trackB) {
-    showToast("⚠️ Load both tracks first.");
-    return;
-  }
-
-  appState.engine.stopPlayback();
-  document.getElementById('playFullBtn').classList.add('active');
-
-  const config = {
-    spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
-    spliceTimeB: appState.activeTransitionConfig.spliceTimeB,
-    crossfadeDuration: appState.activeTransitionConfig.crossfadeDuration,
-    transitionType: appState.activeTransitionConfig.transitionType
-  };
-
-  showToast("▶ Playing full reconstructed wedding dance mix...");
-  appState.engine.playFullMix(appState.trackA, appState.trackB, config, (elapsed, total) => {
-    drawWaveformTimeline(elapsed);
-  });
-}
-
-function triggerStopPlayback() {
-  appState.engine.stopPlayback();
-  if (appState.playheadAnimationId) cancelAnimationFrame(appState.playheadAnimationId);
-  document.getElementById('playFullBtn').classList.remove('active');
-  drawWaveformTimeline(null);
-  showToast("⏹ Stopped playback.");
-}
-
-/**
  * Export Master Mix (WAV)
  */
 async function triggerExportWav() {
@@ -761,7 +959,9 @@ async function triggerExportWav() {
       spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
       spliceTimeB: appState.activeTransitionConfig.spliceTimeB,
       crossfadeDuration: appState.activeTransitionConfig.crossfadeDuration,
-      transitionType: appState.activeTransitionConfig.transitionType
+      transitionType: appState.activeTransitionConfig.transitionType,
+      useStudioMasterForChoreo: appState.useStudioMaster,
+      studioStartOffset: appState.studioStartOffset
     };
 
     const result = await appState.engine.renderMasterWav(appState.trackA, appState.trackB, config);
@@ -770,7 +970,8 @@ async function triggerExportWav() {
     const url = URL.createObjectURL(result.wavBlob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Wedding_Performance_Master_Mix_${Date.now()}.wav`;
+    const modePrefix = appState.useStudioMaster ? "Studio_Master_Clean" : "Performance_Mic";
+    a.download = `Wedding_Performance_${modePrefix}_Mix_${Date.now()}.wav`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -805,10 +1006,12 @@ function openCueSheetModal() {
   WEDDING DANCE REHEARSAL CUE SHEET
 ==================================================
 Total Mix Duration: ${appState.engine.formatTime(totalDuration)}
+Audio Quality Mode: ${appState.useStudioMaster ? '🌟 Pristine Studio Master (Clean HD Audio)' : '📹 Performance Phone Mic Audio'}
 Transition Type:    ${appState.activeTransitionConfig.transitionType.toUpperCase()}
 Tempo / BPM:        Track 1: ${appState.trackA.analysis.bpm} BPM | Track 2: ${appState.trackB.analysis.bpm} BPM
+Cut / Splice Point: ${appState.engine.formatTime(spliceTimeA)} (${spliceTimeA.toFixed(2)}s)
 
-SECTION 1: CHOREOGRAPHY REMIX EDIT
+SECTION 1: CHOREOGRAPHY REMIX EDIT (${appState.useStudioMaster ? 'Studio Clean Master' : 'Rehearsal Mic'})
 --------------------------------------------------
 [ 0:00.0 - ${appState.engine.formatTime(spliceTimeA)} ]
 * Intro, verses & choreography rehearsed from performance video.
