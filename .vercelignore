@@ -1,0 +1,11 @@
+# Ignore heavy binaries and media cache for Vercel
+.venv/
+audio_cache/
+*.mov
+performance.mov
+*.wav
+kala_chashma_official.wav
+performance_audio.wav
+public/*.wav
+*.py
+*.pyc
