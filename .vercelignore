@@ -1,4 +1,5 @@
-# Ignore heavy binaries and media cache for Vercel
+# Ignore local development server and python scripts for Vercel
+server.js
 .venv/
 audio_cache/
 *.mov
