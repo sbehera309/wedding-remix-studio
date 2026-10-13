@@ -2,6 +2,9 @@
 
 An intelligent audio alignment, seamless choreography extension, and wedding dance mashup studio.
 
+🌐 **Live Web Application**: [https://wedding-remix-studio.vercel.app](https://wedding-remix-studio.vercel.app)  
+📦 **GitHub Repository**: [https://github.com/sbehera309/wedding-remix-studio](https://github.com/sbehera309/wedding-remix-studio)
+
 ## 🌟 What This Solves
 
 When preparing for wedding dances, couples and bridal parties frequently face two big hurdles:
