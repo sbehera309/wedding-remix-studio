@@ -1,4 +1,15 @@
 {
-  "outputDirectory": "public",
-  "cleanUrls": true
+  "version": 2,
+  "framework": null,
+  "cleanUrls": true,
+  "routes": [
+    {
+      "src": "^/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "^/(.*)",
+      "dest": "/public/$1"
+    }
+  ]
 }
