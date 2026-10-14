@@ -1150,160 +1150,636 @@ function setQualityMode(mode) {
 }
 
 // ========================================================
-// Drag-and-Drop Timeline Line & Song Parts Palette Engine
+// Drag-and-Drop Timeline Line & Multi-Song Mixer Engine
+// Hierarchical: Broad Sections with Sub-Parts Split/Merge
 // ========================================================
 
+const WEDDING_SONG_CATALOG = {
+  kala_chashma: {
+    id: 'kala_chashma',
+    name: 'Kala Chashma (Amar Arshi / Badshah)',
+    shortName: 'Kala Chashma',
+    bpm: 107,
+    keyInfo: { camelot: '10A', keyName: 'B Minor' },
+    duration: 173.45,
+    sections: [
+      {
+        id: 'kc_sec_intro',
+        name: 'Opening Brass Fanfare & Risers',
+        desc: 'Iconic opening 4-beat horn riff & buildup pause (4 bars)',
+        tag: 'INTRO',
+        tagColor: '#a855f7',
+        startTime: 0.00,
+        endTime: 8.972,
+        songName: 'Kala Chashma',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'kc_bar_1', name: 'Bar 1: Intro Brass Fanfare (Entrance Hook)', desc: 'Iconic 4-beat entrance mark', tag: 'INTRO', tagColor: '#a855f7', startTime: 0.00, endTime: 2.243, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_2', name: 'Bar 2: Intro Brass Phrase 2', desc: 'Second brass answer bar', tag: 'INTRO', tagColor: '#a855f7', startTime: 2.243, endTime: 4.486, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_3', name: 'Bar 3: Ascending Brass Fill', desc: 'Ascending brass horn fill', tag: 'INTRO', tagColor: '#a855f7', startTime: 4.486, endTime: 6.729, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_4', name: 'Bar 4: Brass Decay & Anticipatory Pause', desc: 'Horn decay & silence pre-roll', tag: 'INTRO', tagColor: '#a855f7', startTime: 6.729, endTime: 8.972, songName: 'Kala Chashma', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'kc_sec_drop',
+        name: 'Dhol Drum Beat Drop & Buildup',
+        desc: 'Drum roll riser into heavy Punjabi Dhol groove',
+        tag: 'DROP',
+        tagColor: '#10b981',
+        startTime: 8.972,
+        endTime: 15.701,
+        songName: 'Kala Chashma',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'kc_bar_5', name: 'Bar 5: Snare Roll & Vocal Risers', desc: 'Pre-drop buildup roll', tag: 'BUILD', tagColor: '#ec4899', startTime: 8.972, endTime: 11.215, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_6', name: 'Bar 6: Dhol Drop Beat 1', desc: 'Heavy Punjabi Dhol beat begins', tag: 'DROP', tagColor: '#10b981', startTime: 11.215, endTime: 13.458, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_7', name: 'Bar 7: Dhol Drop Beat 2', desc: 'Dhol rhythm groove continuation', tag: 'DROP', tagColor: '#10b981', startTime: 13.458, endTime: 15.701, songName: 'Kala Chashma', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'kc_sec_verse',
+        name: 'Lead Rap Verse & Vocal Inflection',
+        desc: 'Amar Arshi vocal lines leading into chorus',
+        tag: 'VERSE',
+        tagColor: '#06b6d4',
+        startTime: 15.701,
+        endTime: 22.430,
+        songName: 'Kala Chashma',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'kc_bar_8', name: 'Bar 8: Amar Arshi Vocal Pickup ("Tere Naa...")', desc: 'Vocal verse opening', tag: 'VERSE', tagColor: '#06b6d4', startTime: 15.701, endTime: 17.944, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_9', name: 'Bar 9: Lead Rap Verse ("Tu Chandigarh...")', desc: 'Lead vocal verse 1st line', tag: 'VERSE', tagColor: '#06b6d4', startTime: 17.944, endTime: 20.187, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_10', name: 'Bar 10: Vocal Buildup ("Tainu Dekh Ke...")', desc: 'Inflection rising into drop', tag: 'BUILD', tagColor: '#ec4899', startTime: 20.187, endTime: 22.430, songName: 'Kala Chashma', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'kc_sec_chorus',
+        name: 'Signature Chorus Main Drop ("Kaala Chashma...")',
+        desc: 'Main chorus hook climax & energetic dance peak (6 bars)',
+        tag: 'CHORUS',
+        tagColor: '#f97316',
+        startTime: 22.430,
+        endTime: 35.888,
+        songName: 'Kala Chashma',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'kc_bar_11_12', name: 'Bars 11-12: Chorus Main Drop ("Kaala Chashma")', desc: 'Signature hook drop (8 beats)', tag: 'CHORUS', tagColor: '#f97316', startTime: 22.430, endTime: 26.916, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_13_14', name: 'Bars 13-14: Chorus Response ("Gore Mukhde Te")', desc: 'Main chorus response hook', tag: 'CHORUS', tagColor: '#f97316', startTime: 26.916, endTime: 31.402, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_15_16', name: 'Bars 15-16: Chorus Peak & Vocal Climax', desc: 'High energy vocal climax & drum roll', tag: 'CHORUS', tagColor: '#f97316', startTime: 31.402, endTime: 35.888, songName: 'Kala Chashma', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'kc_sec_choreo_end',
+        name: 'Rehearsed Choreo Ending & Video Cutoff',
+        desc: 'End of rehearsed video choreography (35.9s - 41.0s)',
+        tag: 'CHOREO',
+        tagColor: '#8b5cf6',
+        startTime: 35.888,
+        endTime: 41.000,
+        songName: 'Kala Chashma',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'kc_bar_17_18', name: 'Bars 17-18: Chorus Outro Dance Pose', desc: 'Final rehearsed choreo routine', tag: 'CHOREO', tagColor: '#8b5cf6', startTime: 35.888, endTime: 40.374, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_cut_seam', name: 'Choreo Cut-Off Seam (40.4s - 41.0s)', desc: 'Transition point to official full song', tag: 'CHOREO', tagColor: '#8b5cf6', startTime: 40.374, endTime: 41.000, songName: 'Kala Chashma', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'kc_sec_finale',
+        name: 'Extended Grand Finale (Verse 2, Badshah Rap & Outro)',
+        desc: 'Pristine official continuation (+133s missing from choreo)',
+        tag: 'FINALE',
+        tagColor: '#10b981',
+        startTime: 41.000,
+        endTime: 173.45,
+        songName: 'Kala Chashma',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'kc_sub_verse2', name: 'Verse 2 & Buildup Drop (41s - 96s)', desc: 'Female lead verse and rhythmic groove', tag: 'VERSE', tagColor: '#06b6d4', startTime: 41.000, endTime: 96.000, songName: 'Kala Chashma', sourceTrack: 'B' },
+          { id: 'kc_sub_rap_outro', name: 'Badshah Rap Verse & Confetti Outro (96s - 173.5s)', desc: 'High-energy rap climax and crowd cheer finish', tag: 'FINALE', tagColor: '#10b981', startTime: 96.000, endTime: 173.45, songName: 'Kala Chashma', sourceTrack: 'B' }
+        ]
+      }
+    ]
+  },
+  kala_chashma_official: {
+    id: 'kala_chashma_official',
+    name: 'Kala Chashma (Full Official Song Outro)',
+    shortName: 'Kala Chashma Outro',
+    bpm: 107,
+    keyInfo: { camelot: '10A', keyName: 'B Minor' },
+    duration: 173.45,
+    sections: [
+      {
+        id: 'kco_sec_intro',
+        name: 'Official Studio Intro & Horns (0:00 - 8.97s)',
+        desc: 'Pristine CD-quality studio opening (4 bars)',
+        tag: 'INTRO',
+        tagColor: '#a855f7',
+        startTime: 0.00,
+        endTime: 8.972,
+        songName: 'Kala Chashma',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'kco_bar_1', name: 'Bar 1: Opening Horn Fanfare', desc: 'Studio brass intro (4 beats)', tag: 'INTRO', tagColor: '#a855f7', startTime: 0.00, endTime: 2.243, songName: 'Kala Chashma', sourceTrack: 'B' },
+          { id: 'kco_bars_2_4', name: 'Bars 2-4: Horn Phrase & Buildup', desc: 'Brass continuation to drop', tag: 'INTRO', tagColor: '#a855f7', startTime: 2.243, endTime: 8.972, songName: 'Kala Chashma', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'kco_sec_drop',
+        name: 'Official Dhol Drop & Verse (8.97s - 22.43s)',
+        desc: 'Studio drums & vocal pickup',
+        tag: 'DROP',
+        tagColor: '#10b981',
+        startTime: 8.972,
+        endTime: 22.430,
+        songName: 'Kala Chashma',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'kco_bar_6', name: 'Bar 6: Dhol Beat Drop', desc: 'Heavy Punjabi Dhol beat begins', tag: 'DROP', tagColor: '#10b981', startTime: 11.215, endTime: 13.458, songName: 'Kala Chashma', sourceTrack: 'B' },
+          { id: 'kco_verse', name: 'Verse 1: Amar Arshi Vocals', desc: 'Clean studio vocals', tag: 'VERSE', tagColor: '#06b6d4', startTime: 15.701, endTime: 22.430, songName: 'Kala Chashma', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'kco_sec_chorus',
+        name: 'Signature Chorus Main Drop (22.43s - 35.89s)',
+        desc: 'Official CD master chorus drop',
+        tag: 'CHORUS',
+        tagColor: '#f97316',
+        startTime: 22.430,
+        endTime: 35.888,
+        songName: 'Kala Chashma',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'kco_chorus_main', name: 'Bars 11-14: Signature Chorus Drop', desc: 'Main "Kaala Chashma" hook (8 beats)', tag: 'CHORUS', tagColor: '#f97316', startTime: 22.430, endTime: 31.402, songName: 'Kala Chashma', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'kco_sec_finale',
+        name: 'Extended Grand Finale & Badshah Rap (41s - 173.5s)',
+        desc: 'Official continuation to end of song (+133s)',
+        tag: 'FINALE',
+        tagColor: '#10b981',
+        startTime: 41.000,
+        endTime: 173.45,
+        songName: 'Kala Chashma',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'kco_finale_full', name: 'Grand Finale: Verse 2 & Badshah Rap', desc: 'Missing official ending (+133s)', tag: 'FINALE', tagColor: '#10b981', startTime: 41.000, endTime: 173.45, songName: 'Kala Chashma', sourceTrack: 'B' }
+        ]
+      }
+    ]
+  },
+  gallan_goodiyaan: {
+    id: 'gallan_goodiyaan',
+    name: 'Gallan Goodiyaan (Celebration Bhangra)',
+    shortName: 'Gallan Goodiyaan',
+    bpm: 128,
+    keyInfo: { camelot: '9A', keyName: 'E Minor' },
+    duration: 38.0,
+    sections: [
+      {
+        id: 'gg_sec_intro',
+        name: 'Festive Dhol & Acoustic Claps Intro',
+        desc: 'Wedding party entrance rhythm with handclaps (4 bars)',
+        tag: 'INTRO',
+        tagColor: '#10b981',
+        startTime: 0.00,
+        endTime: 8.97,
+        songName: 'Gallan Goodiyaan',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'gg_sub_1', name: 'Part 1: Acoustic Claps & Entrance Mark', desc: 'Family entrance groove (4 bars)', tag: 'INTRO', tagColor: '#10b981', startTime: 0.00, endTime: 4.49, songName: 'Gallan Goodiyaan', sourceTrack: 'B' },
+          { id: 'gg_sub_2', name: 'Part 2: Tempo Buildup & Vocal Chant', desc: 'Energy acceleration for crowd chant', tag: 'BUILD', tagColor: '#06b6d4', startTime: 4.49, endTime: 8.97, songName: 'Gallan Goodiyaan', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'gg_sec_drop',
+        name: 'Heavy Bhangra Dhol Beat Drop & Verse',
+        desc: 'Massive celebratory dance drum groove and singing',
+        tag: 'DROP',
+        tagColor: '#10b981',
+        startTime: 8.97,
+        endTime: 26.91,
+        songName: 'Gallan Goodiyaan',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'gg_sub_3', name: 'Part 3: Heavy Bhangra Dhol Beat Drop', desc: 'High energy dance floor groove', tag: 'DROP', tagColor: '#10b981', startTime: 8.97, endTime: 17.94, songName: 'Gallan Goodiyaan', sourceTrack: 'B' },
+          { id: 'gg_sub_4', name: 'Part 4: Lead Vocal Melody Verse', desc: 'Syncopated Sangeet party lyrics', tag: 'VERSE', tagColor: '#06b6d4', startTime: 17.94, endTime: 26.91, songName: 'Gallan Goodiyaan', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'gg_sec_chorus',
+        name: 'Grand Sangeet Chorus Anthem & Finale',
+        desc: 'Massive celebratory drop & all-guest dance finale',
+        tag: 'CHORUS',
+        tagColor: '#f97316',
+        startTime: 26.91,
+        endTime: 38.00,
+        songName: 'Gallan Goodiyaan',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'gg_sub_5', name: 'Part 5: Main Festive Chorus Drop', desc: 'High-octane dance anthem hook', tag: 'CHORUS', tagColor: '#f97316', startTime: 26.91, endTime: 35.88, songName: 'Gallan Goodiyaan', sourceTrack: 'B' },
+          { id: 'gg_sub_6', name: 'Part 6: Outro Grand Finale Climax', desc: 'Final family pose with confetti', tag: 'FINALE', tagColor: '#10b981', startTime: 35.88, endTime: 38.00, songName: 'Gallan Goodiyaan', sourceTrack: 'B' }
+        ]
+      }
+    ]
+  },
+  london_thumakda: {
+    id: 'london_thumakda',
+    name: 'London Thumakda (Dhol Celebration)',
+    shortName: 'London Thumakda',
+    bpm: 130,
+    keyInfo: { camelot: '11B', keyName: 'A Major' },
+    duration: 26.5,
+    sections: [
+      {
+        id: 'lt_sec_intro',
+        name: 'Punjabi Dhol & Shehnai Fanfare',
+        desc: 'Traditional wedding celebration entrance',
+        tag: 'INTRO',
+        tagColor: '#a855f7',
+        startTime: 0.00,
+        endTime: 8.97,
+        songName: 'London Thumakda',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'lt_sub_1', name: 'Part 1: Punjabi Dhol & Shehnai Fanfare', desc: 'Traditional entrance mark', tag: 'INTRO', tagColor: '#a855f7', startTime: 0.00, endTime: 4.49, songName: 'London Thumakda', sourceTrack: 'A' },
+          { id: 'lt_sub_2', name: 'Part 2: Bridal Party 8-Count Rhythm', desc: 'Catchy syncopated wedding dance beat', tag: 'VERSE', tagColor: '#06b6d4', startTime: 4.49, endTime: 8.97, songName: 'London Thumakda', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'lt_sec_hook',
+        name: 'Signature "London Thumakda" Chorus & Climax',
+        desc: 'Iconic bridal dance hook and accelerating tempo finish',
+        tag: 'CHORUS',
+        tagColor: '#f97316',
+        startTime: 8.97,
+        endTime: 26.50,
+        songName: 'London Thumakda',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'lt_sub_3', name: 'Part 3: "London Thumakda" Chorus Drop', desc: 'Signature bridal chorus hook', tag: 'CHORUS', tagColor: '#f97316', startTime: 8.97, endTime: 17.94, songName: 'London Thumakda', sourceTrack: 'A' },
+          { id: 'lt_sub_4', name: 'Part 4: Grand Dhol Outro Finish', desc: 'Accelerating tempo finish for final bow', tag: 'FINALE', tagColor: '#10b981', startTime: 17.94, endTime: 26.50, songName: 'London Thumakda', sourceTrack: 'A' }
+        ]
+      }
+    ]
+  },
+  sauda_khara: {
+    id: 'sauda_khara',
+    name: 'Sauda Khara Khara (Bhangra Pop)',
+    shortName: 'Sauda Khara Khara',
+    bpm: 105,
+    keyInfo: { camelot: '10A', keyName: 'B Minor' },
+    duration: 38.0,
+    sections: [
+      {
+        id: 'sk_sec_intro',
+        name: 'Sukhbir Signature "Tare Gin Gin" Intro & Drop',
+        desc: 'Iconic Punjabi party starter chant & heavy bassline',
+        tag: 'INTRO',
+        tagColor: '#10b981',
+        startTime: 0.00,
+        endTime: 18.29,
+        songName: 'Sauda Khara Khara',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'sk_sub_1', name: 'Part 1: Sukhbir Signature Intro Chant', desc: 'Party starter chant', tag: 'INTRO', tagColor: '#10b981', startTime: 0.00, endTime: 4.57, songName: 'Sauda Khara Khara', sourceTrack: 'B' },
+          { id: 'sk_sub_2', name: 'Part 2: Heavy Electro-Bhangra Dhol Drop', desc: 'Electro-Bhangra dance floor groove', tag: 'DROP', tagColor: '#10b981', startTime: 4.57, endTime: 18.29, songName: 'Sauda Khara Khara', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'sk_sec_chorus',
+        name: 'Chorus Singalong & High-Energy Outro',
+        desc: 'Grand party chorus drop & confetti finish',
+        tag: 'CHORUS',
+        tagColor: '#f97316',
+        startTime: 18.29,
+        endTime: 38.00,
+        songName: 'Sauda Khara Khara',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'sk_sub_3', name: 'Part 3: "Sauda Khara Khara" Chorus Anthem', desc: 'Singalong wedding celebration drop', tag: 'CHORUS', tagColor: '#f97316', startTime: 18.29, endTime: 27.43, songName: 'Sauda Khara Khara', sourceTrack: 'B' },
+          { id: 'sk_sub_4', name: 'Part 4: High-Energy Confetti Outro', desc: 'Driving finish with crowd cheer', tag: 'FINALE', tagColor: '#10b981', startTime: 27.43, endTime: 38.00, songName: 'Sauda Khara Khara', sourceTrack: 'B' }
+        ]
+      }
+    ]
+  },
+  choreo_demo: {
+    id: 'choreo_demo',
+    name: 'Wedding Choreo Edit (Dhol & Synth Remix)',
+    shortName: 'Choreo Edit',
+    bpm: 128,
+    keyInfo: { camelot: '10A', keyName: 'D Minor' },
+    duration: 26.5,
+    sections: [
+      {
+        id: 'cd_sec_intro',
+        name: 'Dhol & Synth Intro (8 counts)',
+        desc: 'Entrance groove (8 counts)',
+        tag: 'INTRO',
+        tagColor: '#a855f7',
+        startTime: 0.00,
+        endTime: 8.97,
+        songName: 'Choreo Edit',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'cd_sub_1', name: 'Part 1: Dhol & Synth Intro', desc: 'Entrance groove (8 counts)', tag: 'INTRO', tagColor: '#a855f7', startTime: 0.00, endTime: 4.49, songName: 'Choreo Edit', sourceTrack: 'A' },
+          { id: 'cd_sub_2', name: 'Part 2: Lead Dance Phrase', desc: 'Rehearsed group dance choreography', tag: 'VERSE', tagColor: '#06b6d4', startTime: 4.49, endTime: 8.97, songName: 'Choreo Edit', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'cd_sec_drop',
+        name: 'Remix Drop & Peak (Ends at 26.5s)',
+        desc: 'High energy drop right before video cutoff',
+        tag: 'DROP',
+        tagColor: '#10b981',
+        startTime: 8.97,
+        endTime: 26.50,
+        songName: 'Choreo Edit',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'cd_sub_3', name: 'Part 3: Remix Drop & Peak', desc: 'Drop right before cutoff', tag: 'DROP', tagColor: '#10b981', startTime: 8.97, endTime: 26.50, songName: 'Choreo Edit', sourceTrack: 'A' }
+        ]
+      }
+    ]
+  }
+};
+
+// Automatically ensure each song has a flat parts array containing all subParts
+Object.values(WEDDING_SONG_CATALOG).forEach(song => {
+  if (song.sections) {
+    const flat = [];
+    song.sections.forEach(sec => {
+      if (sec.subParts) flat.push(...sec.subParts);
+      else flat.push(sec);
+    });
+    song.parts = flat;
+  }
+});
+
+let activePaletteFilter = 'all';
+let paletteState = {
+  viewMode: 'broad', // 'broad' (default) or 'detailed'
+  expandedSections: new Set()
+};
+
+function setPaletteViewMode(mode) {
+  paletteState.viewMode = mode;
+  document.getElementById('viewBroadBtn')?.classList.toggle('active', mode === 'broad');
+  document.getElementById('viewDetailedBtn')?.classList.toggle('active', mode === 'detailed');
+  renderPaletteUI();
+}
+
+function toggleSectionExpansion(secId) {
+  if (paletteState.expandedSections.has(secId)) {
+    paletteState.expandedSections.delete(secId);
+    showToast("🔗 Merged section back to broad view.");
+  } else {
+    paletteState.expandedSections.add(secId);
+    showToast("✂️ Split section into smaller bars & phrases!");
+  }
+  renderPaletteUI();
+}
+
+function getSongSectionsCatalog() {
+  if (appState.currentMode === 'medley') {
+    const selA = document.getElementById('songSelectA')?.value || 'kala_chashma';
+    const selB = document.getElementById('songSelectB')?.value || 'gallan_goodiyaan';
+    const secsA = (WEDDING_SONG_CATALOG[selA] || WEDDING_SONG_CATALOG['kala_chashma']).sections || [];
+    const secsB = (WEDDING_SONG_CATALOG[selB] || WEDDING_SONG_CATALOG['gallan_goodiyaan']).sections || [];
+    return [...secsA, ...secsB];
+  } else {
+    const selA = document.getElementById('songSelectA')?.value || 'kala_chashma';
+    return (WEDDING_SONG_CATALOG[selA] || WEDDING_SONG_CATALOG['kala_chashma']).sections || [];
+  }
+}
+
 function getDetectedSongPartsCatalog() {
-  return [
-    {
-      id: 'bar_1',
-      name: 'Bar 1: Intro Brass Fanfare',
-      desc: 'Iconic opening 4-beat horn hook (Entrance mark)',
-      tag: 'INTRO',
-      tagColor: '#a855f7',
-      startTime: 0.00,
-      endTime: 2.243
-    },
-    {
-      id: 'bar_2',
-      name: 'Bar 2: Intro Brass Phrase 2',
-      desc: 'Second brass answer bar (4 beats)',
-      tag: 'INTRO',
-      tagColor: '#a855f7',
-      startTime: 2.243,
-      endTime: 4.486
-    },
-    {
-      id: 'bar_3',
-      name: 'Bar 3: Intro Brass Phrase 3',
-      desc: 'Ascending brass horn fill',
-      tag: 'INTRO',
-      tagColor: '#a855f7',
-      startTime: 4.486,
-      endTime: 6.729
-    },
-    {
-      id: 'bar_4',
-      name: 'Bar 4: Brass End & Silence Pre-Roll',
-      desc: 'Horn decay & anticipatory pause',
-      tag: 'INTRO',
-      tagColor: '#a855f7',
-      startTime: 6.729,
-      endTime: 8.972
-    },
-    {
-      id: 'bar_5',
-      name: 'Bar 5: Build-up Drum Roll & Horns',
-      desc: 'Snare roll & vocal risers',
-      tag: 'BUILD',
-      tagColor: '#ec4899',
-      startTime: 8.972,
-      endTime: 11.215
-    },
-    {
-      id: 'bar_6',
-      name: 'Bar 6: Dhol Drop Beat 1',
-      desc: 'Heavy Punjabi Dhol beat begins',
-      tag: 'DROP',
-      tagColor: '#10b981',
-      startTime: 11.215,
-      endTime: 13.458
-    },
-    {
-      id: 'bar_7',
-      name: 'Bar 7: Dhol Drop Beat 2',
-      desc: 'Dhol rhythm groove continuation',
-      tag: 'DROP',
-      tagColor: '#10b981',
-      startTime: 13.458,
-      endTime: 15.701
-    },
-    {
-      id: 'bar_8',
-      name: 'Bar 8: Rap Intro ("Tere Naa Diyaan...")',
-      desc: 'Amar Arshi vocal pickup',
-      tag: 'VERSE',
-      tagColor: '#06b6d4',
-      startTime: 15.701,
-      endTime: 17.944
-    },
-    {
-      id: 'bar_9',
-      name: 'Bar 9: Rap Verse ("Tu Chandigarh Toh...")',
-      desc: 'Lead vocal verse 1st line',
-      tag: 'VERSE',
-      tagColor: '#06b6d4',
-      startTime: 17.944,
-      endTime: 20.187
-    },
-    {
-      id: 'bar_10',
-      name: 'Bar 10: Rap Build ("Tainu Dekh Ke...")',
-      desc: 'Vocal inflection leading into chorus drop',
-      tag: 'BUILD',
-      tagColor: '#ec4899',
-      startTime: 20.187,
-      endTime: 22.430
-    },
-    {
-      id: 'bar_11_12',
-      name: 'Bars 11-12: Chorus Main Drop ("Kaala Chashma...")',
-      desc: 'The signature hook drop (8 beats)',
-      tag: 'CHORUS',
-      tagColor: '#f97316',
-      startTime: 22.430,
-      endTime: 26.916
-    },
-    {
-      id: 'bar_13_14',
-      name: 'Bars 13-14: Chorus Phrase 2 ("Gore Mukhde Te...")',
-      desc: 'Main chorus response hook',
-      tag: 'CHORUS',
-      tagColor: '#f97316',
-      startTime: 26.916,
-      endTime: 31.402
-    },
-    {
-      id: 'bar_15_16',
-      name: 'Bars 15-16: Hook Climax & Vocal Peak',
-      desc: 'High energy vocal climax & drum roll',
-      tag: 'CHORUS',
-      tagColor: '#f97316',
-      startTime: 31.402,
-      endTime: 35.888
-    },
-    {
-      id: 'bar_17_18',
-      name: 'Bars 17-18: Chorus Outro (Choreo Cut-Off)',
-      desc: 'End of rehearsed choreo video (38.8s - 40.37s)',
-      tag: 'CHOREO',
-      tagColor: '#8b5cf6',
-      startTime: 35.888,
-      endTime: 40.374
-    },
-    {
-      id: 'bar_finale',
-      name: 'Extended Finale: Verse 2, Badshah Rap & Outro',
-      desc: 'Full studio continuation to end (+133s)',
-      tag: 'FINALE',
-      tagColor: '#10b981',
-      startTime: 40.374,
-      endTime: 173.45
+  if (appState.currentMode === 'medley') {
+    const selA = document.getElementById('songSelectA')?.value || 'kala_chashma';
+    const selB = document.getElementById('songSelectB')?.value || 'gallan_goodiyaan';
+    const partsA = (WEDDING_SONG_CATALOG[selA] || WEDDING_SONG_CATALOG['kala_chashma']).parts || [];
+    const partsB = (WEDDING_SONG_CATALOG[selB] || WEDDING_SONG_CATALOG['gallan_goodiyaan']).parts || [];
+    return [...partsA, ...partsB];
+  } else {
+    const selA = document.getElementById('songSelectA')?.value || 'kala_chashma';
+    return (WEDDING_SONG_CATALOG[selA] || WEDDING_SONG_CATALOG['kala_chashma']).parts || [];
+  }
+}
+
+function getAllSongPartsAndSections() {
+  const secs = getSongSectionsCatalog();
+  const parts = getDetectedSongPartsCatalog();
+  return [...secs, ...parts];
+}
+
+function setPaletteFilter(filter) {
+  activePaletteFilter = filter;
+  document.querySelectorAll('.palette-filter-btn').forEach(btn => btn.classList.remove('active'));
+  if (filter === 'all') document.getElementById('filterAllBtn')?.classList.add('active');
+  else if (filter === 'A') document.getElementById('filterTrackABtn')?.classList.add('active');
+  else if (filter === 'B') document.getElementById('filterTrackBBtn')?.classList.add('active');
+  renderPaletteUI();
+}
+
+async function loadSongBuffer(songId) {
+  if (songId === 'kala_chashma' || songId === 'kala_chashma_official') {
+    return await ensureTrackBBuffer();
+  } else if (songId === 'gallan_goodiyaan') {
+    if (!appState._cachedGallan) {
+      appState._cachedGallan = await appState.demoGen.generateCelebrationSong();
     }
-  ];
+    return appState._cachedGallan;
+  } else if (songId === 'london_thumakda') {
+    if (!appState._cachedLondon) {
+      appState._cachedLondon = await appState.demoGen.generateChoreoEdit();
+    }
+    return appState._cachedLondon;
+  } else if (songId === 'sauda_khara') {
+    if (!appState._cachedSauda) {
+      appState._cachedSauda = await appState.demoGen.generateCelebrationSong();
+    }
+    return appState._cachedSauda;
+  } else if (songId === 'choreo_demo') {
+    if (!appState._cachedChoreoDemo) {
+      appState._cachedChoreoDemo = await appState.demoGen.generateChoreoEdit();
+    }
+    return appState._cachedChoreoDemo;
+  }
+  return await ensureTrackBBuffer();
+}
+
+async function selectMixStarter(starterId) {
+  document.querySelectorAll('.btn-mix-starter').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`starter_${starterId}`)?.classList.add('active');
+
+  if (starterId === 'kala_chashma_choreo') {
+    switchRemixMode('choreo');
+    const selA = document.getElementById('songSelectA');
+    const selB = document.getElementById('songSelectB');
+    if (selA) selA.value = 'kala_chashma';
+    if (selB) selB.value = 'kala_chashma_official';
+
+    await loadKalaChashmaUserTracks();
+    appState.arrangementBlocks = getDefaultKalaChashmaBlocks(true);
+    renderArrangementBlocksUI();
+    drawWaveformTimeline();
+    showToast("🔥 Loaded Kala Chashma Choreo Extension (Bar 1 Repeat + Outro Extension)!");
+
+  } else if (starterId === 'kala_gallan_mashup') {
+    switchRemixMode('medley');
+    const selA = document.getElementById('songSelectA');
+    const selB = document.getElementById('songSelectB');
+    if (selA) selA.value = 'kala_chashma';
+    if (selB) selB.value = 'gallan_goodiyaan';
+
+    showToast("🎛️ Loading Kala Chashma ➔ Gallan Goodiyaan Bhangra Mashup...");
+    const bufA = await ensureTrackBBuffer();
+    const bufB = await loadSongBuffer('gallan_goodiyaan');
+
+    appState.trackA = {
+      name: "Kala Chashma (Opening Anthem - 107 BPM)",
+      buffer: bufA,
+      analysis: appState.engine.analyzeTrack(bufA),
+      source: 'catalog'
+    };
+    appState.trackB = {
+      name: "Gallan Goodiyaan (Celebration Bhangra - 128 BPM)",
+      buffer: bufB,
+      analysis: appState.engine.analyzeTrack(bufB),
+      source: 'catalog'
+    };
+
+    updateTrackCardUI('A', appState.trackA);
+    updateTrackCardUI('B', appState.trackB);
+    checkBothTracksReady();
+
+    appState.arrangementBlocks = getCuratedMashupBlocks('kala_chashma', 'gallan_goodiyaan');
+    renderArrangementBlocksUI();
+    drawWaveformTimeline();
+    showToast("🎉 Loaded Kala Chashma ➔ Gallan Goodiyaan Mashup!");
+
+  } else if (starterId === 'london_sauda_medley') {
+    switchRemixMode('medley');
+    const selA = document.getElementById('songSelectA');
+    const selB = document.getElementById('songSelectB');
+    if (selA) selA.value = 'london_thumakda';
+    if (selB) selB.value = 'sauda_khara';
+
+    showToast("🎛️ Loading London Thumakda ➔ Sauda Khara Khara Medley...");
+    const bufA = await loadSongBuffer('london_thumakda');
+    const bufB = await loadSongBuffer('sauda_khara');
+
+    appState.trackA = {
+      name: "London Thumakda (Dhol Celebration - 130 BPM)",
+      buffer: bufA,
+      analysis: appState.engine.analyzeTrack(bufA),
+      source: 'catalog'
+    };
+    appState.trackB = {
+      name: "Sauda Khara Khara (Bhangra Pop - 105 BPM)",
+      buffer: bufB,
+      analysis: appState.engine.analyzeTrack(bufB),
+      source: 'catalog'
+    };
+
+    updateTrackCardUI('A', appState.trackA);
+    updateTrackCardUI('B', appState.trackB);
+    checkBothTracksReady();
+
+    appState.arrangementBlocks = getCuratedMashupBlocks('london_thumakda', 'sauda_khara');
+    renderArrangementBlocksUI();
+    drawWaveformTimeline();
+    showToast("🎉 Loaded London Thumakda ➔ Sauda Khara Khara Medley!");
+
+  } else if (starterId === 'custom_upload') {
+    toggleDeckUpload('A', true);
+    toggleDeckUpload('B', true);
+    showToast("📁 Drop your audio/video files or paste YouTube links in Deck 1 and Deck 2!");
+  }
+}
+
+async function handleSongSelectChange(deck, songId) {
+  if (songId === 'custom') {
+    toggleDeckUpload(deck, true);
+    return;
+  }
+
+  toggleDeckUpload(deck, false);
+  const songData = WEDDING_SONG_CATALOG[songId];
+  if (!songData) return;
+
+  showToast(`Loading ${songData.name} on Track ${deck}...`);
+  const buf = await loadSongBuffer(songId);
+  const analysis = appState.engine.analyzeTrack(buf);
+
+  const trackObj = {
+    name: songData.name,
+    buffer: buf,
+    analysis: analysis,
+    source: 'catalog'
+  };
+
+  if (deck === 'A') appState.trackA = trackObj;
+  else appState.trackB = trackObj;
+
+  updateTrackCardUI(deck, trackObj);
+  checkBothTracksReady();
+
+  renderArrangementBlocksUI();
+  drawWaveformTimeline();
+  showToast(`✅ Selected: ${songData.name} (${analysis.bpm} BPM)`);
+}
+
+function toggleDeckUpload(deck, forceOpen = null) {
+  const drawer = document.getElementById(`deckUploadDrawer${deck}`);
+  if (!drawer) return;
+  if (forceOpen !== null) {
+    drawer.style.display = forceOpen ? 'block' : 'none';
+  } else {
+    drawer.style.display = (drawer.style.display === 'none') ? 'block' : 'none';
+  }
+}
+
+function getCuratedMashupBlocks(songAId, songBId) {
+  const songA = WEDDING_SONG_CATALOG[songAId] || WEDDING_SONG_CATALOG['kala_chashma'];
+  const songB = WEDDING_SONG_CATALOG[songBId] || WEDDING_SONG_CATALOG['gallan_goodiyaan'];
+  const blocks = [];
+
+  // Pick broad sections from Song 1
+  if (songA.sections && songA.sections.length > 0) {
+    blocks.push({ ...songA.sections[0], id: `${songA.id}_sec1_${Date.now()}`, isDuplicated: false });
+    if (songA.sections[1]) blocks.push({ ...songA.sections[1], id: `${songA.id}_sec2_${Date.now()}`, isDuplicated: false });
+    const dropA = songA.sections.find(s => s.tag === 'DROP' || s.tag === 'CHORUS') || songA.sections[2];
+    if (dropA) blocks.push({ ...dropA, id: `${songA.id}_drop_${Date.now()}`, isDuplicated: false });
+  }
+
+  // Pick broad sections from Song 2
+  if (songB.sections && songB.sections.length > 0) {
+    const buildB = songB.sections.find(s => s.tag === 'BUILD' || s.tag === 'INTRO') || songB.sections[0];
+    if (buildB) blocks.push({ ...buildB, id: `${songB.id}_build_${Date.now()}`, isDuplicated: false });
+    const dropB = songB.sections.find(s => s.tag === 'DROP') || songB.sections[1];
+    if (dropB) blocks.push({ ...dropB, id: `${songB.id}_drop_${Date.now()}`, isDuplicated: false });
+    const chorusB = songB.sections.find(s => s.tag === 'CHORUS') || songB.sections[2];
+    if (chorusB) blocks.push({ ...chorusB, id: `${songB.id}_chorus_${Date.now()}`, isDuplicated: false });
+    const finaleB = songB.sections.find(s => s.tag === 'FINALE') || songB.sections[songB.sections.length - 1];
+    if (finaleB) blocks.push({ ...finaleB, id: `${songB.id}_finale_${Date.now()}`, isDuplicated: false });
+  }
+
+  return blocks;
 }
 
 function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
-  const catalog = getDetectedSongPartsCatalog();
+  const song = WEDDING_SONG_CATALOG['kala_chashma'];
+  const introSubparts = song.sections[0].subParts;
   const blocks = [];
 
   // Bar 1
-  blocks.push({ ...catalog[0], id: 'bar_1', isDuplicated: false });
+  blocks.push({ ...introSubparts[0], id: 'bar_1', isDuplicated: false });
 
   // Optional Bar 1 Repeat (for Choreo Video Match)
   if (includeDuplicatedIntro) {
     blocks.push({
-      ...catalog[0],
+      ...introSubparts[0],
       id: 'bar_1_dup',
       name: 'Bar 1 Repeat: Choreo Extra Riff',
       desc: 'Repeated opening horn hook (Choreo pattern)',
@@ -1313,63 +1789,195 @@ function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
     });
   }
 
-  // Push remaining parts in sequence
-  for (let i = 1; i < catalog.length; i++) {
-    blocks.push({ ...catalog[i], isDuplicated: false });
+  // Add broad sections for the rest
+  const remainingIntro = {
+    id: 'intro_continuation',
+    name: 'Intro Brass Risers & Pause (Bars 2-4)',
+    desc: 'Brass horn answer bars & silent pause',
+    tag: 'INTRO',
+    tagColor: '#a855f7',
+    startTime: 2.243,
+    endTime: 8.972,
+    songName: 'Kala Chashma',
+    sourceTrack: 'A',
+    isDuplicated: false
+  };
+  blocks.push(remainingIntro);
+
+  // Push remaining broad sections: Drop, Verse, Chorus, Choreo Outro, Extended Finale
+  for (let s = 1; s < song.sections.length; s++) {
+    blocks.push({ ...song.sections[s], id: `${song.sections[s].id}_${Date.now()}`, isDuplicated: false });
   }
 
   return blocks;
 }
 
-// Render Palette of Auto-Detected Song Parts
+// Render Palette of Auto-Detected Song Parts (Broad & Detailed)
 function renderPaletteUI() {
   const container = document.getElementById('paletteGridContainer');
   if (!container) return;
 
-  const catalog = getDetectedSongPartsCatalog();
+  if (paletteState.viewMode === 'broad') {
+    // --- Render Broad Sections View ---
+    let sections = getSongSectionsCatalog();
+    if (appState.currentMode === 'medley' && activePaletteFilter !== 'all') {
+      sections = sections.filter(s => s.sourceTrack === activePaletteFilter);
+    }
 
-  const html = catalog.map(part => {
-    const dur = (part.endTime - part.startTime).toFixed(2);
-    const tagBg = part.tagColor || '#818cf8';
+    const html = sections.map(sec => {
+      const dur = (sec.endTime - sec.startTime).toFixed(2);
+      const tagBg = sec.tagColor || '#818cf8';
+      const isTrackB = sec.sourceTrack === 'B';
+      const isExpanded = paletteState.expandedSections.has(sec.id);
+      const subPartsCount = sec.subParts ? sec.subParts.length : 0;
 
-    return `
-      <div class="palette-item-card" 
-           id="palette_${part.id}"
-           draggable="true" 
-           ondragstart="handlePaletteDragStart(event, '${part.id}')"
-           ondragend="handleDragEnd(event)">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: ${tagBg}22; color: ${tagBg}; border: 1px solid ${tagBg}55;">
-            ${part.tag}
-          </span>
-          <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">
-            ⏱ ${dur}s
-          </span>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 2px;">
-          <strong style="font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            ${part.name}
-          </strong>
-          <span style="font-size: 11px; color: var(--text-muted); line-height: 1.3;">
-            ${part.desc}
-          </span>
-        </div>
-        <div style="font-size: 10.5px; font-family: monospace; color: var(--accent-cyan); background: rgba(0,0,0,0.25); padding: 3px 6px; border-radius: 4px;">
-          Span: ${appState.engine.formatTime(part.startTime)} - ${appState.engine.formatTime(part.endTime)}
-        </div>
-        <div class="palette-actions-row">
-          <button type="button" class="timeline-item-btn" onclick="soloPalettePart('${part.id}')" title="Audition this part in isolation">
-            <span>🔊</span> Solo
-          </button>
-          <button type="button" class="btn-add-to-timeline" onclick="addPartToTimeline('${part.id}')" title="Drop this part onto the Timeline Line">
-            <span>➕</span> Add to Line
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
+      return `
+        <div class="palette-item-card" 
+             id="palette_${sec.id}"
+             draggable="true" 
+             ondragstart="handlePaletteDragStart(event, '${sec.id}')"
+             ondragend="handleDragEnd(event)"
+             style="${appState.currentMode === 'medley' ? (isTrackB ? 'border-top: 3px solid var(--accent-cyan);' : 'border-top: 3px solid var(--accent-purple);') : ''}">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 5px; align-items: center;">
+              ${appState.currentMode === 'medley' ? `
+                <span style="font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${isTrackB ? 'rgba(6, 182, 212, 0.25)' : 'rgba(168, 85, 247, 0.25)'}; color: ${isTrackB ? '#67e8f9' : '#d8b4fe'};">
+                  ${isTrackB ? 'Track 2' : 'Track 1'}
+                </span>
+              ` : ''}
+              <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: ${tagBg}22; color: ${tagBg}; border: 1px solid ${tagBg}55;">
+                ${sec.tag}
+              </span>
+            </div>
+            <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">
+              ⏱ ${dur}s
+            </span>
+          </div>
 
-  container.innerHTML = html;
+          <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 4px;">
+            <strong style="font-size: 13.5px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              ${sec.name}
+            </strong>
+            <span style="font-size: 11px; color: var(--text-muted); line-height: 1.3;">
+              ${sec.desc}
+            </span>
+          </div>
+
+          <div style="font-size: 10.5px; font-family: monospace; color: var(--accent-cyan); background: rgba(0,0,0,0.25); padding: 3px 6px; border-radius: 4px; margin-top: 2px;">
+            Span: ${appState.engine.formatTime(sec.startTime)} - ${appState.engine.formatTime(sec.endTime)}
+          </div>
+
+          <!-- Actions -->
+          <div class="palette-actions-row">
+            <button type="button" class="timeline-item-btn" onclick="soloPalettePart('${sec.id}')" title="Audition this section">
+              <span>🔊</span> Solo
+            </button>
+            <button type="button" class="btn-add-to-timeline" onclick="addPartToTimeline('${sec.id}')" title="Drop this section onto your timeline line">
+              <span>➕</span> Add Section
+            </button>
+            ${subPartsCount > 1 ? `
+              <button type="button" class="${isExpanded ? 'btn-merge-sec' : 'btn-split-sec'}" onclick="toggleSectionExpansion('${sec.id}')" title="${isExpanded ? 'Merge back into broad card' : 'Split into smaller bars'}">
+                <span>${isExpanded ? '🔗 Merge' : '✂️ Split (' + subPartsCount + ')'}</span>
+              </button>
+            ` : ''}
+          </div>
+
+          <!-- Unfolded Sub-Parts Tray -->
+          ${isExpanded && sec.subParts ? `
+            <div class="palette-subparts-tray">
+              <div style="font-size: 10.5px; font-weight: 700; color: #a5f3fc; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center;">
+                <span>Constituent Bars & Phrases:</span>
+                <span style="font-size: 10px; color: var(--text-muted);">Pick any individual bar</span>
+              </div>
+              ${sec.subParts.map(sp => `
+                <div class="subpart-pill-row" 
+                     id="palette_${sp.id}"
+                     draggable="true" 
+                     ondragstart="handlePaletteDragStart(event, '${sp.id}')"
+                     ondragend="handleDragEnd(event)">
+                  <div class="subpart-pill-info">
+                    <strong style="font-size: 11.5px; color: var(--text-main);">${sp.name}</strong>
+                    <span style="font-size: 10px; font-family: monospace; color: var(--text-muted);">${appState.engine.formatTime(sp.startTime)} - ${appState.engine.formatTime(sp.endTime)} (${(sp.endTime - sp.startTime).toFixed(2)}s)</span>
+                  </div>
+                  <div class="subpart-pill-actions">
+                    <button type="button" class="timeline-item-btn" onclick="soloPalettePart('${sp.id}')" style="padding: 2px 6px; font-size: 10px;">
+                      <span>🔊</span>
+                    </button>
+                    <button type="button" class="btn-add-to-timeline" onclick="addPartToTimeline('${sp.id}')" style="padding: 3px 8px; font-size: 10px;">
+                      <span>➕ Add</span>
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = html;
+
+  } else {
+    // --- Render Detailed Bars View ---
+    let catalog = getDetectedSongPartsCatalog();
+    if (appState.currentMode === 'medley' && activePaletteFilter !== 'all') {
+      catalog = catalog.filter(p => p.sourceTrack === activePaletteFilter);
+    }
+
+    const html = catalog.map(part => {
+      const dur = (part.endTime - part.startTime).toFixed(2);
+      const tagBg = part.tagColor || '#818cf8';
+      const isTrackB = part.sourceTrack === 'B';
+
+      return `
+        <div class="palette-item-card" 
+             id="palette_${part.id}"
+             draggable="true" 
+             ondragstart="handlePaletteDragStart(event, '${part.id}')"
+             ondragend="handleDragEnd(event)"
+             style="${appState.currentMode === 'medley' ? (isTrackB ? 'border-top: 3px solid var(--accent-cyan);' : 'border-top: 3px solid var(--accent-purple);') : ''}">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 5px; align-items: center;">
+              ${appState.currentMode === 'medley' ? `
+                <span style="font-size: 9.5px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: ${isTrackB ? 'rgba(6, 182, 212, 0.25)' : 'rgba(168, 85, 247, 0.25)'}; color: ${isTrackB ? '#67e8f9' : '#d8b4fe'};">
+                  ${isTrackB ? 'Track 2' : 'Track 1'}
+                </span>
+              ` : ''}
+              <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: ${tagBg}22; color: ${tagBg}; border: 1px solid ${tagBg}55;">
+                ${part.tag}
+              </span>
+            </div>
+            <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">
+              ⏱ ${dur}s
+            </span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 4px;">
+            <strong style="font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              ${part.name}
+            </strong>
+            <span style="font-size: 11px; color: var(--text-muted); line-height: 1.3;">
+              ${part.desc}
+            </span>
+          </div>
+          <div style="font-size: 10.5px; font-family: monospace; color: var(--accent-cyan); background: rgba(0,0,0,0.25); padding: 3px 6px; border-radius: 4px; margin-top: 2px;">
+            Span: ${appState.engine.formatTime(part.startTime)} - ${appState.engine.formatTime(part.endTime)}
+          </div>
+          <div class="palette-actions-row">
+            <button type="button" class="timeline-item-btn" onclick="soloPalettePart('${part.id}')" title="Audition this part in isolation">
+              <span>🔊</span> Solo
+            </button>
+            <button type="button" class="btn-add-to-timeline" onclick="addPartToTimeline('${part.id}')" title="Drop this part onto the Timeline Line">
+              <span>➕</span> Add to Line
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = html;
+  }
 }
 
 // Render the Sequencer Timeline Line
@@ -1382,7 +1990,7 @@ function renderTimelineLineUI() {
   if (blocks.length === 0) {
     track.innerHTML = `
       <div class="timeline-empty-hint">
-        <span>👉 Your Timeline Line is empty! Pick parts from the Song Palette below and drag & drop them here (or click "+ Add to Line").</span>
+        <span>👉 Your Timeline Line is empty! Pick sections from the Palette below and drag & drop them here (or click "+ Add Section").</span>
       </div>
     `;
     updateTimelineStatsBadge(0, 0);
@@ -1397,6 +2005,9 @@ function renderTimelineLineUI() {
   const html = blocks.map((blk, idx) => {
     const dur = (blk.endTime - blk.startTime).toFixed(2);
     const tagBg = blk.tagColor || '#818cf8';
+    const isTrackB = blk.sourceTrack === 'B';
+    const canSplit = (blk.endTime - blk.startTime) > 2.0;
+    const canMerge = (idx < blocks.length - 1) && Math.abs(blocks[idx + 1].startTime - blk.endTime) < 0.2;
 
     return `
       <div class="timeline-item-pill" 
@@ -1407,11 +2018,17 @@ function renderTimelineLineUI() {
            ondragover="handleTimelineItemDragOver(event, ${idx})"
            ondragleave="handleTimelineItemDragLeave(event, ${idx})"
            ondrop="handleTimelineItemDrop(event, ${idx})"
-           ondragend="handleDragEnd(event)">
+           ondragend="handleDragEnd(event)"
+           style="${appState.currentMode === 'medley' ? (isTrackB ? 'border-top: 3px solid var(--accent-cyan);' : 'border-top: 3px solid var(--accent-purple);') : ''}">
         <div class="timeline-item-header">
           <span style="font-size: 10px; font-weight: 700; background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; color: var(--text-muted);">
             #${idx + 1}
           </span>
+          ${appState.currentMode === 'medley' ? `
+            <span style="font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; background: ${isTrackB ? 'rgba(6, 182, 212, 0.25)' : 'rgba(168, 85, 247, 0.25)'}; color: ${isTrackB ? '#67e8f9' : '#d8b4fe'};">
+              ${isTrackB ? 'Track 2' : 'Track 1'}
+            </span>
+          ` : ''}
           <span style="font-size: 9.5px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: ${tagBg}22; color: ${tagBg}; border: 1px solid ${tagBg}44;">
             ${blk.tag}
           </span>
@@ -1425,12 +2042,22 @@ function renderTimelineLineUI() {
         </div>
         <div class="timeline-item-actions">
           <button type="button" class="timeline-item-btn" onclick="soloBlock(${idx})" title="Listen to just this part">
-            <span>🔊</span> Solo
+            <span>🔊</span>
           </button>
           <button type="button" class="timeline-item-btn dup" onclick="duplicateBlock(${idx})" title="Duplicate/repeat this part on the line">
-            <span>🔁</span> Dup
+            <span>🔁 Dup</span>
           </button>
-          <button type="button" class="timeline-item-btn del" onclick="deleteBlock(${idx})" title="Cut out this part">
+          ${canSplit ? `
+            <button type="button" class="timeline-item-btn split" onclick="splitBlock(${idx})" title="Split into smaller bars">
+              <span>✂️ Split</span>
+            </button>
+          ` : ''}
+          ${canMerge ? `
+            <button type="button" class="timeline-item-btn merge" onclick="mergeBlockWithNext(${idx})" title="Merge with next piece">
+              <span>🔗 Merge</span>
+            </button>
+          ` : ''}
+          <button type="button" class="timeline-item-btn del" onclick="deleteBlock(${idx})" title="Cut out this piece">
             <span>✕</span>
           </button>
         </div>
@@ -1453,6 +2080,78 @@ function updateTimelineStatsBadge(count, totalDur) {
   if (impactTotal) {
     impactTotal.innerText = `${appState.engine.formatTime(totalDur)} (${totalDur.toFixed(1)}s)`;
   }
+}
+
+function splitBlock(idx) {
+  if (!appState.arrangementBlocks || !appState.arrangementBlocks[idx]) return;
+  const blk = appState.arrangementBlocks[idx];
+  const dur = blk.endTime - blk.startTime;
+
+  if (dur < 1.0) {
+    showToast("⚠️ This part is already a short beat (<1s) and cannot be split further.");
+    return;
+  }
+
+  // Look up if this section has constituent subParts in the catalog
+  const allSecs = getSongSectionsCatalog();
+  const matched = allSecs.find(s => Math.abs(s.startTime - blk.startTime) < 0.15 && Math.abs(s.endTime - blk.endTime) < 0.15);
+
+  if (matched && matched.subParts && matched.subParts.length > 1) {
+    const newPieces = matched.subParts.map(sp => ({
+      ...sp,
+      id: `${sp.id}_split_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      isDuplicated: false,
+      sourceTrack: blk.sourceTrack || sp.sourceTrack
+    }));
+    appState.arrangementBlocks.splice(idx, 1, ...newPieces);
+    renderTimelineLineUI();
+    drawWaveformTimeline();
+    showToast(`✂️ Split "${blk.name}" into ${newPieces.length} smaller bars!`);
+    return;
+  }
+
+  // Split in half
+  const half = dur / 2;
+  const splitPoint = blk.startTime + half;
+
+  const piece1 = {
+    ...blk,
+    id: `${blk.id}_p1_${Date.now()}`,
+    name: `${blk.name.replace(/\s*\(Part\s*\d+\)/g, '')} (Part 1)`,
+    endTime: splitPoint
+  };
+  const piece2 = {
+    ...blk,
+    id: `${blk.id}_p2_${Date.now()}`,
+    name: `${blk.name.replace(/\s*\(Part\s*\d+\)/g, '')} (Part 2)`,
+    startTime: splitPoint
+  };
+
+  appState.arrangementBlocks.splice(idx, 1, piece1, piece2);
+  renderTimelineLineUI();
+  drawWaveformTimeline();
+  showToast(`✂️ Split into 2 parts (${(splitPoint - blk.startTime).toFixed(1)}s + ${(blk.endTime - splitPoint).toFixed(1)}s)!`);
+}
+
+function mergeBlockWithNext(idx) {
+  if (!appState.arrangementBlocks || idx >= appState.arrangementBlocks.length - 1) return;
+  const b1 = appState.arrangementBlocks[idx];
+  const b2 = appState.arrangementBlocks[idx + 1];
+
+  const merged = {
+    ...b1,
+    id: `merged_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    name: `${b1.name.replace(/\s*\(Part\s*\d+\)/g, '')} + ${b2.name.replace(/\s*\(Part\s*\d+\)/g, '')}`,
+    desc: `Merged continuous section (${b1.startTime.toFixed(2)}s - ${b2.endTime.toFixed(2)}s)`,
+    startTime: b1.startTime,
+    endTime: b2.endTime,
+    isDuplicated: false
+  };
+
+  appState.arrangementBlocks.splice(idx, 2, merged);
+  renderTimelineLineUI();
+  drawWaveformTimeline();
+  showToast(`🔗 Merged parts into a single continuous block (${(merged.endTime - merged.startTime).toFixed(1)}s)!`);
 }
 
 // Alias for backwards compatibility

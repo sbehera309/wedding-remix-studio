@@ -8,25 +8,25 @@
 </head>
 <body>
   <div class="container">
-    <!-- Header -->
+    <!-- Studio Header -->
     <header class="studio-header">
       <div class="logo-group">
         <h1><span>✨</span> Wedding Remix Studio</h1>
-        <p class="studio-subtitle">Choreo & Song Arranger • Drag & Drop Parts • Seamless Master Mix</p>
+        <p class="studio-subtitle">Wedding & Sangeet Dance Mashup Lab • Mix Songs, Cut Beats & Create DJ Edits</p>
       </div>
 
-      <!-- Current Track Status & Quick Actions -->
+      <!-- Quick Global Actions -->
       <div class="header-right-group">
         <div class="track-status-badge">
           <span class="status-pulse-dot"></span>
           <div class="status-badge-text">
-            <span class="track-status-name">Kala Chashma (107 BPM • B Minor)</span>
-            <span class="track-status-tag">Studio Master HD</span>
+            <span class="track-status-name" id="globalStatusName">Kala Chashma (107 BPM • B Minor)</span>
+            <span class="track-status-tag" id="globalStatusTag">Ready to Play</span>
           </div>
         </div>
         <div class="header-action-buttons">
-          <button type="button" id="loadUserKalaChashmaBtn" class="btn-header-glow" title="Reload Kala Chashma Choreo & Official Song">
-            <span>🔥</span> Load Song
+          <button type="button" class="btn-header-glow" onclick="triggerPlayFullMix()" title="Play entire mix">
+            <span>▶</span> Play Mix
           </button>
           <button type="button" class="btn-header-action" onclick="triggerExportWav()" title="Download high-resolution master WAV">
             <span>💾</span> Download WAV
@@ -36,15 +36,168 @@
     </header>
 
     <!-- ======================================================== -->
-    <!-- STEP 1: 🎶 YOUR SONG TIMELINE (CENTERPIECE OF THE STUDIO) -->
+    <!-- STEP 1: 🎛️ SELECT SONGS TO MIX                           -->
+    <!-- ======================================================== -->
+    <section class="studio-card song-selector-card" id="songSelectorSection">
+      <div class="timeline-title-meta" style="margin-bottom: 14px;">
+        <span class="step-badge" style="background: linear-gradient(135deg, #06b6d4, #0284c7);">STEP 1</span>
+        <div>
+          <h2 style="font-size: 19px; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
+            <span>🎛️</span> Select Songs to Mix & Choose Project Type
+          </h2>
+          <p style="font-size: 12.5px; color: var(--text-muted); margin: 3px 0 0;">
+            Choose whether you are arranging a single dance track or mixing two songs together into a wedding medley.
+          </p>
+        </div>
+      </div>
+
+      <!-- Project Type Selector (Tabs) -->
+      <div class="project-type-nav">
+        <div id="modeChoreoTab" class="project-type-btn active" onclick="switchRemixMode('choreo')">
+          <div class="project-type-icon">✂️</div>
+          <div class="project-type-text">
+            <strong>Single Song Choreo Arranger</strong>
+            <p>Cut, repeat bars for bridal entry, duplicate hooks, or extend the ending of a single song (e.g. Kala Chashma).</p>
+          </div>
+        </div>
+        <div id="modeMedleyTab" class="project-type-btn" onclick="switchRemixMode('medley')">
+          <div class="project-type-icon">🎚️</div>
+          <div class="project-type-text">
+            <strong>2-Song Wedding Mashup (Song 1 ➔ Song 2)</strong>
+            <p>Mix two different songs together with an 8-bar beat-matched DJ transition (Entrance ➔ High-Energy Party).</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1-Click Popular Starter Mixes -->
+      <div class="mix-starters-section">
+        <span class="starters-label">⚡ 1-Click Starter Mixes:</span>
+        <div class="starters-pills-row">
+          <button type="button" class="btn-mix-starter active" id="starter_kala_chashma_choreo" onclick="selectMixStarter('kala_chashma_choreo')">
+            <span>🔥</span> Kala Chashma Choreo Extension
+          </button>
+          <button type="button" class="btn-mix-starter" id="starter_kala_gallan_mashup" onclick="selectMixStarter('kala_gallan_mashup')">
+            <span>🎛️</span> Kala Chashma ➔ Gallan Goodiyaan Mashup
+          </button>
+          <button type="button" class="btn-mix-starter" id="starter_london_sauda_medley" onclick="selectMixStarter('london_sauda_medley')">
+            <span>🎛️</span> London Thumakda ➔ Sauda Khara Khara
+          </button>
+          <button type="button" class="btn-mix-starter" id="starter_custom_upload" onclick="selectMixStarter('custom_upload')">
+            <span>📁</span> Upload Custom Songs (MP3 / WAV / MP4)
+          </button>
+        </div>
+      </div>
+
+      <!-- Dual Song Decks Row -->
+      <div class="song-decks-row">
+        <!-- Deck 1: Track 1 -->
+        <div class="deck-selector-card track-a" id="deckCardA">
+          <div class="deck-selector-header">
+            <span class="deck-selector-label">
+              <span>🎵</span> <span id="deckTitleA">Track 1: Opening Song / Choreo Edit</span>
+            </span>
+            <span id="deckStatusA" class="metric-pill" style="color: var(--accent-emerald);">Loaded ✓</span>
+          </div>
+
+          <!-- Song Select Dropdown -->
+          <select id="songSelectA" class="deck-song-select" onchange="handleSongSelectChange('A', this.value)">
+            <option value="kala_chashma">🎵 Kala Chashma (Amar Arshi / Badshah • 107 BPM)</option>
+            <option value="london_thumakda">🎵 London Thumakda (Queen • 130 BPM)</option>
+            <option value="choreo_demo">🎵 Wedding Choreo Edit (Dhol & Synth • 128 BPM)</option>
+            <option value="custom">📁 Upload Custom File / Paste YouTube Link...</option>
+          </select>
+
+          <!-- Track Metadata Chips -->
+          <div class="deck-meta-strip">
+            <span class="meta-chip">Song: <strong id="trackNameA">Kala Chashma (Official Song)</strong></span>
+            <span class="meta-chip">BPM: <strong id="trackBpmA">107 BPM</strong></span>
+            <span class="meta-chip">Key: <strong id="trackKeyA">10A / B Minor</strong></span>
+            <span class="meta-chip">Length: <strong id="trackDurationA">2:53.4</strong></span>
+          </div>
+
+          <!-- Upload Toggle Link -->
+          <div class="deck-action-links">
+            <button type="button" class="btn-toggle-upload" onclick="toggleDeckUpload('A')">
+              <span>📁</span> Upload custom audio/video or paste YouTube link ▾
+            </button>
+          </div>
+
+          <!-- Hidden/Collapsible Upload Box -->
+          <div id="deckUploadDrawerA" style="display: none; margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 10px;">
+            <div class="link-input-group" style="margin-bottom: 8px;">
+              <input type="text" id="trackInputUrlA" placeholder="Paste YouTube link...">
+              <button class="btn-fetch" onclick="handleFetchTrack('A')">Load</button>
+            </div>
+            <div class="drop-zone" id="dropZoneA" onclick="document.getElementById('fileInputA').click()">
+              <input type="file" id="fileInputA" accept="audio/*,video/mp4,video/quicktime,video/webm" onchange="handleFileUpload('A', this.files[0])">
+              <strong>Drop rehearsal video (.mp4/.mov) or audio (.mp3/.wav)</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center Transition Bridge -->
+        <div class="deck-bridge-indicator">
+          <span class="bridge-arrow">➔</span>
+          <span class="bridge-pill" id="compatibilityBadge">8-Bar DJ Mix</span>
+        </div>
+
+        <!-- Deck 2: Track 2 -->
+        <div class="deck-selector-card track-b" id="deckCardB">
+          <div class="deck-selector-header">
+            <span class="deck-selector-label">
+              <span>🎵</span> <span id="deckTitleB">Track 2: Second Song / Full Anthem</span>
+            </span>
+            <span id="deckStatusB" class="metric-pill" style="color: var(--accent-emerald);">Loaded ✓</span>
+          </div>
+
+          <!-- Song Select Dropdown -->
+          <select id="songSelectB" class="deck-song-select" onchange="handleSongSelectChange('B', this.value)">
+            <option value="kala_chashma_official">🎵 Kala Chashma (Full Official Song Outro)</option>
+            <option value="gallan_goodiyaan">🎵 Gallan Goodiyaan (Celebration Bhangra • 128 BPM)</option>
+            <option value="sauda_khara">🎵 Sauda Khara Khara (Sukhbir Dhol • 105 BPM)</option>
+            <option value="custom">📁 Upload Custom File / Paste YouTube Link...</option>
+          </select>
+
+          <!-- Track Metadata Chips -->
+          <div class="deck-meta-strip">
+            <span class="meta-chip">Song: <strong id="trackNameB">Kala Chashma (Official Song)</strong></span>
+            <span class="meta-chip">BPM: <strong id="trackBpmB">107 BPM</strong></span>
+            <span class="meta-chip">Key: <strong id="trackKeyB">10A / B Minor</strong></span>
+            <span class="meta-chip">Length: <strong id="trackDurationB">2:53.4</strong></span>
+          </div>
+
+          <!-- Upload Toggle Link -->
+          <div class="deck-action-links">
+            <button type="button" class="btn-toggle-upload" onclick="toggleDeckUpload('B')">
+              <span>📁</span> Upload custom audio/video or paste YouTube link ▾
+            </button>
+          </div>
+
+          <!-- Hidden/Collapsible Upload Box -->
+          <div id="deckUploadDrawerB" style="display: none; margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 10px;">
+            <div class="link-input-group" style="margin-bottom: 8px;">
+              <input type="text" id="trackInputUrlB" placeholder="Paste YouTube link...">
+              <button class="btn-fetch" onclick="handleFetchTrack('B')">Load</button>
+            </div>
+            <div class="drop-zone" id="dropZoneB" onclick="document.getElementById('fileInputB').click()">
+              <input type="file" id="fileInputB" accept="audio/*,video/mp4,video/quicktime,video/webm" onchange="handleFileUpload('B', this.files[0])">
+              <strong>Drop full official song (.mp3/.wav/.mp4)</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- STEP 2: 🎶 YOUR SONG TIMELINE LINE (ARRANGER TRACK)      -->
     <!-- ======================================================== -->
     <section class="studio-card timeline-card" id="timelineSection">
       <!-- Timeline Header & Presets -->
       <div class="timeline-card-header">
         <div class="timeline-title-meta">
-          <span class="step-badge">STEP 1</span>
+          <span class="step-badge">STEP 2</span>
           <div class="title-with-pill">
-            <h2><span>🎶</span> Your Song Timeline</h2>
+            <h2><span>🎶</span> Your Song Timeline Line</h2>
             <span class="timeline-stats-badge" id="timelineStatsBadge">16 Pieces • 2:55.7</span>
           </div>
         </div>
@@ -71,7 +224,7 @@
 
       <!-- Helper Hint -->
       <div class="timeline-instructions">
-        <span>💡 <strong>Quick controls:</strong> Drag pieces horizontally to reorder • Click <strong>🔁 Dup</strong> to repeat a beat • Click <strong>✕</strong> to cut • Or drag pieces up from the palette below!</span>
+        <span>💡 <strong>How to arrange:</strong> Drag pieces horizontally along the line to reorder • Click <strong>🔁 Dup</strong> to repeat a beat • Click <strong>✕</strong> to cut out • Or drag pieces up from the palette below!</span>
       </div>
 
       <!-- Mini Waveform Canvas Strip with Live Playhead -->
@@ -95,11 +248,11 @@
         </div>
       </div>
 
-      <!-- Transport Bar -->
+      <!-- Big Obvious Transport Bar -->
       <div class="studio-transport-bar">
         <div class="transport-main-controls">
           <button type="button" class="btn-transport btn-play-main" id="timelinePlayBtn" onclick="triggerPlayFullMix()">
-            <span>▶</span> Play Song
+            <span>▶</span> Play Full Mix
           </button>
           <button type="button" class="btn-transport btn-replay-main" id="replayBtn" onclick="triggerReplay()">
             <span>🔁</span> Replay from 0:00
@@ -121,12 +274,12 @@
     </section>
 
     <!-- ======================================================== -->
-    <!-- STEP 2: 🎼 AUTO-DETECTED SONG PARTS PALETTE -->
+    <!-- STEP 3: 🎼 AUTO-DETECTED SONG PARTS PALETTE              -->
     <!-- ======================================================== -->
     <section class="studio-card palette-card" id="paletteSection">
       <div class="palette-card-header">
         <div class="palette-title-meta">
-          <span class="step-badge step-2">STEP 2</span>
+          <span class="step-badge step-2">STEP 3</span>
           <div>
             <h2><span>🎼</span> Auto-Detected Song Parts Palette</h2>
             <p>Pick any musical section below and <strong>drag & drop it onto the line above</strong>, or click <strong>"+ Add to Line"</strong> to insert it.</p>
@@ -137,6 +290,29 @@
         </button>
       </div>
 
+      <!-- Filter Tabs for Multi-Song Medleys -->
+      <div class="palette-filter-row" id="paletteFilterRow" style="display: none;">
+        <span style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Filter Parts:</span>
+        <button type="button" class="palette-filter-btn active" id="filterAllBtn" onclick="setPaletteFilter('all')">All Song Parts</button>
+        <button type="button" class="palette-filter-btn" id="filterTrackABtn" onclick="setPaletteFilter('A')">🟣 Track 1 Parts</button>
+        <button type="button" class="palette-filter-btn filter-track-b" id="filterTrackBBtn" onclick="setPaletteFilter('B')">🟢 Track 2 Parts</button>
+      </div>
+
+      <!-- Broad Sections vs Detailed Bars View Toggle -->
+      <div class="palette-view-toggle-row">
+        <div class="view-toggle-group">
+          <button type="button" class="btn-view-toggle active" id="viewBroadBtn" onclick="setPaletteViewMode('broad')">
+            <span>📁</span> Broad Sections (Easy to Identify)
+          </button>
+          <button type="button" class="btn-view-toggle" id="viewDetailedBtn" onclick="setPaletteViewMode('detailed')">
+            <span>🔬</span> Detailed Bars & Beats (All Parts)
+          </button>
+        </div>
+        <div style="font-size: 11.5px; color: var(--text-muted);">
+          💡 Tip: Click <strong>"✂️ Split into Bars"</strong> on any section below to drill into smaller pieces, or <strong>"🔗 Merge"</strong> to combine them!
+        </div>
+      </div>
+
       <!-- Palette Grid of Song Parts -->
       <div class="palette-grid" id="paletteGridContainer">
         <!-- Populated dynamically by renderPaletteUI() in app.js -->
@@ -144,128 +320,23 @@
     </section>
 
     <!-- ======================================================== -->
-    <!-- STEP 3: COLLAPSIBLE ADVANCED OPTIONS & CUSTOM AUDIO DRAWER -->
+    <!-- COLLAPSIBLE ADVANCED DJ SETTINGS                         -->
     <!-- ======================================================== -->
     <details class="advanced-drawer" id="advancedDrawer">
       <summary class="drawer-summary">
         <div class="summary-left">
           <span class="summary-icon">⚙️</span>
           <div>
-            <strong>Advanced Options & Custom Audio Uploads</strong>
-            <span class="summary-sub">Custom audio files, DJ transition styles, harmonic keys & legacy tools</span>
+            <strong>Advanced DJ Transition Controls & Harmonic Key Analysis</strong>
+            <span class="summary-sub">Fine-tune DJ crossfade curves, downbeat alignment & audio quality</span>
           </div>
         </div>
         <span class="drawer-chevron">▼</span>
       </summary>
 
       <div class="drawer-content">
-        <!-- Mode Tabs -->
-        <div class="mode-selector">
-          <div id="modeChoreoTab" class="mode-tab active" onclick="switchRemixMode('choreo')">
-            <div class="mode-tab-icon">🔗</div>
-            <div class="mode-tab-info">
-              <h3>Choreo Match & Extend (Performance Video Restorer)</h3>
-              <p>Detects matching phrases in the original full song and appends the missing grand finale outro.</p>
-            </div>
-          </div>
-          <div id="modeMedleyTab" class="mode-tab" onclick="switchRemixMode('medley')">
-            <div class="mode-tab-icon">🎚️</div>
-            <div class="mode-tab-info">
-              <h3>Wedding DJ Medley (Song A ➔ Song B)</h3>
-              <p>Mix two distinct celebration tracks with 8-bar bass-swap crossfades.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Dual Audio Decks -->
-        <div class="decks-grid">
-          <!-- Deck 1: Track A -->
-          <div class="deck-card track-a" id="deckCardA">
-            <div class="deck-header">
-              <div class="deck-title">
-                <span class="deck-tag">Track 1</span>
-                <h3 id="deckTitleA">Performance / Choreo Edit</h3>
-              </div>
-              <span id="deckStatusA" class="metric-pill">Loaded ✓</span>
-            </div>
-
-            <div class="deck-input-tabs">
-              <button class="deck-input-tab active" onclick="switchDeckInputTab('A', 'link')">YouTube / Spotify</button>
-              <button class="deck-input-tab" onclick="switchDeckInputTab('A', 'file')">Upload Audio/Video</button>
-            </div>
-
-            <div id="deckInputLinkA" class="deck-tab-content">
-              <div class="link-input-group">
-                <input type="text" id="trackInputUrlA" placeholder="Paste YouTube music link or Spotify URL...">
-                <button class="btn-fetch" onclick="handleFetchTrack('A')">Load</button>
-              </div>
-            </div>
-
-            <div id="deckInputFileA" class="deck-tab-content" style="display: none;">
-              <div class="drop-zone" id="dropZoneA" onclick="document.getElementById('fileInputA').click()">
-                <input type="file" id="fileInputA" accept="audio/*,video/mp4,video/quicktime,video/webm" onchange="handleFileUpload('A', this.files[0])">
-                <strong>Drop rehearsal video (.mp4/.mov) or audio</strong>
-                <p>MP3, WAV, M4A, or performance video</p>
-              </div>
-            </div>
-
-            <div class="track-meta-badge" id="metaBadgeA">
-              <div class="track-meta-info">
-                <div class="track-title" id="trackNameA">Your Performance Video (41.0s cut)</div>
-                <div class="track-details">
-                  <span>BPM: <strong id="trackBpmA">107</strong></span>
-                  <span>Key: <strong id="trackKeyA">10A / B Minor</strong></span>
-                  <span>Length: <strong id="trackDurationA">0:41.0</strong></span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Deck 2: Track B -->
-          <div class="deck-card track-b" id="deckCardB">
-            <div class="deck-header">
-              <div class="deck-title">
-                <span class="deck-tag">Track 2</span>
-                <h3 id="deckTitleB">Original Full Song</h3>
-              </div>
-              <span id="deckStatusB" class="metric-pill">Loaded ✓</span>
-            </div>
-
-            <div class="deck-input-tabs">
-              <button class="deck-input-tab active" onclick="switchDeckInputTab('B', 'link')">YouTube / Spotify</button>
-              <button class="deck-input-tab" onclick="switchDeckInputTab('B', 'file')">Upload Audio/Video</button>
-            </div>
-
-            <div id="deckInputLinkB" class="deck-tab-content">
-              <div class="link-input-group">
-                <input type="text" id="trackInputUrlB" placeholder="Paste YouTube link for full song...">
-                <button class="btn-fetch" onclick="handleFetchTrack('B')">Load</button>
-              </div>
-            </div>
-
-            <div id="deckInputFileB" class="deck-tab-content" style="display: none;">
-              <div class="drop-zone" id="dropZoneB" onclick="document.getElementById('fileInputB').click()">
-                <input type="file" id="fileInputB" accept="audio/*,video/mp4,video/quicktime,video/webm" onchange="handleFileUpload('B', this.files[0])">
-                <strong>Drop audio file or full official track</strong>
-                <p>MP3, WAV, M4A, or MP4 container</p>
-              </div>
-            </div>
-
-            <div class="track-meta-badge" id="metaBadgeB">
-              <div class="track-meta-info">
-                <div class="track-title" id="trackNameB">Kala Chashma (Official Song)</div>
-                <div class="track-details">
-                  <span>BPM: <strong id="trackBpmB">107</strong></span>
-                  <span>Key: <strong id="trackKeyB">10A / B Minor</strong></span>
-                  <span>Length: <strong id="trackDurationB">2:53.4</strong></span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- DJ Controls & Quality Mode -->
-        <div class="mix-controls-bar" style="margin-top: 14px;">
+        <div class="mix-controls-bar">
           <div class="control-item">
             <label for="transitionTypeSelect">Transition Style</label>
             <select id="transitionTypeSelect" onchange="updateTransitionSettings()">
@@ -299,11 +370,11 @@
               <span>📹</span> Performance Mic Audio
             </button>
           </div>
-          <div id="compatibilityBadge" class="metric-pill">Harmonic: 107 BPM Phase-Locked</div>
         </div>
 
         <!-- Preserved DOM IDs for Backwards Compatibility -->
         <div style="display: none;">
+          <button id="loadUserKalaChashmaBtn"></button>
           <button id="loadChoreoDemoBtn"></button>
           <button id="loadMedleyDemoBtn"></button>
           <button id="playFullBtn"></button>
@@ -334,6 +405,13 @@
             <span id="impactTotalDuration"></span>
           </div>
           <div id="candidatesGrid"></div>
+          <div class="deck-input-tabs">
+            <button class="deck-input-tab" onclick="switchDeckInputTab('A', 'link')"></button>
+            <button class="deck-input-tab" onclick="switchDeckInputTab('A', 'file')"></button>
+          </div>
+          <div id="deckInputLinkA"></div><div id="deckInputFileA"></div>
+          <div id="deckInputLinkB"></div><div id="deckInputFileB"></div>
+          <div id="metaBadgeA"></div><div id="metaBadgeB"></div>
         </div>
       </div>
     </details>

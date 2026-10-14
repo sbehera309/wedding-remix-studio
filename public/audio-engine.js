@@ -810,7 +810,10 @@ class AudioRemixEngine {
           const blk = blocks[i];
           const blkDur = Math.max(0.05, blk.endTime - blk.startTime);
           const src = this.ctx.createBufferSource();
-          src.buffer = activeBuf;
+          let blkBuf = activeBuf;
+          if (blk.sourceTrack === 'A' && trackA && trackA.buffer) blkBuf = trackA.buffer;
+          else if (blk.sourceTrack === 'B' && trackB && trackB.buffer) blkBuf = trackB.buffer;
+          src.buffer = blkBuf;
           src.connect(this.ctx.destination);
           src.start(currentMixTime, blk.startTime, blkDur);
           sources.push(src);
@@ -1058,7 +1061,10 @@ class AudioRemixEngine {
         for (let blk of blocks) {
           const blkDur = Math.max(0.05, blk.endTime - blk.startTime);
           const src = offlineCtx.createBufferSource();
-          src.buffer = activeBuf;
+          let blkBuf = activeBuf;
+          if (blk.sourceTrack === 'A' && trackA && trackA.buffer) blkBuf = trackA.buffer;
+          else if (blk.sourceTrack === 'B' && trackB && trackB.buffer) blkBuf = trackB.buffer;
+          src.buffer = blkBuf;
           src.connect(offlineCtx.destination);
           src.start(currentMixTime, blk.startTime, blkDur);
           currentMixTime += blkDur;
