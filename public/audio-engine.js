@@ -1320,6 +1320,128 @@ class AudioRemixEngine {
     return new Blob([arrayBuffer], { type: 'audio/wav' });
   }
 
+  /**
+   * Convert an AudioBuffer into an iPhone-compatible stereo MP3 Blob using lamejs
+   * @param {AudioBuffer} audioBuffer
+   * @param {number} bitrate Default 256 kbps (studio-grade MP3)
+   * @param {Function} onProgress Optional progress callback (0 - 100)
+   * @returns {Promise<Blob>}
+   */
+  async audioBufferToMp3Blob(audioBuffer, bitrate = 256, onProgress = null) {
+    if (typeof window !== 'undefined' && !window.lamejs) {
+      try {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'vendor/lame.min.js';
+          script.onload = resolve;
+          script.onerror = () => {
+            const cdn = document.createElement('script');
+            cdn.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
+            cdn.onload = resolve;
+            cdn.onerror = reject;
+            document.head.appendChild(cdn);
+          };
+          document.head.appendChild(script);
+        });
+      } catch (e) {
+        console.warn("Could not dynamically load lamejs:", e);
+      }
+    }
+
+    const lame = (typeof window !== 'undefined' && window.lamejs) ? window.lamejs : (typeof lamejs !== 'undefined' ? lamejs : null);
+    if (!lame) {
+      throw new Error("MP3 encoder (lamejs) is not available.");
+    }
+
+    const sampleRate = audioBuffer.sampleRate;
+    const numChannels = audioBuffer.numberOfChannels;
+    const numSamples = audioBuffer.length;
+
+    const leftFloat = audioBuffer.getChannelData(0);
+    const rightFloat = (numChannels > 1) ? audioBuffer.getChannelData(1) : leftFloat;
+
+    const leftInt16 = new Int16Array(numSamples);
+    const rightInt16 = new Int16Array(numSamples);
+
+    for (let i = 0; i < numSamples; i++) {
+      let sL = Math.max(-1, Math.min(1, leftFloat[i]));
+      leftInt16[i] = sL < 0 ? sL * 0x8000 : sL * 0x7FFF;
+
+      let sR = Math.max(-1, Math.min(1, rightFloat[i]));
+      rightInt16[i] = sR < 0 ? sR * 0x8000 : sR * 0x7FFF;
+    }
+
+    const mp3encoder = new lame.Mp3Encoder(numChannels > 1 ? 2 : 1, sampleRate, bitrate);
+    const mp3Chunks = [];
+    const chunkSize = 1152 * 4;
+
+    for (let i = 0; i < numSamples; i += chunkSize) {
+      const leftChunk = leftInt16.subarray(i, i + chunkSize);
+      let mp3buf;
+      if (numChannels > 1) {
+        const rightChunk = rightInt16.subarray(i, i + chunkSize);
+        mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+      } else {
+        mp3buf = mp3encoder.encodeBuffer(leftChunk);
+      }
+      if (mp3buf && mp3buf.length > 0) {
+        mp3Chunks.push(new Uint8Array(mp3buf));
+      }
+
+      if (onProgress && i % (chunkSize * 8) === 0) {
+        const pct = Math.min(99, Math.round((i / numSamples) * 100));
+        onProgress(pct);
+        await new Promise(r => setTimeout(r, 0));
+      }
+    }
+
+    const flushBuf = mp3encoder.flush();
+    if (flushBuf && flushBuf.length > 0) {
+      mp3Chunks.push(new Uint8Array(flushBuf));
+    }
+
+    if (onProgress) onProgress(100);
+
+    const totalByteLength = mp3Chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+    const mergedMp3Array = new Uint8Array(totalByteLength);
+    let offset = 0;
+    for (const chunk of mp3Chunks) {
+      mergedMp3Array.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    return new Blob([mergedMp3Array], { type: 'audio/mpeg' });
+  }
+
+  /**
+   * Request server-side conversion of WAV blob to Apple M4A (CoreAudio AAC) via afconvert
+   */
+  async convertWavToM4aOnServer(wavBlob) {
+    try {
+      const response = await fetch('/api/convert-to-m4a', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'audio/wav',
+          'X-File-Name': 'rendered_master.wav'
+        },
+        body: wavBlob
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.success && data.audioUrl) {
+          return {
+            success: true,
+            audioUrl: data.audioUrl,
+            format: 'm4a'
+          };
+        }
+      }
+    } catch (err) {
+      console.warn("Server-side M4A conversion unavailable:", err);
+    }
+    return { success: false };
+  }
+
   _writeString(view, offset, string) {
     for (let i = 0; i < string.length; i++) {
       view.setUint8(offset + i, string.charCodeAt(i));

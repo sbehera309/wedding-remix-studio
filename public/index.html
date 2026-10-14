@@ -28,8 +28,8 @@
           <button type="button" class="btn-header-glow" onclick="triggerPlayFullMix()" title="Play entire mix">
             <span>▶</span> Play Mix
           </button>
-          <button type="button" class="btn-header-action" onclick="triggerExportWav()" title="Download high-resolution master WAV">
-            <span>💾</span> Download WAV
+          <button type="button" class="btn-header-action" onclick="triggerExport('iphone')" title="Download iPhone-compatible remix (Apple M4A / MP3)">
+            <span>📱</span> Download (iPhone)
           </button>
         </div>
       </div>
@@ -278,12 +278,35 @@
         </div>
 
         <div class="transport-side-controls">
-          <button type="button" class="btn-transport btn-export-main" id="exportWavBtn" onclick="triggerExportWav()">
-            <span>💾</span> Download Master WAV
-          </button>
-          <button type="button" class="btn-transport btn-cue-sheet" onclick="openCueSheetModal()">
-            <span>📋</span> Dance Cue Sheet
-          </button>
+          <div class="export-format-picker-wrapper">
+            <span class="export-format-label">FORMAT:</span>
+            <div class="export-format-pills" id="exportFormatPills">
+              <button type="button" class="btn-format-pill active" id="pillFormatIPhone" data-format="iphone" onclick="selectExportFormat('iphone')" title="Optimized for iPhone, Apple Music, AirDrop, iMessage & WhatsApp">
+                <span>📱</span> iPhone (M4A/MP3)
+              </button>
+              <button type="button" class="btn-format-pill" id="pillFormatMp3" data-format="mp3" onclick="selectExportFormat('mp3')" title="Universal MP3 256kbps for all phones and DJ software">
+                <span>🎧</span> MP3
+              </button>
+              <button type="button" class="btn-format-pill" id="pillFormatWav" data-format="wav" onclick="selectExportFormat('wav')" title="Uncompressed 16-bit 44.1kHz PCM Studio Master">
+                <span>🎛️</span> WAV
+              </button>
+            </div>
+          </div>
+
+          <div class="export-actions-row">
+            <button type="button" class="btn-transport btn-export-main" id="exportWavBtn" onclick="triggerExportSelectedFormat()">
+              <span id="exportBtnIcon">📱</span> <span id="exportBtnLabel">Download for iPhone</span>
+            </button>
+            <button type="button" class="btn-transport btn-share-mobile" id="shareIphoneBtn" onclick="triggerIPhoneShare()" title="AirDrop, Save to iPhone Files, or send to bridal party via iMessage/WhatsApp">
+              <span>📲</span> AirDrop / Share
+            </button>
+            <button type="button" class="btn-transport btn-cue-sheet" onclick="openCueSheetModal()">
+              <span>📋</span> Dance Cue Sheet
+            </button>
+          </div>
+          <div class="iphone-compat-note">
+            <span class="compat-icon">✓</span> 100% iPhone Compatible (Apple Music, iOS Files, AirDrop, iMessage & WhatsApp)
+          </div>
         </div>
       </div>
     </section>
@@ -508,6 +531,7 @@
   </div>
 
   <!-- Scripts -->
+  <script src="vendor/lame.min.js"></script>
   <script src="demo-audio.js"></script>
   <script src="audio-engine.js"></script>
   <script src="app.js"></script>

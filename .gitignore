@@ -26,5 +26,6 @@ public/*.wav
 *.py
 *.js
 !server.js
+!api/**/*.js
 !public/**/*.js
 

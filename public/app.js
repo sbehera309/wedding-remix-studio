@@ -30,7 +30,8 @@ const appState = {
   selectedCandidateIndex: 0,
   isPlaying: false,
   playbackPosition: 0,
-  playheadAnimationId: null
+  playheadAnimationId: null,
+  exportFormat: 'iphone'
 };
 
 // Global Autoplay Unlocker: Unconditionally wake AudioContext on very first user interaction
@@ -52,6 +53,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initWaveformCanvas();
   // Auto-initialize Kala Chashma performance mix so playback is ready immediately on load
   initKalaChashmaDefaultState();
+  selectExportFormat(appState.exportFormat || 'iphone');
 });
 
 function setupEventListeners() {
@@ -3808,18 +3810,72 @@ function triggerAuditionTransition() {
 }
 
 /**
- * Export Master Mix (WAV)
+ * ========================================================
+ * 📱 MULTI-FORMAT & IPHONE-NATIVE AUDIO EXPORT SYSTEM
+ * ========================================================
  */
+
+function selectExportFormat(format) {
+  appState.exportFormat = format || 'iphone';
+
+  const formats = ['iphone', 'mp3', 'wav'];
+  formats.forEach(f => {
+    const pill = document.getElementById(`pillFormat${f.charAt(0).toUpperCase() + f.slice(1)}`);
+    if (pill) {
+      if (f === appState.exportFormat) {
+        pill.classList.add('active');
+      } else {
+        pill.classList.remove('active');
+      }
+    }
+  });
+
+  const exportBtnIcon = document.getElementById('exportBtnIcon');
+  const exportBtnLabel = document.getElementById('exportBtnLabel');
+  if (exportBtnLabel) {
+    if (appState.exportFormat === 'iphone') {
+      if (exportBtnIcon) exportBtnIcon.innerText = '📱';
+      exportBtnLabel.innerText = 'Download for iPhone';
+    } else if (appState.exportFormat === 'mp3') {
+      if (exportBtnIcon) exportBtnIcon.innerText = '🎧';
+      exportBtnLabel.innerText = 'Download MP3 (256k)';
+    } else {
+      if (exportBtnIcon) exportBtnIcon.innerText = '🎛️';
+      exportBtnLabel.innerText = 'Download Master WAV';
+    }
+  }
+}
+
+async function triggerExportSelectedFormat() {
+  await triggerExport(appState.exportFormat || 'iphone');
+}
+
+/**
+  * Alias for backwards compatibility
+  */
 async function triggerExportWav() {
+  await triggerExport(appState.exportFormat || 'iphone');
+}
+
+/**
+ * Main Audio Export Function
+ * Renders the customized update clip and exports in an iPhone-playable format
+ * @param {string} targetFormat 'iphone' | 'mp3' | 'wav'
+ */
+async function triggerExport(targetFormat = 'iphone') {
   if (!appState.trackA || !appState.trackB) {
     showToast("⚠️ Load both tracks first.");
     return;
   }
 
   const exportBtn = document.getElementById('exportWavBtn');
-  exportBtn.disabled = true;
-  exportBtn.innerText = "⏳ Rendering Master...";
-  showToast("Rendering high-resolution 44.1kHz stereo master mix...");
+  if (exportBtn) {
+    exportBtn.disabled = true;
+    exportBtn.innerHTML = '<span>⏳</span> Rendering Mix...';
+  }
+
+  const formatDisplayName = targetFormat === 'iphone' ? 'iPhone (Apple M4A / MP3)' : targetFormat.toUpperCase();
+  showToast(`Rendering master audio for ${formatDisplayName}...`);
 
   try {
     await ensureTrackBBuffer();
@@ -3829,24 +3885,34 @@ async function triggerExportWav() {
       appState.arrangementBlocks.length === 16 && 
       appState.arrangementBlocks[1] && appState.arrangementBlocks[1].id === 'bar_1_dup';
 
+    // 1. Unmodified Default Mix: Instant Download
     if (isDefaultUnmodifiedRep) {
-      try {
-        const checkWav = await fetch('/Kala_Chashma_Performance_Extended_Mix.wav', { method: 'HEAD' });
-        if (checkWav.ok) {
-          const a = document.createElement('a');
-          a.href = '/Kala_Chashma_Performance_Extended_Mix.wav';
-          a.download = `Kala_Chashma_Performance_Clean_Master_Mix.wav`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          showToast("🎉 Master Mix exported successfully! Ready for wedding rehearsal and DJ booth.");
-          return;
+      if (targetFormat === 'iphone') {
+        try {
+          const checkM4a = await fetch('/Kala_Chashma_Performance_Extended_Mix.m4a', { method: 'HEAD' });
+          if (checkM4a.ok) {
+            triggerFileDownload('/Kala_Chashma_Performance_Extended_Mix.m4a', 'Kala_Chashma_Wedding_Performance_Master_iPhone.m4a');
+            showToast("🎉 Downloaded iPhone-ready M4A! Plays natively in Apple Music, Files app, and AirDrop.");
+            return;
+          }
+        } catch (e) {
+          console.warn("Pre-rendered M4A not found, proceeding to render:", e);
         }
-      } catch (e) {
-        // Fall back to offline rendering
+      } else if (targetFormat === 'wav') {
+        try {
+          const checkWav = await fetch('/Kala_Chashma_Performance_Extended_Mix.wav', { method: 'HEAD' });
+          if (checkWav.ok) {
+            triggerFileDownload('/Kala_Chashma_Performance_Extended_Mix.wav', 'Kala_Chashma_Performance_Clean_Master_Mix.wav');
+            showToast("🎉 Studio Master WAV exported successfully!");
+            return;
+          }
+        } catch (e) {
+          console.warn("Pre-rendered WAV not found, proceeding to render:", e);
+        }
       }
     }
 
+    // 2. Customized "update clip": Offline Render of user's customized arrangement blocks
     const config = {
       blocks: appState.arrangementBlocks,
       hasArrangement: appState.arrangement ? appState.arrangement.hasArrangement : false,
@@ -3863,25 +3929,178 @@ async function triggerExportWav() {
     };
 
     const result = await appState.engine.renderMasterWav(appState.trackA, appState.trackB, config);
+    const renderedBuf = result.renderedBuffer;
 
-    // Trigger browser download
-    const url = URL.createObjectURL(result.wavBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    const modePrefix = appState.useStudioMaster ? "Studio_Master_Clean" : "Performance_Mic";
-    a.download = `Kala_Chashma_Custom_Arranged_${modePrefix}_Mix_${Date.now()}.wav`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // WAV Format
+    if (targetFormat === 'wav') {
+      const url = URL.createObjectURL(result.wavBlob);
+      triggerFileDownload(url, `Kala_Chashma_Custom_Arranged_Master_${Date.now()}.wav`, true);
+      showToast("🎉 Studio Master WAV exported successfully!");
+      return;
+    }
 
-    showToast("🎉 Master Mix exported successfully! Ready for wedding rehearsal and DJ booth.");
+    // iPhone Format: Try Apple M4A via afconvert first, fallback to pristine 256k MP3
+    if (targetFormat === 'iphone') {
+      if (exportBtn) {
+        exportBtn.innerHTML = '<span>⚡</span> Encoding iPhone Clip...';
+      }
+      showToast("Encoding iPhone-compatible audio (Apple M4A / MP3)...");
+
+      // Attempt server CoreAudio conversion
+      const serverResult = await appState.engine.convertWavToM4aOnServer(result.wavBlob);
+      if (serverResult && serverResult.success && serverResult.audioUrl) {
+        triggerFileDownload(serverResult.audioUrl, `Kala_Chashma_Wedding_Remix_iPhone_${Date.now()}.m4a`);
+        showToast("🎉 iPhone Apple M4A clip exported! 100% playable on iPhone Files, Apple Music, and AirDrop.");
+        return;
+      }
+
+      // Universal client-side MP3 encoding via lamejs
+      // MP3 plays natively on every iPhone in iOS Safari, Files app, Apple Music, AirDrop, iMessage, and WhatsApp
+      const mp3Blob = await appState.engine.audioBufferToMp3Blob(renderedBuf, 256, (pct) => {
+        if (exportBtn) exportBtn.innerHTML = `<span>⚡</span> iPhone Audio ${pct}%`;
+      });
+
+      const mp3Filename = `Kala_Chashma_Wedding_Remix_iPhone_${Date.now()}.mp3`;
+      await downloadOrShareBlob(mp3Blob, mp3Filename, 'audio/mpeg');
+      showToast("🎉 iPhone-ready mix downloaded! Opens in iOS Files, AirDrop, Apple Music & WhatsApp.");
+      return;
+    }
+
+    // Universal MP3 Format
+    if (targetFormat === 'mp3') {
+      if (exportBtn) {
+        exportBtn.innerHTML = '<span>⚡</span> Encoding MP3...';
+      }
+      showToast("Encoding universal 256kbps stereo MP3...");
+
+      const mp3Blob = await appState.engine.audioBufferToMp3Blob(renderedBuf, 256, (pct) => {
+        if (exportBtn) exportBtn.innerHTML = `<span>⚡</span> MP3 ${pct}%`;
+      });
+
+      const mp3Filename = `Kala_Chashma_Wedding_Remix_${Date.now()}.mp3`;
+      await downloadOrShareBlob(mp3Blob, mp3Filename, 'audio/mpeg');
+      showToast("🎉 Universal MP3 exported successfully!");
+      return;
+    }
+
   } catch (err) {
-    console.error(err);
+    console.error("Export error:", err);
     showToast(`⚠️ Export failed: ${err.message}`);
   } finally {
-    exportBtn.disabled = false;
-    exportBtn.innerHTML = '<span>💾</span> Download Master Mix (WAV)';
+    if (exportBtn) {
+      exportBtn.disabled = false;
+      selectExportFormat(appState.exportFormat || 'iphone');
+    }
+  }
+}
+
+/**
+ * Handle mobile native share sheet (AirDrop, iOS Files, WhatsApp) or file download
+ */
+async function downloadOrShareBlob(blob, filename, mimeType, preferShare = false) {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if ((preferShare || isIOS) && navigator.canShare) {
+    try {
+      const file = new File([blob], filename, { type: mimeType });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: 'Kala Chashma Wedding Remix',
+          text: 'Here is our custom wedding choreography remix clip!',
+          files: [file]
+        });
+        showToast("🎉 Shared to iPhone successfully!");
+        return;
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.warn("Share sheet dismissed or unsupported, falling back to download:", err);
+      } else {
+        return; // User explicitly cancelled share sheet
+      }
+    }
+  }
+
+  // Fallback / standard browser download
+  const url = URL.createObjectURL(blob);
+  triggerFileDownload(url, filename, true);
+}
+
+function triggerFileDownload(url, filename, revoke = false) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  if (revoke) {
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+}
+
+/**
+ * Trigger direct iPhone AirDrop / Share Sheet
+ */
+async function triggerIPhoneShare() {
+  if (!appState.trackA || !appState.trackB) {
+    showToast("⚠️ Load both tracks first.");
+    return;
+  }
+
+  showToast("Preparing iPhone clip for AirDrop / Share Sheet...");
+  const shareBtn = document.getElementById('shareIphoneBtn');
+  if (shareBtn) {
+    shareBtn.disabled = true;
+    shareBtn.innerHTML = '<span>⏳</span> Preparing...';
+  }
+
+  try {
+    await ensureTrackBBuffer();
+
+    const config = {
+      blocks: appState.arrangementBlocks,
+      hasArrangement: appState.arrangement ? appState.arrangement.hasArrangement : false,
+      loopStart: appState.arrangement ? appState.arrangement.loopStart : 0,
+      loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 2.243,
+      loopRepeats: appState.arrangement ? appState.arrangement.loopRepeats : 1,
+      choreoCutTime: appState.arrangement ? appState.arrangement.choreoCutTime : appState.activeTransitionConfig.spliceTimeA,
+      spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
+      spliceTimeB: appState.activeTransitionConfig.spliceTimeB,
+      crossfadeDuration: appState.activeTransitionConfig.crossfadeDuration,
+      transitionType: appState.activeTransitionConfig.transitionType,
+      useStudioMasterForChoreo: appState.useStudioMaster,
+      studioStartOffset: appState.studioStartOffset
+    };
+
+    const isDefaultUnmodifiedRep = appState.useStudioMaster && 
+      appState.arrangementBlocks && 
+      appState.arrangementBlocks.length === 16 && 
+      appState.arrangementBlocks[1] && appState.arrangementBlocks[1].id === 'bar_1_dup';
+
+    if (isDefaultUnmodifiedRep) {
+      try {
+        const resp = await fetch('/Kala_Chashma_Performance_Extended_Mix.m4a');
+        if (resp.ok) {
+          const blob = await resp.blob();
+          await downloadOrShareBlob(blob, 'Kala_Chashma_Wedding_Remix_iPhone.m4a', 'audio/mp4', true);
+          return;
+        }
+      } catch (e) {}
+    }
+
+    const result = await appState.engine.renderMasterWav(appState.trackA, appState.trackB, config);
+    // Encode MP3 for share
+    const mp3Blob = await appState.engine.audioBufferToMp3Blob(result.renderedBuffer, 256);
+    await downloadOrShareBlob(mp3Blob, `Kala_Chashma_Wedding_Remix_iPhone_${Date.now()}.mp3`, 'audio/mpeg', true);
+  } catch (err) {
+    console.error("Share error:", err);
+    showToast(`⚠️ Share failed: ${err.message}`);
+  } finally {
+    if (shareBtn) {
+      shareBtn.disabled = false;
+      shareBtn.innerHTML = '<span>📲</span> AirDrop / Share';
+    }
   }
 }
 

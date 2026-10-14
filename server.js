@@ -202,6 +202,53 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 4. Convert Rendered WAV to iPhone M4A (Apple AAC 256kbps) using macOS afconvert
+  if (pathname === '/api/convert-to-m4a' && req.method === 'POST') {
+    const timestamp = Date.now();
+    const tempWavPath = path.join(CACHE_DIR, `render_${timestamp}.wav`);
+    const outputM4aPath = path.join(CACHE_DIR, `render_${timestamp}.m4a`);
+
+    const writeStream = fs.createWriteStream(tempWavPath);
+    req.pipe(writeStream);
+
+    writeStream.on('finish', () => {
+      // Use macOS built-in /usr/bin/afconvert for studio-grade CoreAudio AAC
+      exec(`/usr/bin/afconvert -f m4af -d aac -b 256000 "${tempWavPath}" "${outputM4aPath}"`, (err, stdout, stderr) => {
+        // Clean up temporary wav file
+        try { fs.unlinkSync(tempWavPath); } catch (e) {}
+
+        if (err) {
+          console.error('afconvert error:', stderr || err.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: false,
+            error: 'Failed to convert to M4A: ' + (stderr || err.message)
+          }));
+          return;
+        }
+
+        if (fs.existsSync(outputM4aPath)) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            success: true,
+            format: 'm4a',
+            audioUrl: `/cache/render_${timestamp}.m4a`,
+            message: 'Audio converted to iPhone M4A (Apple AAC 256kbps) successfully'
+          }));
+        } else {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'Converted M4A file not found' }));
+        }
+      });
+    });
+
+    writeStream.on('error', (err) => {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Failed to write wav stream: ' + err.message }));
+    });
+    return;
+  }
+
   // --- Serve Audio Cache ---
   if (pathname.startsWith('/cache/')) {
     const filename = path.basename(pathname);
