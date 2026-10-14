@@ -19,6 +19,7 @@ const appState = {
     choreoCutTime: 41.00 // Where video ends choreo
   },
   arrangementBlocks: [],
+  userHasCustomizedBlocks: false,
   activeTransitionConfig: {
     spliceTimeA: 41.00,
     spliceTimeB: 38.76, // 41.0 - 2.243 = 38.76s in official song
@@ -31,6 +32,18 @@ const appState = {
   playbackPosition: 0,
   playheadAnimationId: null
 };
+
+// Global Autoplay Unlocker: Unconditionally wake AudioContext on very first user interaction
+function unlockAudioContextOnGesture() {
+  if (appState.engine && appState.engine.ctx) {
+    if (appState.engine.ctx.state === 'suspended' || appState.engine.ctx.state === 'interrupted') {
+      appState.engine.ctx.resume().catch(() => {});
+    }
+  }
+}
+window.addEventListener('click', unlockAudioContextOnGesture, { capture: true, passive: true });
+window.addEventListener('touchstart', unlockAudioContextOnGesture, { capture: true, passive: true });
+window.addEventListener('keydown', unlockAudioContextOnGesture, { capture: true, passive: true });
 
 // Initialize on DOM load
 window.addEventListener('DOMContentLoaded', () => {
@@ -2127,6 +2140,7 @@ function splitBlock(idx) {
       isDuplicated: false,
       sourceTrack: blk.sourceTrack || sp.sourceTrack
     }));
+    appState.userHasCustomizedBlocks = true;
     appState.arrangementBlocks.splice(idx, 1, ...newPieces);
     renderTimelineLineUI();
     drawWaveformTimeline();
@@ -2151,6 +2165,7 @@ function splitBlock(idx) {
     startTime: splitPoint
   };
 
+  appState.userHasCustomizedBlocks = true;
   appState.arrangementBlocks.splice(idx, 1, piece1, piece2);
   renderTimelineLineUI();
   drawWaveformTimeline();
@@ -2172,6 +2187,7 @@ function mergeBlockWithNext(idx) {
     isDuplicated: false
   };
 
+  appState.userHasCustomizedBlocks = true;
   appState.arrangementBlocks.splice(idx, 2, merged);
   renderTimelineLineUI();
   drawWaveformTimeline();
@@ -2287,6 +2303,7 @@ function handleTimelineItemDrop(e, targetIdx) {
       const part = catalog.find(p => p.id === payload.partId);
       if (part) {
         if (!appState.arrangementBlocks) appState.arrangementBlocks = [];
+        appState.userHasCustomizedBlocks = true;
         appState.arrangementBlocks.splice(targetIdx, 0, {
           ...part,
           id: `${part.id}_${Date.now()}`,
@@ -2299,6 +2316,7 @@ function handleTimelineItemDrop(e, targetIdx) {
     } else if (payload.type === 'from_timeline') {
       const fromIdx = payload.index;
       if (fromIdx !== undefined && fromIdx !== targetIdx && appState.arrangementBlocks) {
+        appState.userHasCustomizedBlocks = true;
         const item = appState.arrangementBlocks.splice(fromIdx, 1)[0];
         appState.arrangementBlocks.splice(targetIdx, 0, item);
         renderTimelineLineUI();
@@ -2317,6 +2335,7 @@ function addPartToTimeline(partId) {
   if (!part) return;
 
   if (!appState.arrangementBlocks) appState.arrangementBlocks = [];
+  appState.userHasCustomizedBlocks = true;
   appState.arrangementBlocks.push({
     ...part,
     id: `${part.id}_${Date.now()}`,
@@ -2329,6 +2348,7 @@ function addPartToTimeline(partId) {
 }
 
 function clearTimeline() {
+  appState.userHasCustomizedBlocks = true;
   appState.arrangementBlocks = [];
   renderTimelineLineUI();
   drawWaveformTimeline();
@@ -2348,6 +2368,7 @@ function duplicateBlock(idx) {
     isDuplicated: true
   };
 
+  appState.userHasCustomizedBlocks = true;
   appState.arrangementBlocks.splice(idx + 1, 0, clone);
   renderTimelineLineUI();
   drawWaveformTimeline();
@@ -2356,6 +2377,7 @@ function duplicateBlock(idx) {
 
 function deleteBlock(idx) {
   if (!appState.arrangementBlocks || !appState.arrangementBlocks[idx]) return;
+  appState.userHasCustomizedBlocks = true;
   const removed = appState.arrangementBlocks.splice(idx, 1)[0];
   renderTimelineLineUI();
   drawWaveformTimeline();
@@ -2367,6 +2389,26 @@ let activeAuditionState = {
   type: null, // 'timeline' | 'palette'
   id: null
 };
+let activeAuditionAudio = null;
+let activeAuditionTimeout = null;
+
+function stopAuditionPlayback() {
+  if (activeAuditionTimeout) {
+    clearTimeout(activeAuditionTimeout);
+    activeAuditionTimeout = null;
+  }
+  if (activeAuditionAudio) {
+    try {
+      activeAuditionAudio.pause();
+      activeAuditionAudio.currentTime = 0;
+    } catch (_) {}
+    activeAuditionAudio = null;
+  }
+  if (appState.engine) {
+    appState.engine.stopPlayback();
+  }
+  document.querySelectorAll('.timeline-item-pill, .palette-item-card, .subpart-pill-row').forEach(c => c.classList.remove('active-playing'));
+}
 
 function handleTimelineBlockCardClick(event, idx) {
   if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
@@ -2417,47 +2459,77 @@ async function soloBlock(idx) {
   const blk = appState.arrangementBlocks[idx];
 
   // Toggle stop if clicking the currently auditioning block
-  if (appState.engine.isPlaying && activeAuditionState.type === 'timeline' && activeAuditionState.id === idx) {
-    appState.engine.stopPlayback();
-    document.querySelectorAll('.timeline-item-pill, .palette-item-card, .subpart-pill-row').forEach(c => c.classList.remove('active-playing'));
+  if ((appState.isPlaying || activeAuditionAudio) && activeAuditionState.type === 'timeline' && activeAuditionState.id === idx) {
+    stopAuditionPlayback();
     activeAuditionState = { type: null, id: null };
     showToast(`⏹ Stopped audition of "${blk.name}"`);
     return;
   }
 
-  // Resolve audio buffer (always prioritize pristine studio master)
-  let buf = null;
-  const selA = document.getElementById('songSelectA')?.value || 'kala_chashma';
-  const selB = document.getElementById('songSelectB')?.value || 'kala_chashma_official';
+  stopAuditionPlayback();
 
-  if (blk.sourceTrack === 'A') {
-    if (selA === 'kala_chashma') buf = await ensureTrackBBuffer();
-    else buf = (appState.trackA && appState.trackA.buffer) ? appState.trackA.buffer : await loadSongBuffer(selA);
-  } else {
-    if (selB === 'kala_chashma_official' || selB === 'kala_chashma') buf = await ensureTrackBBuffer();
-    else buf = (appState.trackB && appState.trackB.buffer) ? appState.trackB.buffer : await loadSongBuffer(selB);
-  }
-  if (!buf) buf = await ensureTrackBBuffer();
-
-  if (!buf) {
-    showToast("⚠️ Loading studio audio buffer for audition...");
-    return;
+  // If master mix is playing, pause it so solo block can be clearly heard
+  const masterAudio = document.getElementById('masterAudioPlayer');
+  if (masterAudio && !masterAudio.paused) {
+    masterAudio.pause();
+    appState.isPlaying = false;
   }
 
-  // Highlight active pill on timeline line
-  document.querySelectorAll('.timeline-item-pill, .palette-item-card, .subpart-pill-row').forEach(c => c.classList.remove('active-playing'));
   const pill = document.getElementById(`timelinePill_${idx}`);
   if (pill) pill.classList.add('active-playing');
 
   activeAuditionState = { type: 'timeline', id: idx };
   showToast(`🔊 Auditioning Block #${idx + 1}: ${blk.name} (${blk.startTime.toFixed(2)}s - ${blk.endTime.toFixed(2)}s)`);
 
-  await appState.engine.playBlockSolo(blk, buf, () => {
-    if (pill) pill.classList.remove('active-playing');
-    if (activeAuditionState.type === 'timeline' && activeAuditionState.id === idx) {
-      activeAuditionState = { type: null, id: null };
+  const dur = Math.max(0.1, blk.endTime - blk.startTime);
+
+  // 1. Try Web Audio buffer source if buffer is ready and context is running
+  const activeBuf = (appState.trackB && appState.trackB.buffer) || (appState.trackA && appState.trackA.buffer);
+  if (activeBuf && appState.engine && appState.engine.ctx && appState.engine.ctx.state === 'running') {
+    await appState.engine.playBlockSolo(blk, activeBuf, () => {
+      if (pill) pill.classList.remove('active-playing');
+      if (activeAuditionState.type === 'timeline' && activeAuditionState.id === idx) {
+        activeAuditionState = { type: null, id: null };
+      }
+    });
+    return;
+  }
+
+  // 2. Instant Zero-Latency HTML5 Audio Audition Fallback:
+  try {
+    const audio = new Audio('/kala_chashma_official.m4a');
+    activeAuditionAudio = audio;
+
+    const playSlice = () => {
+      audio.currentTime = Math.max(0, blk.startTime);
+      audio.play().catch(e => console.warn("Native audition error:", e));
+    };
+
+    if (audio.readyState >= 1) {
+      playSlice();
+    } else {
+      audio.addEventListener('loadedmetadata', playSlice, { once: true });
+      audio.play().then(() => {
+        audio.currentTime = Math.max(0, blk.startTime);
+      }).catch(() => {});
     }
-  });
+
+    activeAuditionTimeout = setTimeout(() => {
+      if (activeAuditionAudio === audio) {
+        audio.pause();
+        activeAuditionAudio = null;
+      }
+      if (pill) pill.classList.remove('active-playing');
+      if (activeAuditionState.type === 'timeline' && activeAuditionState.id === idx) {
+        activeAuditionState = { type: null, id: null };
+      }
+    }, dur * 1000);
+  } catch (err) {
+    console.error("Audition playback error:", err);
+    if (pill) pill.classList.remove('active-playing');
+  }
+
+  ensureTrackBBuffer().catch(() => {});
 }
 
 async function soloPalettePart(partId) {
@@ -2469,46 +2541,76 @@ async function soloPalettePart(partId) {
   if (!part) return;
 
   // Toggle stop if clicking the currently auditioning palette card
-  if (appState.engine.isPlaying && activeAuditionState.type === 'palette' && activeAuditionState.id === partId) {
-    appState.engine.stopPlayback();
-    document.querySelectorAll('.timeline-item-pill, .palette-item-card, .subpart-pill-row').forEach(c => c.classList.remove('active-playing'));
+  if ((appState.isPlaying || activeAuditionAudio) && activeAuditionState.type === 'palette' && activeAuditionState.id === partId) {
+    stopAuditionPlayback();
     activeAuditionState = { type: null, id: null };
     showToast(`⏹ Stopped audition of "${part.name}"`);
     return;
   }
 
-  // Resolve audio buffer
-  let buf = null;
-  const selA = document.getElementById('songSelectA')?.value || 'kala_chashma';
-  const selB = document.getElementById('songSelectB')?.value || 'kala_chashma_official';
+  stopAuditionPlayback();
 
-  if (part.sourceTrack === 'A') {
-    if (selA === 'kala_chashma') buf = await ensureTrackBBuffer();
-    else buf = (appState.trackA && appState.trackA.buffer) ? appState.trackA.buffer : await loadSongBuffer(selA);
-  } else {
-    if (selB === 'kala_chashma_official' || selB === 'kala_chashma') buf = await ensureTrackBBuffer();
-    else buf = (appState.trackB && appState.trackB.buffer) ? appState.trackB.buffer : await loadSongBuffer(selB);
-  }
-  if (!buf) buf = await ensureTrackBBuffer();
-
-  if (!buf) {
-    showToast("⚠️ Loading studio audio buffer for audition...");
-    return;
+  const masterAudio = document.getElementById('masterAudioPlayer');
+  if (masterAudio && !masterAudio.paused) {
+    masterAudio.pause();
+    appState.isPlaying = false;
   }
 
-  document.querySelectorAll('.timeline-item-pill, .palette-item-card, .subpart-pill-row').forEach(c => c.classList.remove('active-playing'));
   const card = document.getElementById(`palette_${partId}`);
   if (card) card.classList.add('active-playing');
 
   activeAuditionState = { type: 'palette', id: partId };
   showToast(`🔊 Auditioning: ${part.name} (${part.startTime.toFixed(2)}s - ${part.endTime.toFixed(2)}s)`);
 
-  await appState.engine.playBlockSolo(part, buf, () => {
-    if (card) card.classList.remove('active-playing');
-    if (activeAuditionState.type === 'palette' && activeAuditionState.id === partId) {
-      activeAuditionState = { type: null, id: null };
+  const dur = Math.max(0.1, part.endTime - part.startTime);
+
+  // 1. Try Web Audio buffer source if buffer is ready and context is running
+  const activeBuf = (appState.trackB && appState.trackB.buffer) || (appState.trackA && appState.trackA.buffer);
+  if (activeBuf && appState.engine && appState.engine.ctx && appState.engine.ctx.state === 'running') {
+    await appState.engine.playBlockSolo(part, activeBuf, () => {
+      if (card) card.classList.remove('active-playing');
+      if (activeAuditionState.type === 'palette' && activeAuditionState.id === partId) {
+        activeAuditionState = { type: null, id: null };
+      }
+    });
+    return;
+  }
+
+  // 2. Instant Zero-Latency HTML5 Audio Audition Fallback:
+  try {
+    const audio = new Audio('/kala_chashma_official.m4a');
+    activeAuditionAudio = audio;
+
+    const playSlice = () => {
+      audio.currentTime = Math.max(0, part.startTime);
+      audio.play().catch(e => console.warn("Native audition error:", e));
+    };
+
+    if (audio.readyState >= 1) {
+      playSlice();
+    } else {
+      audio.addEventListener('loadedmetadata', playSlice, { once: true });
+      audio.play().then(() => {
+        audio.currentTime = Math.max(0, part.startTime);
+      }).catch(() => {});
     }
-  });
+
+    activeAuditionTimeout = setTimeout(() => {
+      if (activeAuditionAudio === audio) {
+        audio.pause();
+        activeAuditionAudio = null;
+      }
+      if (card) card.classList.remove('active-playing');
+      if (activeAuditionState.type === 'palette' && activeAuditionState.id === partId) {
+        activeAuditionState = { type: null, id: null };
+      }
+    }, dur * 1000);
+  } catch (err) {
+    console.error("Audition playback error:", err);
+    if (card) card.classList.remove('active-playing');
+  }
+
+  ensureTrackBBuffer().catch(() => {});
 }
 
 function resetBlocksToPreset(preset) {
@@ -2585,6 +2687,7 @@ function submitCustomSlice() {
   };
 
   if (!appState.arrangementBlocks) appState.arrangementBlocks = [];
+  appState.userHasCustomizedBlocks = true;
   appState.arrangementBlocks.push(newBlock);
 
   closeAddSliceModal();
@@ -2602,25 +2705,61 @@ function initAudioPlayerSync() {
   audio.addEventListener('timeupdate', () => {
     appState.playbackPosition = audio.currentTime;
     drawWaveformTimeline(audio.currentTime);
+
+    // Real-time active block highlighting on timeline
+    const cur = audio.currentTime;
+    let accumulated = 0;
+    let activeIdx = -1;
+    const blocks = appState.arrangementBlocks || [];
+    for (let i = 0; i < blocks.length; i++) {
+      const dur = Math.max(0.01, blocks[i].endTime - blocks[i].startTime);
+      if (cur >= accumulated && cur < accumulated + dur) {
+        activeIdx = i;
+        break;
+      }
+      accumulated += dur;
+    }
+    if (activeIdx !== -1) {
+      document.querySelectorAll('.timeline-item-pill').forEach((pill, idx) => {
+        if (idx === activeIdx) pill.classList.add('active-playing');
+        else pill.classList.remove('active-playing');
+      });
+      document.querySelectorAll('.music-block-card').forEach((card, idx) => {
+        if (idx === activeIdx) card.classList.add('active-playing');
+        else card.classList.remove('active-playing');
+      });
+    }
   });
 
   audio.addEventListener('play', () => {
     appState.isPlaying = true;
     const playBtn = document.getElementById('playFullBtn');
+    const timelinePlayBtn = document.getElementById('timelinePlayBtn');
     if (playBtn) {
       playBtn.innerHTML = '<span>⏸</span> Pause Full Mix';
       playBtn.classList.add('active');
     }
+    if (timelinePlayBtn) {
+      timelinePlayBtn.innerHTML = '<span>⏸</span> Pause Timeline';
+      timelinePlayBtn.classList.add('active');
+    }
   });
 
   audio.addEventListener('pause', () => {
-    if (!auditionTimer) {
+    if (!auditionTimer && !activeAuditionAudio) {
       appState.isPlaying = false;
       const playBtn = document.getElementById('playFullBtn');
+      const timelinePlayBtn = document.getElementById('timelinePlayBtn');
       if (playBtn) {
         playBtn.innerHTML = '<span>▶</span> Play Full Mix';
         playBtn.classList.remove('active');
       }
+      if (timelinePlayBtn) {
+        timelinePlayBtn.innerHTML = '<span>▶</span> Play My Timeline';
+        timelinePlayBtn.classList.remove('active');
+      }
+      document.querySelectorAll('.timeline-item-pill').forEach(c => c.classList.remove('active-playing'));
+      document.querySelectorAll('.music-block-card').forEach(c => c.classList.remove('active-playing'));
     }
   });
 
@@ -2636,6 +2775,7 @@ function initAudioPlayerSync() {
 
 function initKalaChashmaDefaultState() {
   switchRemixMode('choreo');
+  appState.userHasCustomizedBlocks = false;
 
   // Pre-configure tracks for instant readiness with pristine studio master audio
   appState.trackA = {
@@ -2723,20 +2863,37 @@ function initKalaChashmaDefaultState() {
 async function preloadAudioBuffersInBackground() {
   try {
     let resp = await fetch('/kala_chashma_official.m4a');
-    if (!resp.ok) resp = await fetch('/kala_chashma_official.wav');
+    let studioBuffer = null;
     if (resp.ok) {
-      const arrayBuf = await resp.arrayBuffer();
-      const studioBuffer = await appState.engine.decodeAudio(arrayBuf);
-      const studioAnalysis = appState.engine.analyzeTrack(studioBuffer);
+      try {
+        const arrayBuf = await resp.arrayBuffer();
+        studioBuffer = await appState.engine.decodeAudio(arrayBuf);
+      } catch (err) {
+        console.warn("Preload m4a decode note:", err);
+      }
+    }
+    if (!studioBuffer) {
+      let respWav = await fetch('/kala_chashma_official.wav');
+      if (respWav.ok) {
+        const arrayBufWav = await respWav.arrayBuffer();
+        studioBuffer = await appState.engine.decodeAudio(arrayBufWav);
+      }
+    }
+
+    if (studioBuffer) {
+      let studioAnalysis = null;
+      try {
+        studioAnalysis = appState.engine.analyzeTrack(studioBuffer);
+      } catch (_) {}
 
       if (appState.trackA) {
         appState.trackA.buffer = studioBuffer;
-        appState.trackA.analysis = studioAnalysis;
+        if (studioAnalysis) appState.trackA.analysis = studioAnalysis;
         updateTrackCardUI('A', appState.trackA);
       }
       if (appState.trackB) {
         appState.trackB.buffer = studioBuffer;
-        appState.trackB.analysis = studioAnalysis;
+        if (studioAnalysis) appState.trackB.analysis = studioAnalysis;
         updateTrackCardUI('B', appState.trackB);
       }
     }
@@ -2761,18 +2918,36 @@ async function ensureTrackBBuffer() {
   if (appState.trackB && appState.trackB.buffer) return appState.trackB.buffer;
   try {
     let respB = await fetch('/kala_chashma_official.m4a');
-    if (!respB.ok) respB = await fetch('/kala_chashma_official.wav');
+    let bufferB = null;
     if (respB.ok) {
-      const arrayBufB = await respB.arrayBuffer();
-      const bufferB = await appState.engine.decodeAudio(arrayBufB);
-      const analysisB = appState.engine.analyzeTrack(bufferB);
+      try {
+        const arrayBufB = await respB.arrayBuffer();
+        bufferB = await appState.engine.decodeAudio(arrayBufB);
+      } catch (decodeErr) {
+        console.warn("m4a decode failed, attempting wav:", decodeErr);
+      }
+    }
+    // Fallback to uncompressed WAV if m4a failed or was unavailable
+    if (!bufferB) {
+      let respWav = await fetch('/kala_chashma_official.wav');
+      if (respWav.ok) {
+        const arrayBufWav = await respWav.arrayBuffer();
+        bufferB = await appState.engine.decodeAudio(arrayBufWav);
+      }
+    }
+
+    if (bufferB) {
+      let analysisB = null;
+      try {
+        analysisB = appState.engine.analyzeTrack(bufferB);
+      } catch (_) {}
       if (appState.trackB) {
         appState.trackB.buffer = bufferB;
-        appState.trackB.analysis = analysisB;
+        if (analysisB) appState.trackB.analysis = analysisB;
       }
-      if (appState.trackA && (!appState.trackA.buffer || appState.trackA.source === 'local_video')) {
+      if (appState.trackA) {
         appState.trackA.buffer = bufferB;
-        appState.trackA.analysis = analysisB;
+        if (analysisB) appState.trackA.analysis = analysisB;
         appState.trackA.source = 'official_studio';
       }
       drawWaveformTimeline();
@@ -2790,19 +2965,17 @@ async function ensureTrackBBuffer() {
 function triggerReplay() {
   const audio = document.getElementById('masterAudioPlayer');
   const playBtn = document.getElementById('playFullBtn');
+  const timelinePlayBtn = document.getElementById('timelinePlayBtn');
 
-  if (auditionTimer) {
-    clearTimeout(auditionTimer);
-    auditionTimer = null;
-  }
+  stopAuditionPlayback();
 
   // Synchronously resume Web Audio context on user gesture
   if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
     appState.engine.ctx.resume().catch(() => {});
   }
 
-  // If using arranged blocks, use Web Audio sequencer for 100% dynamic accuracy
-  if (appState.arrangementBlocks && appState.arrangementBlocks.length > 0) {
+  // If user customized arrangement and Web Audio buffer is ready:
+  if (appState.userHasCustomizedBlocks && appState.trackB && appState.trackB.buffer) {
     playViaWebAudioEngine();
     return;
   }
@@ -2814,6 +2987,10 @@ function triggerReplay() {
       if (playBtn) {
         playBtn.innerHTML = '<span>⏸</span> Pause Full Mix';
         playBtn.classList.add('active');
+      }
+      if (timelinePlayBtn) {
+        timelinePlayBtn.innerHTML = '<span>⏸</span> Pause Timeline';
+        timelinePlayBtn.classList.add('active');
       }
       appState.playbackPosition = 0;
       drawWaveformTimeline(0);
@@ -2833,16 +3010,14 @@ function triggerReplay() {
 function triggerPlayFullMix() {
   const audio = document.getElementById('masterAudioPlayer');
   const playBtn = document.getElementById('playFullBtn');
+  const timelinePlayBtn = document.getElementById('timelinePlayBtn');
 
   // Synchronously resume Web Audio context
   if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
     appState.engine.ctx.resume().catch(() => {});
   }
 
-  if (auditionTimer) {
-    clearTimeout(auditionTimer);
-    auditionTimer = null;
-  }
+  stopAuditionPlayback();
 
   // Toggle behavior
   if (appState.isPlaying) {
@@ -2851,18 +3026,23 @@ function triggerPlayFullMix() {
     return;
   }
 
-  // If using arranged blocks, use Web Audio sequencer for 100% dynamic accuracy
-  if (appState.arrangementBlocks && appState.arrangementBlocks.length > 0) {
+  // If user customized arrangement and Web Audio buffer is ready:
+  if (appState.userHasCustomizedBlocks && appState.trackB && appState.trackB.buffer) {
     playViaWebAudioEngine();
     return;
   }
 
+  // Default sequence (or fallback): play the pre-rendered master mix directly via native audio!
   if (audio) {
     audio.play().then(() => {
       appState.isPlaying = true;
       if (playBtn) {
         playBtn.innerHTML = '<span>⏸</span> Pause Full Mix';
         playBtn.classList.add('active');
+      }
+      if (timelinePlayBtn) {
+        timelinePlayBtn.innerHTML = '<span>⏸</span> Pause Timeline';
+        timelinePlayBtn.classList.add('active');
       }
       showToast("▶ Playing Kala Chashma Clean Master Mix...");
     }).catch(err => {
@@ -2878,7 +3058,16 @@ async function playViaWebAudioEngine() {
   if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
     appState.engine.ctx.resume().catch(() => {});
   }
-  await ensureTrackBBuffer();
+  const buf = await ensureTrackBBuffer();
+
+  // Fall back to native audio if Web Audio buffer could not be loaded
+  if (!buf) {
+    const audio = document.getElementById('masterAudioPlayer');
+    if (audio) {
+      audio.play().catch(e => console.warn("Native fallback error:", e));
+      return;
+    }
+  }
 
   if (appState.trackB && appState.trackB.buffer && (!appState.trackA || !appState.trackA.buffer)) {
     if (appState.trackA) {

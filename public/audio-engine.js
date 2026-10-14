@@ -42,7 +42,7 @@ class AudioRemixEngine {
    * Handles audio and video files (.mov, .mp4) using server-side macOS avconvert.
    */
   async decodeAudio(fileOrBuffer) {
-    this.ensureContext();
+    await this.ensureContext();
 
     // Check if input is a video file
     const isVideoFile = (fileOrBuffer instanceof Blob || fileOrBuffer instanceof File) && (
@@ -61,15 +61,42 @@ class AudioRemixEngine {
       arrayBuffer = fileOrBuffer;
     }
 
+    const tryDecode = (ctx, buf) => {
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        try {
+          const p = ctx.decodeAudioData(
+            buf.slice(0),
+            (decoded) => { if (!settled) { settled = true; resolve(decoded); } },
+            (err) => { if (!settled) { settled = true; reject(err); } }
+          );
+          if (p && typeof p.then === 'function') {
+            p.then(decoded => { if (!settled) { settled = true; resolve(decoded); } })
+             .catch(err => { if (!settled) { settled = true; reject(err); } });
+          }
+        } catch (e) {
+          if (!settled) { settled = true; reject(e); }
+        }
+      });
+    };
+
     try {
-      const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer.slice(0));
-      return audioBuffer;
+      return await tryDecode(this.ctx, arrayBuffer);
     } catch (err) {
-      // If direct decoding failed on a file, attempt server video extraction as fallback
+      // Fallback 1: Try decoding with OfflineAudioContext (unaffected by autoplay suspension)
+      try {
+        const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        if (OfflineCtx) {
+          const offline = new OfflineCtx(2, 44100, 44100);
+          return await tryDecode(offline, arrayBuffer);
+        }
+      } catch (_) {}
+
+      // Fallback 2: If direct decoding failed on a file, attempt server video extraction as fallback
       if (fileOrBuffer instanceof Blob || fileOrBuffer instanceof File) {
         return await this._extractVideoAudioViaServer(fileOrBuffer);
       }
-      throw new Error(`Failed to decode audio: ${err.message}`);
+      throw new Error(`Failed to decode audio: ${err ? err.message : 'Unknown error'}`);
     }
   }
 
