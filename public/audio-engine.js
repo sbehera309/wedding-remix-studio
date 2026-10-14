@@ -757,7 +757,17 @@ class AudioRemixEngine {
 
     const src = this.ctx.createBufferSource();
     src.buffer = buffer;
-    src.connect(this.ctx.destination);
+
+    // Smooth 8ms attack & release envelope to eliminate audio pops and clicks
+    const gainNode = this.ctx.createGain();
+    const fadeSec = Math.min(0.008, dur * 0.1);
+    gainNode.gain.setValueAtTime(0.0001, now);
+    gainNode.gain.exponentialRampToValueAtTime(1.0, now + fadeSec);
+    gainNode.gain.setValueAtTime(1.0, now + dur - fadeSec);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    src.connect(gainNode);
+    gainNode.connect(this.ctx.destination);
     src.start(now, block.startTime, dur);
 
     this.currentSourceNodes = [src];
@@ -811,10 +821,28 @@ class AudioRemixEngine {
           const blkDur = Math.max(0.05, blk.endTime - blk.startTime);
           const src = this.ctx.createBufferSource();
           let blkBuf = activeBuf;
-          if (blk.sourceTrack === 'A' && trackA && trackA.buffer) blkBuf = trackA.buffer;
-          else if (blk.sourceTrack === 'B' && trackB && trackB.buffer) blkBuf = trackB.buffer;
+          if (blk.sourceTrack === 'A' && trackA && trackA.buffer) {
+            // Guard: If trackA was loaded from phone video, always prioritize pristine studio track!
+            if (useStudioMasterForChoreo && trackA.source === 'local_video' && trackB && trackB.buffer) {
+              blkBuf = trackB.buffer;
+            } else {
+              blkBuf = trackA.buffer;
+            }
+          } else if (blk.sourceTrack === 'B' && trackB && trackB.buffer) {
+            blkBuf = trackB.buffer;
+          }
           src.buffer = blkBuf;
-          src.connect(this.ctx.destination);
+
+          // Micro-fade envelope to eliminate seams, DC jumps, and clicks between contiguous or looped blocks
+          const gainNode = this.ctx.createGain();
+          const fadeSec = Math.min(0.008, blkDur * 0.1);
+          gainNode.gain.setValueAtTime(0.0001, currentMixTime);
+          gainNode.gain.exponentialRampToValueAtTime(1.0, currentMixTime + fadeSec);
+          gainNode.gain.setValueAtTime(1.0, currentMixTime + blkDur - fadeSec);
+          gainNode.gain.exponentialRampToValueAtTime(0.0001, currentMixTime + blkDur);
+
+          src.connect(gainNode);
+          gainNode.connect(this.ctx.destination);
           src.start(currentMixTime, blk.startTime, blkDur);
           sources.push(src);
 
@@ -1062,10 +1090,27 @@ class AudioRemixEngine {
           const blkDur = Math.max(0.05, blk.endTime - blk.startTime);
           const src = offlineCtx.createBufferSource();
           let blkBuf = activeBuf;
-          if (blk.sourceTrack === 'A' && trackA && trackA.buffer) blkBuf = trackA.buffer;
-          else if (blk.sourceTrack === 'B' && trackB && trackB.buffer) blkBuf = trackB.buffer;
+          if (blk.sourceTrack === 'A' && trackA && trackA.buffer) {
+            if (useStudioMasterForChoreo && trackA.source === 'local_video' && trackB && trackB.buffer) {
+              blkBuf = trackB.buffer;
+            } else {
+              blkBuf = trackA.buffer;
+            }
+          } else if (blk.sourceTrack === 'B' && trackB && trackB.buffer) {
+            blkBuf = trackB.buffer;
+          }
           src.buffer = blkBuf;
-          src.connect(offlineCtx.destination);
+
+          // Micro-fade envelope to ensure master WAV export is completely free of clicks or glitches
+          const gainNode = offlineCtx.createGain();
+          const fadeSec = Math.min(0.008, blkDur * 0.1);
+          gainNode.gain.setValueAtTime(0.0001, currentMixTime);
+          gainNode.gain.exponentialRampToValueAtTime(1.0, currentMixTime + fadeSec);
+          gainNode.gain.setValueAtTime(1.0, currentMixTime + blkDur - fadeSec);
+          gainNode.gain.exponentialRampToValueAtTime(0.0001, currentMixTime + blkDur);
+
+          src.connect(gainNode);
+          gainNode.connect(offlineCtx.destination);
           src.start(currentMixTime, blk.startTime, blkDur);
           currentMixTime += blkDur;
         }

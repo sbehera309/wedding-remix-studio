@@ -1521,6 +1521,67 @@ canvas#waveformCanvas {
   border-color: var(--accent-purple);
 }
 
+/* Click-to-hear hints and audition styling */
+.timeline-item-cue-chip {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.2px;
+  transition: all 0.2s ease;
+}
+
+.timeline-item-pill:hover .timeline-item-cue-chip {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: #34d399;
+  color: #6ee7b7;
+}
+
+.timeline-item-btn.solo-btn {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+  font-weight: 700;
+}
+
+.timeline-item-btn.solo-btn:hover {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: var(--accent-emerald);
+}
+
+.palette-audition-hint {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 1px 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.palette-item-card:hover .palette-audition-hint {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #34d399;
+  color: #6ee7b7;
+}
+
+.palette-item-card.active-playing {
+  border-color: var(--accent-emerald) !important;
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.6), inset 0 0 10px rgba(16, 185, 129, 0.2) !important;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(22, 25, 38, 0.98)) !important;
+  animation: pulse-line-active 1s infinite alternate;
+}
+
+.subpart-pill-row.active-playing {
+  border-color: var(--accent-emerald) !important;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.5) !important;
+  background: rgba(16, 185, 129, 0.25) !important;
+}
+
 /* ======================================================== */
 /* STREAMLINED STUDIO STYLES                                */
 /* ======================================================== */
