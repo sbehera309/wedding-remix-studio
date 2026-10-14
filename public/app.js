@@ -2294,7 +2294,8 @@ function selectTransitionMethod(methodType) {
     vinyl_brake: 'Vinyl Brake / Tape Stop',
     echo_out: 'Echo Out & Reverb Wash',
     bass_swap: 'Frequency Filter / Bass Swap',
-    quick_cut: 'Sudden Punch Cut'
+    quick_cut: 'Sudden Punch Cut',
+    teaser_loop: 'Rising Teaser Loop (Clip 2 Hook Repeat)'
   };
 
   const tag = document.getElementById('activeMethodTag');
@@ -2333,10 +2334,11 @@ async function auditionSpecificTransition(methodType) {
     vinyl_brake: 'Vinyl Brake / Tape Stop',
     echo_out: 'Echo Out & Reverb Wash',
     bass_swap: 'Frequency Filter / Bass Swap',
-    quick_cut: 'Sudden Punch Cut'
+    quick_cut: 'Sudden Punch Cut',
+    teaser_loop: 'Rising Teaser Loop (Clip 2 Hook Repeat)'
   };
 
-  showToast(`🎧 Auditioning 5s "${methodNames[methodType] || methodType}" Transition...`);
+  showToast(`🎧 Auditioning "${methodNames[methodType] || methodType}" Transition...`);
 
   // Ensure buffers are loaded for track A and track B
   if (!appState.trackA || !appState.trackA.buffer) {
@@ -2397,42 +2399,133 @@ async function auditionSpecificTransition(methodType) {
       return;
     }
 
-    const preRoll = 3.0;
-    const postRoll = 2.5;
-
     try { audioA.pause(); audioB.pause(); } catch (_) {}
     audioA.playbackRate = 1.0;
     audioB.playbackRate = 1.0;
-    audioA.currentTime = Math.max(0, spliceA - preRoll);
+    audioA.volume = 1.0;
+    audioB.volume = 1.0;
+    audioA.preservesPitch = true;
+    audioB.preservesPitch = true;
 
+    if (methodType === 'teaser_loop') {
+      // 🔁 Rising Teaser Loop Audition (4.28s pre-roll + 2.5s post-roll)
+      const teaserDur = 2.14;
+      const preRoll = teaserDur * 2; // 4.28s
+      const postRoll = 2.5;
+
+      audioA.currentTime = Math.max(0, spliceA - preRoll);
+      audioA.volume = 0.85;
+
+      audioB.currentTime = Math.max(0, spliceB);
+      audioB.volume = 0.25;
+
+      Promise.all([audioA.play(), audioB.play()]).then(() => {
+        showToast("🔁 Teaser Loop: Clip 2 Hook whispering in the background (25% vol)...");
+
+        // At 2.14s: Repeat 2 starts (vol 0.70), Song 1 ducks to 0.30
+        setTimeout(() => {
+          audioB.currentTime = Math.max(0, spliceB);
+          audioB.volume = 0.70;
+          audioA.volume = 0.30;
+          showToast("🔁 Teaser Loop: Clip 2 Hook getting louder (70% vol), Song 1 fading...");
+        }, teaserDur * 1000);
+
+        // At 4.28s: Drop / Handoff to Song B at full volume 1.0
+        setTimeout(() => {
+          try {
+            audioA.pause();
+            audioA.volume = 1.0;
+            audioA.currentTime = 0;
+          } catch (_) {}
+
+          audioB.currentTime = Math.max(0, spliceB);
+          audioB.volume = 1.0;
+          appState.engine.playLiveTransitionCue('teaser_loop', true);
+          showToast("⚡ Team 2 TAKES OVER! Full volume drop!");
+
+          // Conclude audition
+          setTimeout(() => {
+            try { audioB.pause(); audioB.volume = 1.0; } catch (_) {}
+            if (btn) btn.classList.remove('active');
+            if (card) card.classList.remove('auditioning');
+            showToast("⚡ Teaser Loop Audition complete!");
+          }, postRoll * 1000);
+
+        }, preRoll * 1000);
+
+      }).catch(err => {
+        console.warn("Native teaser audition autoplay error:", err);
+        if (btn) btn.classList.remove('active');
+        if (card) card.classList.remove('auditioning');
+        showToast("⚠️ Autoplay prevented. Click Audition again.");
+      });
+      return;
+    }
+
+    // Standard 5s Transition Auditions
+    const preRoll = 3.0;
+    const postRoll = 2.5;
+
+    audioA.currentTime = Math.max(0, spliceA - preRoll);
     audioA.play().then(() => {
-      // 1.5s in: trigger transition riser cue
-      setTimeout(() => {
-        if (methodType === 'drum_riser') {
+      // Pre-roll FX triggers
+      if (methodType === 'drum_riser') {
+        setTimeout(() => {
           appState.engine.playLiveTransitionCue('drum_riser', false);
-        } else if (methodType === 'vinyl_brake') {
-          audioA.playbackRate = 0.25;
-        }
-      }, 1400);
+          showToast("⚡ Drum Roll & Snare Riser Building...");
+        }, 1400);
+      } else if (methodType === 'vinyl_brake') {
+        setTimeout(() => {
+          appState.engine.playLiveTransitionCue('vinyl_brake', false);
+          audioA.preservesPitch = false;
+          if ('mozPreservesPitch' in audioA) audioA.mozPreservesPitch = false;
+          if ('webkitPreservesPitch' in audioA) audioA.webkitPreservesPitch = false;
+          audioA.playbackRate = 0.08;
+          audioA.volume = 0.15;
+          showToast("🛑 Vinyl Brake... Turntable Motor Stopping!");
+        }, 2150);
+      } else if (methodType === 'echo_out') {
+        setTimeout(() => {
+          appState.engine.playLiveTransitionCue('echo_out', false);
+          audioA.volume = 0.6;
+          setTimeout(() => { audioA.volume = 0.3; }, 400);
+          setTimeout(() => { audioA.volume = 0.05; }, 800);
+          showToast("🌊 Echo Out... Vocal Delay Wash Floating!");
+        }, 1600);
+      } else if (methodType === 'bass_swap') {
+        setTimeout(() => {
+          appState.engine.playLiveTransitionCue('bass_swap', false);
+          audioA.volume = 0.35;
+          showToast("🔊 High-Pass Resonant Filter Sweep... Lows Removed!");
+        }, 1600);
+      } else if (methodType === 'quick_cut') {
+        setTimeout(() => {
+          audioA.volume = 0;
+        }, 2850);
+      }
 
       // At 3.0s: trigger handoff to Song B + drop impact
       setTimeout(() => {
         try {
           audioA.pause();
           audioA.playbackRate = 1.0;
+          audioA.volume = 1.0;
+          audioA.preservesPitch = true;
         } catch (_) {}
 
         audioB.currentTime = Math.max(0, spliceB);
+        audioB.volume = 1.0;
+        audioB.playbackRate = 1.0;
         audioB.play().catch(e => console.warn("Deck B audition play error:", e));
 
         appState.engine.playLiveTransitionCue(methodType, true);
 
         // Finish audition after post-roll
         setTimeout(() => {
-          try { audioB.pause(); } catch (_) {}
+          try { audioB.pause(); audioB.volume = 1.0; } catch (_) {}
           if (btn) btn.classList.remove('active');
           if (card) card.classList.remove('auditioning');
-          showToast(`⚡ 5s Transition Audition complete!`);
+          showToast(`⚡ 5s "${methodNames[methodType] || methodType}" complete!`);
         }, postRoll * 1000);
 
       }, preRoll * 1000);
@@ -2448,19 +2541,20 @@ async function auditionSpecificTransition(methodType) {
   // Try Web Audio preview if buffers are available; otherwise use native dual-deck audition
   if (appState.trackA && appState.trackA.buffer && appState.trackB && appState.trackB.buffer) {
     try {
+      const isTeaser = methodType === 'teaser_loop';
       const config = {
         mode: 'medley',
         spliceTimeA: spliceA,
         spliceTimeB: spliceB,
-        crossfadeDuration: methodType === 'drum_riser' ? 1.0 : (methodType === 'quick_cut' ? 0.05 : 0.8),
+        crossfadeDuration: methodType === 'drum_riser' ? 1.0 : (methodType === 'quick_cut' ? 0.05 : (isTeaser ? 0.05 : 0.8)),
         transitionType: methodType,
-        previewPreRoll: 3.0,
-        previewPostRoll: 3.0,
+        previewPreRoll: isTeaser ? 4.5 : 3.0,
+        previewPostRoll: 2.5,
         useStudioMasterForChoreo: false
       };
 
       const res = await appState.engine.previewTransition(appState.trackA, appState.trackB, config);
-      const dur = res && res.auditionDuration ? res.auditionDuration : 6.0;
+      const dur = res && res.auditionDuration ? res.auditionDuration : (isTeaser ? 7.0 : 6.0);
 
       setTimeout(() => {
         if (btn) btn.classList.remove('active');
@@ -4010,6 +4104,10 @@ function stopArrangementPlayback() {
     clearInterval(arrangementSequencer.checkInterval);
     arrangementSequencer.checkInterval = null;
   }
+  arrangementSequencer.transitionRiserTriggered = false;
+  arrangementSequencer.teaserRep1Triggered = false;
+  arrangementSequencer.teaserRep2Triggered = false;
+
   if (arrangementSequencer.audio) {
     try {
       arrangementSequencer.audio.pause();
@@ -4018,9 +4116,9 @@ function stopArrangementPlayback() {
   const deckA = document.getElementById('deckAAudioPlayer');
   const deckB = document.getElementById('deckBAudioPlayer');
   const official = document.getElementById('officialAudioPlayer');
-  if (deckA) { try { deckA.pause(); } catch (_) {} }
-  if (deckB) { try { deckB.pause(); } catch (_) {} }
-  if (official) { try { official.pause(); } catch (_) {} }
+  if (deckA) { try { deckA.pause(); deckA.volume = 1.0; deckA.playbackRate = 1.0; deckA.preservesPitch = true; } catch (_) {} }
+  if (deckB) { try { deckB.pause(); deckB.volume = 1.0; deckB.playbackRate = 1.0; deckB.preservesPitch = true; } catch (_) {} }
+  if (official) { try { official.pause(); official.volume = 1.0; official.playbackRate = 1.0; official.preservesPitch = true; } catch (_) {} }
 
   arrangementSequencer.isPlaying = false;
   arrangementSequencer.lastHighlightedIdx = -1;
@@ -4174,8 +4272,63 @@ function startArrangementMonitorLoop() {
           showToast("⚡ DJ Snare Riser Building... Team 2 Taking The Floor!");
         }
       } else if (transType === 'vinyl_brake') {
-        if (timeRemaining <= 0.7 && timeRemaining > 0) {
-          audio.playbackRate = Math.max(0.08, timeRemaining / 0.7);
+        if (timeRemaining <= 0.85 && timeRemaining > 0 && !arrangementSequencer.transitionRiserTriggered) {
+          arrangementSequencer.transitionRiserTriggered = true;
+          appState.engine.playLiveTransitionCue('vinyl_brake', false);
+          audio.preservesPitch = false;
+          if ('mozPreservesPitch' in audio) audio.mozPreservesPitch = false;
+          if ('webkitPreservesPitch' in audio) audio.webkitPreservesPitch = false;
+          audio.playbackRate = 0.08;
+          showToast("🛑 Turntable Brake... Needle Stopping!");
+        }
+        if (timeRemaining <= 0.85 && timeRemaining > 0) {
+          audio.volume = Math.max(0.05, timeRemaining / 0.85);
+        }
+      } else if (transType === 'echo_out') {
+        if (timeRemaining <= 1.4 && timeRemaining > 0 && !arrangementSequencer.transitionRiserTriggered) {
+          arrangementSequencer.transitionRiserTriggered = true;
+          appState.engine.playLiveTransitionCue('echo_out', false);
+          showToast("🌊 Echo Out & Reverb Wash... Song 1 Dissolving!");
+        }
+        if (timeRemaining <= 1.4 && timeRemaining > 0) {
+          audio.volume = Math.max(0.05, timeRemaining / 1.4);
+        }
+      } else if (transType === 'bass_swap') {
+        if (timeRemaining <= 1.4 && timeRemaining > 0 && !arrangementSequencer.transitionRiserTriggered) {
+          arrangementSequencer.transitionRiserTriggered = true;
+          appState.engine.playLiveTransitionCue('bass_swap', false);
+          audio.volume = 0.35;
+          showToast("🔊 High-Pass Filter Sweep... Low-End Cut!");
+        }
+      } else if (transType === 'quick_cut') {
+        if (timeRemaining <= 0.18 && timeRemaining > 0 && !arrangementSequencer.transitionRiserTriggered) {
+          arrangementSequencer.transitionRiserTriggered = true;
+          audio.volume = 0;
+        }
+      } else if (transType === 'teaser_loop') {
+        const deckB = getAudioElementForBlock(schedule[nextIdx].block);
+        const teaserStart = schedule[nextIdx].startTime;
+
+        // Phase 1: 4.28s to 2.14s remaining -> Repeat 1 (vol 0.25)
+        if (timeRemaining <= 4.28 && timeRemaining > 2.14 && !arrangementSequencer.teaserRep1Triggered) {
+          arrangementSequencer.teaserRep1Triggered = true;
+          if (deckB) {
+            deckB.currentTime = teaserStart;
+            deckB.volume = 0.25;
+            deckB.play().catch(() => {});
+          }
+          audio.volume = 0.80;
+          showToast("🔁 Teaser Loop: Clip 2 Hook whispering in the background (25% vol)...");
+        }
+        // Phase 2: 2.14s to 0.0s remaining -> Repeat 2 (vol 0.70)
+        if (timeRemaining <= 2.14 && timeRemaining > 0 && !arrangementSequencer.teaserRep2Triggered) {
+          arrangementSequencer.teaserRep2Triggered = true;
+          if (deckB) {
+            deckB.currentTime = teaserStart;
+            deckB.volume = 0.70;
+          }
+          audio.volume = 0.30;
+          showToast("🔁 Teaser Loop: Clip 2 Hook getting louder (70% vol), Song 1 fading...");
         }
       }
     }
@@ -4186,6 +4339,8 @@ function startArrangementMonitorLoop() {
         const nextSched = schedule[nextIdx];
         arrangementSequencer.currentBlockIdx = nextIdx;
         arrangementSequencer.transitionRiserTriggered = false;
+        arrangementSequencer.teaserRep1Triggered = false;
+        arrangementSequencer.teaserRep2Triggered = false;
 
         const nextAudio = getAudioElementForBlock(nextSched.block);
 
@@ -4193,10 +4348,14 @@ function startArrangementMonitorLoop() {
           // Cross-deck handoff (e.g. Track A -> Track B in Dance-Off!)
           try {
             audio.playbackRate = 1.0;
+            audio.volume = 1.0;
+            audio.preservesPitch = true;
             audio.pause();
           } catch (_) {}
 
           nextAudio.playbackRate = 1.0;
+          nextAudio.volume = 1.0;
+          nextAudio.preservesPitch = true;
           nextAudio.currentTime = Math.max(0, nextSched.startTime);
           nextAudio.play().catch(e => console.warn("Deck handoff play error:", e));
           arrangementSequencer.audio = nextAudio;

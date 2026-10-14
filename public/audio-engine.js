@@ -765,19 +765,28 @@ class AudioRemixEngine {
 
     } else if (transitionType === 'vinyl_brake') {
       // 2. Vinyl Brake / Tape Stop
-      const brakeDuration = Math.min(0.65, actualPreRoll);
+      const brakeDuration = Math.min(0.85, actualPreRoll);
       const brakeStart = transitionStartTime - brakeDuration;
 
       sourceA.playbackRate.setValueAtTime(1.0, now);
       sourceA.playbackRate.setValueAtTime(1.0, brakeStart);
-      sourceA.playbackRate.exponentialRampToValueAtTime(0.02, transitionStartTime - 0.06);
+      sourceA.playbackRate.exponentialRampToValueAtTime(0.02, transitionStartTime - 0.05);
 
       gainA.gain.setValueAtTime(1.0, now);
       gainA.gain.setValueAtTime(1.0, brakeStart);
       gainA.gain.linearRampToValueAtTime(0.001, transitionStartTime);
 
+      // Play turntable motor spin-down FX and needle thump
+      setTimeout(() => {
+        this.playLiveTransitionCue('vinyl_brake', false);
+      }, Math.max(0, (brakeStart - now) * 1000));
+
+      setTimeout(() => {
+        this.playLiveTransitionCue('vinyl_brake', true);
+      }, Math.max(0, (transitionStartTime - now) * 1000));
+
       gainB.gain.setValueAtTime(0.001, transitionStartTime);
-      gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.04);
+      gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.02);
 
     } else if (transitionType === 'echo_out') {
       // 3. Echo Out & Reverb Wash
@@ -797,41 +806,107 @@ class AudioRemixEngine {
 
       sourceA.connect(delay);
 
-      const echoStart = transitionStartTime - 0.4;
+      const echoStart = transitionStartTime - 1.4;
       gainA.gain.setValueAtTime(1.0, now);
       gainA.gain.setValueAtTime(1.0, echoStart);
-      gainA.gain.linearRampToValueAtTime(0.001, transitionStartTime);
+      gainA.gain.linearRampToValueAtTime(0.05, transitionStartTime);
 
       delayFeedback.gain.setValueAtTime(0.55, transitionStartTime);
       delayFeedback.gain.linearRampToValueAtTime(0.001, transitionStartTime + 1.8);
 
+      setTimeout(() => {
+        this.playLiveTransitionCue('echo_out', false);
+      }, Math.max(0, (echoStart - now) * 1000));
+
+      setTimeout(() => {
+        this.playLiveTransitionCue('echo_out', true);
+      }, Math.max(0, (transitionStartTime - now) * 1000));
+
       gainB.gain.setValueAtTime(0.001, transitionStartTime);
-      gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.04);
+      gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.02);
 
     } else if (transitionType === 'bass_swap') {
       // 4. Frequency Filter / Bass Swap
+      const swapStart = transitionStartTime - 1.4;
       filterA.type = 'highpass';
       filterA.frequency.setValueAtTime(20, now);
-      filterA.frequency.exponentialRampToValueAtTime(900, transitionEndTime);
+      filterA.frequency.setValueAtTime(20, swapStart);
+      filterA.frequency.exponentialRampToValueAtTime(1200, transitionStartTime);
 
       filterB.type = 'lowpass';
       filterB.frequency.setValueAtTime(250, transitionStartTime);
       filterB.frequency.exponentialRampToValueAtTime(20000, transitionEndTime + 0.8);
 
       gainA.gain.setValueAtTime(1.0, now);
-      gainA.gain.linearRampToValueAtTime(0.001, transitionEndTime);
+      gainA.gain.setValueAtTime(1.0, swapStart);
+      gainA.gain.linearRampToValueAtTime(0.25, transitionStartTime);
+      gainA.gain.linearRampToValueAtTime(0.001, transitionStartTime + 0.05);
+
+      setTimeout(() => {
+        this.playLiveTransitionCue('bass_swap', false);
+      }, Math.max(0, (swapStart - now) * 1000));
+
+      setTimeout(() => {
+        this.playLiveTransitionCue('bass_swap', true);
+      }, Math.max(0, (transitionStartTime - now) * 1000));
 
       gainB.gain.setValueAtTime(0.001, transitionStartTime);
       gainB.gain.linearRampToValueAtTime(1.0, transitionEndTime);
 
+    } else if (transitionType === 'teaser_loop') {
+      // 6. Rising Teaser Loop (Clip 2 Hook Repeat Crossfade)
+      const teaserDur = 2.14;
+      const teaser1Start = transitionStartTime - (teaserDur * 2);
+      const teaser2Start = transitionStartTime - teaserDur;
+
+      // Track A volume ducks as teaser gets louder
+      gainA.gain.setValueAtTime(1.0, now);
+      gainA.gain.setValueAtTime(0.85, teaser1Start);
+      gainA.gain.linearRampToValueAtTime(0.30, teaser2Start);
+      gainA.gain.linearRampToValueAtTime(0.001, transitionStartTime);
+
+      // Teaser Repeat 1 (low volume: 0.25)
+      const teaser1 = this.ctx.createBufferSource();
+      teaser1.buffer = trackB.buffer;
+      const tGain1 = this.ctx.createGain();
+      tGain1.gain.setValueAtTime(0.25, teaser1Start);
+      teaser1.connect(tGain1);
+      tGain1.connect(this.ctx.destination);
+      teaser1.start(teaser1Start, spliceTimeB, teaserDur);
+
+      // Teaser Repeat 2 (louder volume: 0.70)
+      const teaser2 = this.ctx.createBufferSource();
+      teaser2.buffer = trackB.buffer;
+      const tGain2 = this.ctx.createGain();
+      tGain2.gain.setValueAtTime(0.70, teaser2Start);
+      teaser2.connect(tGain2);
+      tGain2.connect(this.ctx.destination);
+      teaser2.start(teaser2Start, spliceTimeB, teaserDur);
+
+      // Full entry at handoff with celebration drop
+      gainB.gain.setValueAtTime(0.001, transitionStartTime);
+      gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.01);
+
+      setTimeout(() => {
+        this.playLiveTransitionCue('teaser_loop', true);
+      }, Math.max(0, (transitionStartTime - now) * 1000));
+
+      if (!this.currentSourceNodes) this.currentSourceNodes = [];
+      this.currentSourceNodes.push(teaser1, teaser2);
+
     } else {
       // 5. Sudden Punch Cut
+      const cutTime = transitionStartTime - 0.15;
       gainA.gain.setValueAtTime(1.0, now);
-      gainA.gain.setValueAtTime(1.0, transitionStartTime);
-      gainA.gain.linearRampToValueAtTime(0.001, transitionStartTime + 0.02);
+      gainA.gain.setValueAtTime(1.0, cutTime);
+      gainA.gain.linearRampToValueAtTime(0.001, cutTime + 0.02);
 
       gainB.gain.setValueAtTime(0.001, transitionStartTime);
-      gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.02);
+      gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.01);
+
+      setTimeout(() => {
+        this.playLiveTransitionCue('quick_cut', true);
+      }, Math.max(0, (transitionStartTime - now) * 1000));
     }
 
     sourceA.connect(filterA);
@@ -845,7 +920,8 @@ class AudioRemixEngine {
     sourceA.start(now, startOffsetA, actualPreRoll + crossfadeDuration + 0.2);
     sourceB.start(transitionStartTime, spliceTimeB, previewPostRoll);
 
-    this.currentSourceNodes = [sourceA, sourceB];
+    if (!this.currentSourceNodes) this.currentSourceNodes = [];
+    this.currentSourceNodes.push(sourceA, sourceB);
     this.isPlaying = true;
 
     const totalAuditionDuration = actualPreRoll + crossfadeDuration + previewPostRoll;
@@ -858,6 +934,13 @@ class AudioRemixEngine {
       auditionDuration: totalAuditionDuration,
       transitionPointSec: actualPreRoll
     };
+  }
+
+  /**
+   * Preview Transition Alias for Web Audio Audition
+   */
+  async previewTransition(trackA, trackB, config) {
+    return this.auditionTransition(trackA, trackB, config);
   }
 
   /**
@@ -937,48 +1020,150 @@ class AudioRemixEngine {
           subOsc.stop(now + 0.8);
         }
       } else if (type === 'vinyl_brake') {
-        if (isDrop) {
-          // Vinyl needle drop / punch slam
+        if (!isDrop) {
+          // 🛑 Authentic Turntable Spin-down Motor Brake (0.85s duration)
+          const brakeDur = 0.85;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(450, now);
+          osc.frequency.exponentialRampToValueAtTime(25, now + brakeDur);
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(2800, now);
+          filter.frequency.exponentialRampToValueAtTime(120, now + brakeDur);
+
+          gain.gain.setValueAtTime(0.55, now);
+          gain.gain.linearRampToValueAtTime(0.001, now + brakeDur);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + brakeDur);
+        } else {
+          // Needle drop thump & record slam
           const popOsc = this.ctx.createOscillator();
           const popGain = this.ctx.createGain();
           popOsc.type = 'sine';
-          popOsc.frequency.setValueAtTime(110, now);
-          popOsc.frequency.exponentialRampToValueAtTime(45, now + 0.3);
-          popGain.gain.setValueAtTime(0.8, now);
-          popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          popOsc.frequency.setValueAtTime(130, now);
+          popOsc.frequency.exponentialRampToValueAtTime(42, now + 0.35);
+          popGain.gain.setValueAtTime(0.9, now);
+          popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
           popOsc.connect(popGain);
           popGain.connect(this.ctx.destination);
           popOsc.start(now);
-          popOsc.stop(now + 0.4);
+          popOsc.stop(now + 0.45);
         }
       } else if (type === 'echo_out') {
-        if (isDrop) {
-          // Reverb tail impact
+        if (!isDrop) {
+          // 🌊 Rhythmic Vocal Delay Wash (4 tempo-synced echo pulses)
+          const tapTimes = [0.0, 0.28, 0.56, 0.84];
+          const tapGains = [0.65, 0.45, 0.28, 0.15];
+          const tapFreqs = [3200, 2600, 2000, 1500];
+
+          tapTimes.forEach((dt, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const filter = this.ctx.createBiquadFilter();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(220, now + dt);
+            osc.frequency.exponentialRampToValueAtTime(140, now + dt + 0.22);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(tapFreqs[i], now + dt);
+
+            gain.gain.setValueAtTime(tapGains[i], now + dt);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + dt + 0.24);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + dt);
+            osc.stop(now + dt + 0.25);
+          });
+        } else {
+          // Reverb tail impact drop
           const subOsc = this.ctx.createOscillator();
           const subGain = this.ctx.createGain();
           subOsc.type = 'sine';
-          subOsc.frequency.setValueAtTime(120, now);
-          subOsc.frequency.exponentialRampToValueAtTime(42, now + 0.4);
-          subGain.gain.setValueAtTime(0.7, now);
-          subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+          subOsc.frequency.setValueAtTime(135, now);
+          subOsc.frequency.exponentialRampToValueAtTime(40, now + 0.5);
+          subGain.gain.setValueAtTime(0.85, now);
+          subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
           subOsc.connect(subGain);
           subGain.connect(this.ctx.destination);
           subOsc.start(now);
-          subOsc.stop(now + 0.55);
+          subOsc.stop(now + 0.7);
+        }
+      } else if (type === 'bass_swap') {
+        if (!isDrop) {
+          // 🔊 High-pass sweep riser (sweeping from 80Hz up to 2500Hz)
+          const sweepDur = 1.4;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(90, now);
+          osc.frequency.exponentialRampToValueAtTime(680, now + sweepDur);
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.Q.value = 4.0;
+          filter.frequency.setValueAtTime(180, now);
+          filter.frequency.exponentialRampToValueAtTime(3200, now + sweepDur);
+
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.5, now + sweepDur - 0.05);
+          gain.gain.linearRampToValueAtTime(0.001, now + sweepDur);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + sweepDur);
+        } else {
+          // Heavy sub-bass boom
+          const subOsc = this.ctx.createOscillator();
+          const subGain = this.ctx.createGain();
+          subOsc.type = 'sine';
+          subOsc.frequency.setValueAtTime(140, now);
+          subOsc.frequency.exponentialRampToValueAtTime(36, now + 0.6);
+          subGain.gain.setValueAtTime(0.95, now);
+          subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+          subOsc.connect(subGain);
+          subGain.connect(this.ctx.destination);
+          subOsc.start(now);
+          subOsc.stop(now + 0.8);
+        }
+      } else if (type === 'teaser_loop') {
+        if (isDrop) {
+          // Grand celebration drop impact
+          const subOsc = this.ctx.createOscillator();
+          const subGain = this.ctx.createGain();
+          subOsc.type = 'sine';
+          subOsc.frequency.setValueAtTime(150, now);
+          subOsc.frequency.exponentialRampToValueAtTime(38, now + 0.6);
+          subGain.gain.setValueAtTime(0.95, now);
+          subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+          subOsc.connect(subGain);
+          subGain.connect(this.ctx.destination);
+          subOsc.start(now);
+          subOsc.stop(now + 0.85);
         }
       } else {
-        // Quick cut / punch
+        // ✂️ Quick cut / punch downbeat transient
         const hitOsc = this.ctx.createOscillator();
         const hitGain = this.ctx.createGain();
         hitOsc.type = 'triangle';
-        hitOsc.frequency.setValueAtTime(180, now);
-        hitOsc.frequency.exponentialRampToValueAtTime(50, now + 0.25);
-        hitGain.gain.setValueAtTime(0.85, now);
-        hitGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        hitOsc.frequency.setValueAtTime(190, now);
+        hitOsc.frequency.exponentialRampToValueAtTime(45, now + 0.3);
+        hitGain.gain.setValueAtTime(0.9, now);
+        hitGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
         hitOsc.connect(hitGain);
         hitGain.connect(this.ctx.destination);
         hitOsc.start(now);
-        hitOsc.stop(now + 0.35);
+        hitOsc.stop(now + 0.4);
       }
     } catch (err) {
       console.warn("Live transition cue error:", err);
@@ -1419,6 +1604,161 @@ class AudioRemixEngine {
               subGain.connect(hp);
               subOsc.start(transSpot);
               subOsc.stop(transSpot + 0.7);
+            } else if (config.transitionType === 'vinyl_brake') {
+              // Vinyl brake spin-down sound + needle thump
+              const brakeDur = 0.85;
+              const brakeStart = Math.max(0, transSpot - brakeDur);
+              const osc = offlineCtx.createOscillator();
+              const gain = offlineCtx.createGain();
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(450, brakeStart);
+              osc.frequency.exponentialRampToValueAtTime(25, transSpot);
+
+              const flt = offlineCtx.createBiquadFilter();
+              flt.type = 'lowpass';
+              flt.frequency.setValueAtTime(2800, brakeStart);
+              flt.frequency.exponentialRampToValueAtTime(120, transSpot);
+
+              gain.gain.setValueAtTime(0.65, brakeStart);
+              gain.gain.linearRampToValueAtTime(0.001, transSpot);
+
+              osc.connect(flt);
+              flt.connect(gain);
+              gain.connect(hp);
+              osc.start(brakeStart);
+              osc.stop(transSpot);
+
+              // Needle thump
+              const pop = offlineCtx.createOscillator();
+              const popG = offlineCtx.createGain();
+              pop.type = 'sine';
+              pop.frequency.setValueAtTime(130, transSpot);
+              pop.frequency.exponentialRampToValueAtTime(42, transSpot + 0.35);
+              popG.gain.setValueAtTime(0.85, transSpot);
+              popG.gain.exponentialRampToValueAtTime(0.001, transSpot + 0.4);
+              pop.connect(popG);
+              popG.connect(hp);
+              pop.start(transSpot);
+              pop.stop(transSpot + 0.45);
+            } else if (config.transitionType === 'echo_out') {
+              // 4 delay echo taps into reverb drop
+              const tapTimes = [0.0, 0.28, 0.56, 0.84];
+              const tapGains = [0.65, 0.45, 0.28, 0.15];
+              const echoStart = Math.max(0, transSpot - 1.4);
+              tapTimes.forEach((dt, idx) => {
+                const osc = offlineCtx.createOscillator();
+                const g = offlineCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, echoStart + dt);
+                osc.frequency.exponentialRampToValueAtTime(140, echoStart + dt + 0.22);
+                g.gain.setValueAtTime(tapGains[idx], echoStart + dt);
+                g.gain.exponentialRampToValueAtTime(0.001, echoStart + dt + 0.24);
+                osc.connect(g);
+                g.connect(hp);
+                osc.start(echoStart + dt);
+                osc.stop(echoStart + dt + 0.25);
+              });
+              // Sub reverb drop
+              const sub = offlineCtx.createOscillator();
+              const subG = offlineCtx.createGain();
+              sub.type = 'sine';
+              sub.frequency.setValueAtTime(135, transSpot);
+              sub.frequency.exponentialRampToValueAtTime(40, transSpot + 0.5);
+              subG.gain.setValueAtTime(0.85, transSpot);
+              subG.gain.exponentialRampToValueAtTime(0.001, transSpot + 0.65);
+              sub.connect(subG);
+              subG.connect(hp);
+              sub.start(transSpot);
+              sub.stop(transSpot + 0.7);
+            } else if (config.transitionType === 'bass_swap') {
+              // HPF sweep riser into heavy sub boom
+              const sweepDur = 1.4;
+              const sweepStart = Math.max(0, transSpot - sweepDur);
+              const osc = offlineCtx.createOscillator();
+              const g = offlineCtx.createGain();
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(90, sweepStart);
+              osc.frequency.exponentialRampToValueAtTime(680, transSpot);
+
+              const flt = offlineCtx.createBiquadFilter();
+              flt.type = 'bandpass';
+              flt.Q.value = 4.0;
+              flt.frequency.setValueAtTime(180, sweepStart);
+              flt.frequency.exponentialRampToValueAtTime(3200, transSpot);
+
+              g.gain.setValueAtTime(0.1, sweepStart);
+              g.gain.exponentialRampToValueAtTime(0.55, transSpot - 0.05);
+              g.gain.linearRampToValueAtTime(0.001, transSpot);
+
+              osc.connect(flt);
+              flt.connect(g);
+              g.connect(hp);
+              osc.start(sweepStart);
+              osc.stop(transSpot);
+
+              // Sub boom
+              const sub = offlineCtx.createOscillator();
+              const subG = offlineCtx.createGain();
+              sub.type = 'sine';
+              sub.frequency.setValueAtTime(140, transSpot);
+              sub.frequency.exponentialRampToValueAtTime(36, transSpot + 0.6);
+              subG.gain.setValueAtTime(0.95, transSpot);
+              subG.gain.exponentialRampToValueAtTime(0.001, transSpot + 0.75);
+              sub.connect(subG);
+              subG.connect(hp);
+              sub.start(transSpot);
+              sub.stop(transSpot + 0.8);
+            } else if (config.transitionType === 'teaser_loop') {
+              // Render 2 teaser hook repeats of Track B before transSpot
+              if (trackB && trackB.buffer) {
+                const teaserDur = 2.14;
+                const t1Start = Math.max(0, transSpot - (teaserDur * 2));
+                const t2Start = Math.max(0, transSpot - teaserDur);
+
+                // Teaser Repeat 1 (vol 0.25)
+                const t1 = offlineCtx.createBufferSource();
+                t1.buffer = trackB.buffer;
+                const g1 = offlineCtx.createGain();
+                g1.gain.setValueAtTime(0.25, t1Start);
+                t1.connect(g1);
+                g1.connect(hp);
+                t1.start(t1Start, nextBlk.startTime, teaserDur);
+
+                // Teaser Repeat 2 (vol 0.70)
+                const t2 = offlineCtx.createBufferSource();
+                t2.buffer = trackB.buffer;
+                const g2 = offlineCtx.createGain();
+                g2.gain.setValueAtTime(0.70, t2Start);
+                t2.connect(g2);
+                g2.connect(hp);
+                t2.start(t2Start, nextBlk.startTime, teaserDur);
+              }
+
+              // Sub-bass celebration drop
+              const sub = offlineCtx.createOscillator();
+              const subG = offlineCtx.createGain();
+              sub.type = 'sine';
+              sub.frequency.setValueAtTime(150, transSpot);
+              sub.frequency.exponentialRampToValueAtTime(38, transSpot + 0.6);
+              subG.gain.setValueAtTime(0.95, transSpot);
+              subG.gain.exponentialRampToValueAtTime(0.001, transSpot + 0.8);
+              sub.connect(subG);
+              subG.connect(hp);
+              sub.start(transSpot);
+              sub.stop(transSpot + 0.85);
+            } else {
+              // Sudden punch cut: Laser zap transient crack + sub hit
+              const hit = offlineCtx.createOscillator();
+              const hitG = offlineCtx.createGain();
+              hit.type = 'triangle';
+              hit.frequency.setValueAtTime(190, transSpot);
+              hit.frequency.exponentialRampToValueAtTime(45, transSpot + 0.3);
+              hitG.gain.setValueAtTime(0.9, transSpot);
+              hitG.gain.exponentialRampToValueAtTime(0.001, transSpot + 0.35);
+              hit.connect(hitG);
+              hitG.connect(hp);
+              hit.start(transSpot);
+              hit.stop(transSpot + 0.4);
             }
           }
 

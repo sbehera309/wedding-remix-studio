@@ -357,6 +357,22 @@
               <span class="method-selected-indicator">✓ Selected</span>
             </div>
           </div>
+
+          <!-- Method 6: Rising Teaser Loop (Clip 2 Hook Repeat) -->
+          <div class="transition-method-card" id="card_method_teaser_loop" data-type="teaser_loop" onclick="selectTransitionMethod('teaser_loop')">
+            <div class="method-card-badge" style="color: #38bdf8;">REPEAT TEASER • ANTICIPATION</div>
+            <div class="method-card-top">
+              <span class="method-card-icon">🔁</span>
+              <h4>Rising Teaser Loop (Clip 2 Hook)</h4>
+            </div>
+            <p class="method-card-desc">Clip 2's signature hook loops quietly over Song 1 and gradually rises in volume while Song 1 fades down, building anticipation before Team 2 drops!</p>
+            <div class="method-card-footer">
+              <button type="button" class="btn-method-audition" onclick="event.stopPropagation(); auditionSpecificTransition('teaser_loop')">
+                <span>▶</span> Audition (6s)
+              </button>
+              <span class="method-selected-indicator">✓ Selected</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -487,9 +503,13 @@
           <div class="control-item">
             <label for="transitionTypeSelect">Transition Style</label>
             <select id="transitionTypeSelect" onchange="updateTransitionSettings()">
-              <option value="choreo_splice">🎯 Downbeat Phase-Lock Splice (Choreo)</option>
-              <option value="bass_swap">🎛️ 8-Bar DJ Bass Swap (Medley)</option>
-              <option value="quick_cut">💥 Drop Cut on Beat 1</option>
+              <option value="drum_riser">⚡ Drum Roll & DJ Impact Drop (Recommended)</option>
+              <option value="teaser_loop">🔁 Rising Teaser Loop (Clip 2 Hook Repeat)</option>
+              <option value="vinyl_brake">🛑 Vinyl Brake / Tape Stop</option>
+              <option value="echo_out">🌊 Echo Out & Reverb Wash</option>
+              <option value="bass_swap">🔊 Frequency Filter / Bass Swap</option>
+              <option value="quick_cut">✂️ Sudden Punch Cut</option>
+              <option value="choreo_splice">🎯 Downbeat Phase-Lock Splice</option>
               <option value="equal_power">🌊 Smooth Equal-Power Crossfade</option>
             </select>
           </div>
