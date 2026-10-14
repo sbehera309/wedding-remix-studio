@@ -1937,28 +1937,48 @@ async function loadSongBuffer(songId) {
   } else if (songId === 'tauba_tauba_movie1') {
     if (!appState._cachedTauba1) {
       try {
-        const resp = await fetch('/tauba_tauba_movie1.m4a');
-        const ab = await resp.arrayBuffer();
-        appState._cachedTauba1 = await appState.engine.ctx.decodeAudioData(ab);
+        const resp = await fetch('/tauba_tauba_movie1.wav');
+        if (resp.ok) {
+          const ab = await resp.arrayBuffer();
+          appState._cachedTauba1 = await appState.engine.decodeAudio(ab);
+        }
       } catch (e) {
-        console.warn("Could not load tauba 1 m4a, trying wav:", e);
-        const resp2 = await fetch('/tauba_tauba_movie1.wav');
-        const ab2 = await resp2.arrayBuffer();
-        appState._cachedTauba1 = await appState.engine.ctx.decodeAudioData(ab2);
+        console.warn("Could not load tauba 1 wav, trying m4a:", e);
+      }
+      if (!appState._cachedTauba1) {
+        try {
+          const resp = await fetch('/tauba_tauba_movie1.m4a');
+          if (resp.ok) {
+            const ab = await resp.arrayBuffer();
+            appState._cachedTauba1 = await appState.engine.decodeAudio(ab);
+          }
+        } catch (e2) {
+          console.warn("Could not load tauba 1 m4a:", e2);
+        }
       }
     }
     return appState._cachedTauba1;
   } else if (songId === 'tauba_tauba_movie2') {
     if (!appState._cachedTauba2) {
       try {
-        const resp = await fetch('/tauba_tauba_movie2.m4a');
-        const ab = await resp.arrayBuffer();
-        appState._cachedTauba2 = await appState.engine.ctx.decodeAudioData(ab);
+        const resp = await fetch('/tauba_tauba_movie2.wav');
+        if (resp.ok) {
+          const ab = await resp.arrayBuffer();
+          appState._cachedTauba2 = await appState.engine.decodeAudio(ab);
+        }
       } catch (e) {
-        console.warn("Could not load tauba 2 m4a, trying wav:", e);
-        const resp2 = await fetch('/tauba_tauba_movie2.wav');
-        const ab2 = await resp2.arrayBuffer();
-        appState._cachedTauba2 = await appState.engine.ctx.decodeAudioData(ab2);
+        console.warn("Could not load tauba 2 wav, trying m4a:", e);
+      }
+      if (!appState._cachedTauba2) {
+        try {
+          const resp = await fetch('/tauba_tauba_movie2.m4a');
+          if (resp.ok) {
+            const ab = await resp.arrayBuffer();
+            appState._cachedTauba2 = await appState.engine.decodeAudio(ab);
+          }
+        } catch (e2) {
+          console.warn("Could not load tauba 2 m4a:", e2);
+        }
       }
     }
     return appState._cachedTauba2;
@@ -2361,37 +2381,99 @@ async function auditionSpecificTransition(methodType) {
     }
   }
 
-  const config = {
-    mode: 'medley',
-    spliceTimeA: spliceA,
-    spliceTimeB: spliceB,
-    crossfadeDuration: methodType === 'drum_riser' ? 1.0 : (methodType === 'quick_cut' ? 0.05 : 0.8),
-    transitionType: methodType,
-    previewPreRoll: 3.0,
-    previewPostRoll: 3.0,
-    useStudioMasterForChoreo: false
-  };
-
   const btn = document.getElementById('btnAuditionActive');
   if (btn) btn.classList.add('active');
 
   const card = document.getElementById(`card_method_${methodType}`);
   if (card) card.classList.add('auditioning');
 
-  try {
-    const res = await appState.engine.previewTransition(appState.trackA, appState.trackB, config);
-    const dur = res && res.auditionDuration ? res.auditionDuration : 6.0;
-
-    setTimeout(() => {
+  const performNativeTransitionAudition = () => {
+    const audioA = getAudioElementForBlock({ sourceTrack: 'A' });
+    const audioB = getAudioElementForBlock({ sourceTrack: 'B' });
+    if (!audioA || !audioB) {
       if (btn) btn.classList.remove('active');
       if (card) card.classList.remove('auditioning');
-    }, dur * 1000);
-  } catch (err) {
-    console.error("Audition transition error:", err);
-    if (btn) btn.classList.remove('active');
-    if (card) card.classList.remove('auditioning');
-    showToast("⚠️ Could not play transition audition. Try clicking again.");
+      showToast("⚠️ Audio players not ready. Click starter to reload.");
+      return;
+    }
+
+    const preRoll = 3.0;
+    const postRoll = 2.5;
+
+    try { audioA.pause(); audioB.pause(); } catch (_) {}
+    audioA.playbackRate = 1.0;
+    audioB.playbackRate = 1.0;
+    audioA.currentTime = Math.max(0, spliceA - preRoll);
+
+    audioA.play().then(() => {
+      // 1.5s in: trigger transition riser cue
+      setTimeout(() => {
+        if (methodType === 'drum_riser') {
+          appState.engine.playLiveTransitionCue('drum_riser', false);
+        } else if (methodType === 'vinyl_brake') {
+          audioA.playbackRate = 0.25;
+        }
+      }, 1400);
+
+      // At 3.0s: trigger handoff to Song B + drop impact
+      setTimeout(() => {
+        try {
+          audioA.pause();
+          audioA.playbackRate = 1.0;
+        } catch (_) {}
+
+        audioB.currentTime = Math.max(0, spliceB);
+        audioB.play().catch(e => console.warn("Deck B audition play error:", e));
+
+        appState.engine.playLiveTransitionCue(methodType, true);
+
+        // Finish audition after post-roll
+        setTimeout(() => {
+          try { audioB.pause(); } catch (_) {}
+          if (btn) btn.classList.remove('active');
+          if (card) card.classList.remove('auditioning');
+          showToast(`⚡ 5s Transition Audition complete!`);
+        }, postRoll * 1000);
+
+      }, preRoll * 1000);
+
+    }).catch(err => {
+      console.warn("Native audition autoplay error:", err);
+      if (btn) btn.classList.remove('active');
+      if (card) card.classList.remove('auditioning');
+      showToast("⚠️ Autoplay prevented. Click Audition again.");
+    });
+  };
+
+  // Try Web Audio preview if buffers are available; otherwise use native dual-deck audition
+  if (appState.trackA && appState.trackA.buffer && appState.trackB && appState.trackB.buffer) {
+    try {
+      const config = {
+        mode: 'medley',
+        spliceTimeA: spliceA,
+        spliceTimeB: spliceB,
+        crossfadeDuration: methodType === 'drum_riser' ? 1.0 : (methodType === 'quick_cut' ? 0.05 : 0.8),
+        transitionType: methodType,
+        previewPreRoll: 3.0,
+        previewPostRoll: 3.0,
+        useStudioMasterForChoreo: false
+      };
+
+      const res = await appState.engine.previewTransition(appState.trackA, appState.trackB, config);
+      const dur = res && res.auditionDuration ? res.auditionDuration : 6.0;
+
+      setTimeout(() => {
+        if (btn) btn.classList.remove('active');
+        if (card) card.classList.remove('auditioning');
+      }, dur * 1000);
+      return;
+    } catch (e) {
+      console.warn("Web audio previewTransition failed, falling back to native player:", e);
+    }
   }
+
+  // Reliable native fallback
+  performNativeTransitionAudition();
 }
 
 function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
@@ -4078,22 +4160,53 @@ function startArrangementMonitorLoop() {
     appState.playbackPosition = mixPosition;
     drawWaveformTimeline(mixPosition);
 
+    const nextIdx = idx + 1;
+    const isBattleHandoff = (curSched.block.sourceTrack === 'A' && nextIdx < schedule.length && schedule[nextIdx].block.sourceTrack === 'B');
+    const timeRemaining = curSched.endTime - curMediaTime;
+    const transType = (appState.activeTransitionConfig && appState.activeTransitionConfig.transitionType) || 'drum_riser';
+
+    // ⚡ Trigger live transition audio cue as handoff approaches!
+    if (isBattleHandoff) {
+      if (transType === 'drum_riser') {
+        if (timeRemaining <= 1.6 && timeRemaining > 0 && !arrangementSequencer.transitionRiserTriggered) {
+          arrangementSequencer.transitionRiserTriggered = true;
+          appState.engine.playLiveTransitionCue('drum_riser', false);
+          showToast("⚡ DJ Snare Riser Building... Team 2 Taking The Floor!");
+        }
+      } else if (transType === 'vinyl_brake') {
+        if (timeRemaining <= 0.7 && timeRemaining > 0) {
+          audio.playbackRate = Math.max(0.08, timeRemaining / 0.7);
+        }
+      }
+    }
+
     // Check if the current block has concluded (within 40ms)
     if (curMediaTime >= (curSched.endTime - 0.04)) {
-      const nextIdx = idx + 1;
       if (nextIdx < schedule.length) {
         const nextSched = schedule[nextIdx];
         arrangementSequencer.currentBlockIdx = nextIdx;
+        arrangementSequencer.transitionRiserTriggered = false;
 
         const nextAudio = getAudioElementForBlock(nextSched.block);
 
         if (nextAudio !== audio) {
           // Cross-deck handoff (e.g. Track A -> Track B in Dance-Off!)
-          try { audio.pause(); } catch (_) {}
+          try {
+            audio.playbackRate = 1.0;
+            audio.pause();
+          } catch (_) {}
+
+          nextAudio.playbackRate = 1.0;
           nextAudio.currentTime = Math.max(0, nextSched.startTime);
           nextAudio.play().catch(e => console.warn("Deck handoff play error:", e));
           arrangementSequencer.audio = nextAudio;
-          showToast(`⚡ Switched to ${nextSched.block.teamLabel || nextSched.block.name}!`);
+
+          // ⚡ Trigger impact drop right on downbeat 1 of Team 2!
+          if (isBattleHandoff) {
+            appState.engine.playLiveTransitionCue(transType, true);
+          }
+
+          showToast(`⚡ ${nextSched.block.teamLabel || 'Team 2'} Takes The Floor!`);
         } else {
           // Same audio stream
           const isContiguous = Math.abs(nextSched.startTime - curSched.endTime) < 0.06;

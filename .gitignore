@@ -16,6 +16,8 @@ audio_cache/
 *.wav
 public/*.wav
 !public/*.m4a
+!public/tauba_tauba_movie1.wav
+!public/tauba_tauba_movie2.wav
 
 # Keep public demos and code
 .DS_Store

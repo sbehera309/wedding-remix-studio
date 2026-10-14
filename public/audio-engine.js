@@ -861,6 +861,131 @@ class AudioRemixEngine {
   }
 
   /**
+   * Play Live Transition Audio Cue (DJ Snare Riser, Impact Sub-Drop, Vinyl Brake FX, etc.)
+   * Can be triggered live during timeline playback or during audition
+   */
+  async playLiveTransitionCue(type = 'drum_riser', isDrop = false) {
+    try {
+      await this.ensureContext();
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime + 0.02;
+
+      if (type === 'drum_riser') {
+        if (!isDrop) {
+          // Accelerating 4-beat snare roll riser (1.6s duration)
+          const riserDur = 1.6;
+          const riserGain = this.ctx.createGain();
+          riserGain.gain.setValueAtTime(0.02, now);
+          riserGain.gain.exponentialRampToValueAtTime(0.9, now + riserDur - 0.05);
+          riserGain.gain.linearRampToValueAtTime(0.001, now + riserDur);
+          riserGain.connect(this.ctx.destination);
+
+          const sixteenth = (60 / 107) / 4;
+          for (let t = now; t < now + riserDur; t += sixteenth) {
+            const osc = this.ctx.createOscillator();
+            const oGain = this.ctx.createGain();
+            osc.type = 'triangle';
+            const p = (t - now) / riserDur;
+            osc.frequency.setValueAtTime(160 + p * 260, t);
+            oGain.gain.setValueAtTime(0.35 + p * 0.45, t);
+            oGain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+            osc.connect(oGain);
+            oGain.connect(riserGain);
+            osc.start(t);
+            osc.stop(t + 0.055);
+          }
+
+          // White noise whoosh sweep behind the riser
+          const bufferSize = Math.floor(this.ctx.sampleRate * riserDur);
+          const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const output = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+          }
+          const whiteNoise = this.ctx.createBufferSource();
+          whiteNoise.buffer = noiseBuffer;
+
+          const noiseFilter = this.ctx.createBiquadFilter();
+          noiseFilter.type = 'bandpass';
+          noiseFilter.frequency.setValueAtTime(300, now);
+          noiseFilter.frequency.exponentialRampToValueAtTime(4500, now + riserDur);
+          noiseFilter.Q.value = 3.0;
+
+          const noiseGain = this.ctx.createGain();
+          noiseGain.gain.setValueAtTime(0.01, now);
+          noiseGain.gain.exponentialRampToValueAtTime(0.4, now + riserDur - 0.05);
+          noiseGain.gain.linearRampToValueAtTime(0.001, now + riserDur);
+
+          whiteNoise.connect(noiseFilter);
+          noiseFilter.connect(noiseGain);
+          noiseGain.connect(this.ctx.destination);
+
+          whiteNoise.start(now);
+          whiteNoise.stop(now + riserDur);
+        } else {
+          // Sub-bass impact drop right on downbeat 1
+          const subOsc = this.ctx.createOscillator();
+          const subGain = this.ctx.createGain();
+          subOsc.type = 'sine';
+          subOsc.frequency.setValueAtTime(140, now);
+          subOsc.frequency.exponentialRampToValueAtTime(38, now + 0.55);
+          subGain.gain.setValueAtTime(0.95, now);
+          subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+          subOsc.connect(subGain);
+          subGain.connect(this.ctx.destination);
+          subOsc.start(now);
+          subOsc.stop(now + 0.8);
+        }
+      } else if (type === 'vinyl_brake') {
+        if (isDrop) {
+          // Vinyl needle drop / punch slam
+          const popOsc = this.ctx.createOscillator();
+          const popGain = this.ctx.createGain();
+          popOsc.type = 'sine';
+          popOsc.frequency.setValueAtTime(110, now);
+          popOsc.frequency.exponentialRampToValueAtTime(45, now + 0.3);
+          popGain.gain.setValueAtTime(0.8, now);
+          popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          popOsc.connect(popGain);
+          popGain.connect(this.ctx.destination);
+          popOsc.start(now);
+          popOsc.stop(now + 0.4);
+        }
+      } else if (type === 'echo_out') {
+        if (isDrop) {
+          // Reverb tail impact
+          const subOsc = this.ctx.createOscillator();
+          const subGain = this.ctx.createGain();
+          subOsc.type = 'sine';
+          subOsc.frequency.setValueAtTime(120, now);
+          subOsc.frequency.exponentialRampToValueAtTime(42, now + 0.4);
+          subGain.gain.setValueAtTime(0.7, now);
+          subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+          subOsc.connect(subGain);
+          subGain.connect(this.ctx.destination);
+          subOsc.start(now);
+          subOsc.stop(now + 0.55);
+        }
+      } else {
+        // Quick cut / punch
+        const hitOsc = this.ctx.createOscillator();
+        const hitGain = this.ctx.createGain();
+        hitOsc.type = 'triangle';
+        hitOsc.frequency.setValueAtTime(180, now);
+        hitOsc.frequency.exponentialRampToValueAtTime(50, now + 0.25);
+        hitGain.gain.setValueAtTime(0.85, now);
+        hitGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        hitOsc.connect(hitGain);
+        hitGain.connect(this.ctx.destination);
+        hitOsc.start(now);
+        hitOsc.stop(now + 0.35);
+      }
+    } catch (err) {
+      console.warn("Live transition cue error:", err);
+    }
+  }
+
+  /**
    * Solo Audition for a single block/piece of music
    */
   async playBlockSolo(block, bufferOrTrack, onEnd) {
