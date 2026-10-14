@@ -218,13 +218,19 @@
             <button type="button" class="btn-cut-preset btn-clear" onclick="clearTimeline()">
               🗑️ Clear Line
             </button>
+            <button type="button" class="btn-cut-preset btn-history" id="undoBtnHeader" onclick="triggerUndo()" title="Undo last change (Cmd+Z)" disabled>
+              ↩️ Undo
+            </button>
+            <button type="button" class="btn-cut-preset btn-history" id="redoBtnHeader" onclick="triggerRedo()" title="Redo change (Cmd+Shift+Z)" disabled>
+              ↪️ Redo
+            </button>
           </div>
         </div>
       </div>
 
       <!-- Helper Hint -->
       <div class="timeline-instructions">
-        <span>💡 <strong>How to arrange:</strong> Drag pieces horizontally along the line to reorder • Click <strong>🔁 Dup</strong> to repeat a beat • Click <strong>✕</strong> to cut out • Or drag pieces up from the palette below!</span>
+        <span>💡 <strong>How to arrange:</strong> Drag pieces horizontally to drop between any two blocks • Click <strong>✂️ Split</strong> to break into smaller bars • Click <strong>✂️ End Song Here</strong> to cut at paused spot • Press <strong>Cmd+Z</strong> to Undo anytime!</span>
       </div>
 
       <!-- Mini Waveform Canvas Strip with Live Playhead -->
@@ -259,6 +265,15 @@
           </button>
           <button type="button" class="btn-transport btn-stop-main" id="stopBtn" onclick="triggerStopPlayback()">
             <span>⏹</span> Stop
+          </button>
+          <button type="button" class="btn-transport btn-cut-here" id="trimEndBtn" onclick="trimArrangementAtCurrentPosition()" title="Cut and end the track right at the current paused spot (trims everything after it)">
+            <span>✂️</span> End Song Here
+          </button>
+          <button type="button" class="btn-transport btn-history-main" id="undoBtn" onclick="triggerUndo()" title="Undo last change (Cmd+Z)" disabled>
+            <span>↩️</span> Undo
+          </button>
+          <button type="button" class="btn-transport btn-history-main" id="redoBtn" onclick="triggerRedo()" title="Redo change (Cmd+Shift+Z)" disabled>
+            <span>↪️</span> Redo
           </button>
         </div>
 

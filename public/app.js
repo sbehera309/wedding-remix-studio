@@ -1263,18 +1263,108 @@ const WEDDING_SONG_CATALOG = {
         ]
       },
       {
-        id: 'kc_sec_finale',
-        name: 'Extended Grand Finale (Verse 2, Badshah Rap & Outro)',
-        desc: 'Pristine official continuation (+133s missing from choreo)',
-        tag: 'FINALE',
-        tagColor: '#10b981',
+        id: 'kc_sec_verse2',
+        name: 'Female Lead Verse ("Baithi Patola Banke")',
+        desc: 'Neha Kakkar female vocals & driving dhol groove (40.4s - 58.4s)',
+        tag: 'VERSE',
+        tagColor: '#06b6d4',
         startTime: 40.415,
-        endTime: 173.45,
+        endTime: 58.359,
         songName: 'Kala Chashma',
         sourceTrack: 'A',
         subParts: [
-          { id: 'kc_sub_verse2', name: 'Verse 2 & Buildup Drop (40.4s - 96s)', desc: 'Female lead verse and rhythmic groove', tag: 'VERSE', tagColor: '#06b6d4', startTime: 40.415, endTime: 96.000, songName: 'Kala Chashma', sourceTrack: 'A' },
-          { id: 'kc_sub_rap_outro', name: 'Badshah Rap Verse & Confetti Outro (96s - 173.5s)', desc: 'High-energy rap climax and crowd cheer finish', tag: 'FINALE', tagColor: '#10b981', startTime: 96.000, endTime: 173.45, songName: 'Kala Chashma', sourceTrack: 'A' }
+          { id: 'kc_bar_19_22', name: 'Bars 19-22: Female Vocal Line ("Baithi Patola...")', desc: 'Melodic female vocal opener', tag: 'VERSE', tagColor: '#06b6d4', startTime: 40.415, endTime: 49.387, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_23_26', name: 'Bars 23-26: Pre-Chorus Vocal Build ("Tainu Takkeya...")', desc: 'Rhythmic inflection into chorus', tag: 'BUILD', tagColor: '#ec4899', startTime: 49.387, endTime: 58.359, songName: 'Kala Chashma', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'kc_sec_chorus2',
+        name: 'Chorus Hook Return ("Kaala Chashma Jachda Ve")',
+        desc: '2nd chorus hook & bouncy wedding dance beat (58.4s - 76.3s)',
+        tag: 'CHORUS',
+        tagColor: '#f97316',
+        startTime: 58.359,
+        endTime: 76.303,
+        songName: 'Kala Chashma',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'kc_bar_27_30', name: 'Bars 27-30: 2nd Chorus Main Hook', desc: 'Signature female chorus drop', tag: 'CHORUS', tagColor: '#f97316', startTime: 58.359, endTime: 67.331, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_31_34', name: 'Bars 31-34: Chorus Response & Brass Hook', desc: 'Horn response riffs & drums', tag: 'CHORUS', tagColor: '#f97316', startTime: 67.331, endTime: 76.303, songName: 'Kala Chashma', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'kc_sec_bridge',
+        name: 'Percussion Bridge & Chant ("O Kudi Kudi...")',
+        desc: 'Acoustic dholak breakdown and snare riser leading to Rap (76.3s - 94.2s)',
+        tag: 'BUILD',
+        tagColor: '#ec4899',
+        startTime: 76.303,
+        endTime: 94.247,
+        songName: 'Kala Chashma',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'kc_bar_35_38', name: 'Bars 35-38: Dholak Breakdown & Crowd Chant', desc: 'Sangeet clapping breakdown', tag: 'VERSE', tagColor: '#06b6d4', startTime: 76.303, endTime: 85.275, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_39_42', name: 'Bars 39-42: Snare Roll Build into Badshah Rap', desc: 'Acceleration into rap verse', tag: 'BUILD', tagColor: '#ec4899', startTime: 85.275, endTime: 94.247, songName: 'Kala Chashma', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'kc_sec_rap1',
+        name: 'Badshah Rap Verse 1 ("Dekho Dekho...")',
+        desc: 'Iconic Badshah rap flow & booming bass (94.2s - 112.2s)',
+        tag: 'VERSE',
+        tagColor: '#06b6d4',
+        startTime: 94.247,
+        endTime: 112.191,
+        songName: 'Kala Chashma',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'kc_bar_43_46', name: 'Bars 43-46: Badshah Rap Opening ("Dekho Dekho")', desc: 'Rap verse kickoff', tag: 'VERSE', tagColor: '#06b6d4', startTime: 94.247, endTime: 103.219, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_47_50', name: 'Bars 47-50: Badshah Flow & Punchline', desc: 'Catchy syncopated rap bars', tag: 'VERSE', tagColor: '#06b6d4', startTime: 103.219, endTime: 112.191, songName: 'Kala Chashma', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'kc_sec_rap2',
+        name: 'Badshah Rap Verse 2 & Heavy Drop ("Saari City...")',
+        desc: 'High energy rap climax & dance build (112.2s - 130.1s)',
+        tag: 'DROP',
+        tagColor: '#10b981',
+        startTime: 112.191,
+        endTime: 130.135,
+        songName: 'Kala Chashma',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'kc_bar_51_54', name: 'Bars 51-54: Rap Verse 2 Acceleration', desc: 'High energy rap flow', tag: 'DROP', tagColor: '#10b981', startTime: 112.191, endTime: 121.163, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_55_58', name: 'Bars 55-58: Pre-Drop Riser & Vocal Shouts', desc: 'Drum rolls into final peak', tag: 'BUILD', tagColor: '#ec4899', startTime: 121.163, endTime: 130.135, songName: 'Kala Chashma', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'kc_sec_peak_chorus',
+        name: 'Grand Climax Chorus Drop ("Kaala Kaala Chashma Peak")',
+        desc: 'Massive dance floor explosion & all-guest choreography peak (130.1s - 148.1s)',
+        tag: 'CHORUS',
+        tagColor: '#f97316',
+        startTime: 130.135,
+        endTime: 148.079,
+        songName: 'Kala Chashma',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'kc_bar_59_62', name: 'Bars 59-62: All-Hands Dance Peak Hook', desc: 'Peak energy chorus drop', tag: 'CHORUS', tagColor: '#f97316', startTime: 130.135, endTime: 139.107, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_63_66', name: 'Bars 63-66: Peak Horn Harmony & Cheers', desc: 'Full band brass accompaniment', tag: 'CHORUS', tagColor: '#f97316', startTime: 139.107, endTime: 148.079, songName: 'Kala Chashma', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'kc_sec_grand_outro',
+        name: 'Celebration Grand Finale & Confetti Bow (148.1s - 173.5s)',
+        desc: 'Driving bhangra dhol rolls, family stage bow & confetti finish (148.1s - 173.5s)',
+        tag: 'FINALE',
+        tagColor: '#10b981',
+        startTime: 148.079,
+        endTime: 173.450,
+        songName: 'Kala Chashma',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'kc_bar_67_72', name: 'Bars 67-72: Driving Bhangra Dhol Outro Groove', desc: 'Celebratory drum groove', tag: 'DROP', tagColor: '#10b981', startTime: 148.079, endTime: 161.537, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_73_78', name: 'Bars 73-78: Final Bow, Fireworks & Confetti Finish', desc: 'Final stage pose and applause', tag: 'FINALE', tagColor: '#10b981', startTime: 161.537, endTime: 173.450, songName: 'Kala Chashma', sourceTrack: 'A' }
         ]
       }
     ]
@@ -1332,17 +1422,108 @@ const WEDDING_SONG_CATALOG = {
         ]
       },
       {
-        id: 'kco_sec_finale',
-        name: 'Extended Grand Finale & Badshah Rap (40.4s - 173.5s)',
-        desc: 'Official continuation to end of song (+133s)',
-        tag: 'FINALE',
-        tagColor: '#10b981',
+        id: 'kco_sec_verse2',
+        name: 'Female Lead Verse ("Baithi Patola Banke")',
+        desc: 'Neha Kakkar female vocals & driving dhol groove (40.4s - 58.4s)',
+        tag: 'VERSE',
+        tagColor: '#06b6d4',
         startTime: 40.415,
-        endTime: 173.45,
+        endTime: 58.359,
         songName: 'Kala Chashma',
         sourceTrack: 'B',
         subParts: [
-          { id: 'kco_finale_full', name: 'Grand Finale: Verse 2 & Badshah Rap', desc: 'Missing official ending (+133s)', tag: 'FINALE', tagColor: '#10b981', startTime: 40.415, endTime: 173.45, songName: 'Kala Chashma', sourceTrack: 'B' }
+          { id: 'kco_bar_19_22', name: 'Bars 19-22: Female Vocal Line ("Baithi Patola...")', desc: 'Melodic female vocal opener', tag: 'VERSE', tagColor: '#06b6d4', startTime: 40.415, endTime: 49.387, songName: 'Kala Chashma', sourceTrack: 'B' },
+          { id: 'kco_bar_23_26', name: 'Bars 23-26: Pre-Chorus Vocal Build ("Tainu Takkeya...")', desc: 'Rhythmic inflection into chorus', tag: 'BUILD', tagColor: '#ec4899', startTime: 49.387, endTime: 58.359, songName: 'Kala Chashma', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'kco_sec_chorus2',
+        name: 'Chorus Hook Return ("Kaala Chashma Jachda Ve")',
+        desc: '2nd chorus hook & bouncy wedding dance beat (58.4s - 76.3s)',
+        tag: 'CHORUS',
+        tagColor: '#f97316',
+        startTime: 58.359,
+        endTime: 76.303,
+        songName: 'Kala Chashma',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'kco_bar_27_30', name: 'Bars 27-30: 2nd Chorus Main Hook', desc: 'Signature female chorus drop', tag: 'CHORUS', tagColor: '#f97316', startTime: 58.359, endTime: 67.331, songName: 'Kala Chashma', sourceTrack: 'B' },
+          { id: 'kco_bar_31_34', name: 'Bars 31-34: Chorus Response & Brass Hook', desc: 'Horn response riffs & drums', tag: 'CHORUS', tagColor: '#f97316', startTime: 67.331, endTime: 76.303, songName: 'Kala Chashma', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'kco_sec_bridge',
+        name: 'Percussion Bridge & Chant ("O Kudi Kudi...")',
+        desc: 'Acoustic dholak breakdown and snare riser leading to Rap (76.3s - 94.2s)',
+        tag: 'BUILD',
+        tagColor: '#ec4899',
+        startTime: 76.303,
+        endTime: 94.247,
+        songName: 'Kala Chashma',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'kco_bar_35_38', name: 'Bars 35-38: Dholak Breakdown & Crowd Chant', desc: 'Sangeet clapping breakdown', tag: 'VERSE', tagColor: '#06b6d4', startTime: 76.303, endTime: 85.275, songName: 'Kala Chashma', sourceTrack: 'B' },
+          { id: 'kco_bar_39_42', name: 'Bars 39-42: Snare Roll Build into Badshah Rap', desc: 'Acceleration into rap verse', tag: 'BUILD', tagColor: '#ec4899', startTime: 85.275, endTime: 94.247, songName: 'Kala Chashma', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'kco_sec_rap1',
+        name: 'Badshah Rap Verse 1 ("Dekho Dekho...")',
+        desc: 'Iconic Badshah rap flow & booming bass (94.2s - 112.2s)',
+        tag: 'VERSE',
+        tagColor: '#06b6d4',
+        startTime: 94.247,
+        endTime: 112.191,
+        songName: 'Kala Chashma',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'kco_bar_43_46', name: 'Bars 43-46: Badshah Rap Opening ("Dekho Dekho")', desc: 'Rap verse kickoff', tag: 'VERSE', tagColor: '#06b6d4', startTime: 94.247, endTime: 103.219, songName: 'Kala Chashma', sourceTrack: 'B' },
+          { id: 'kco_bar_47_50', name: 'Bars 47-50: Badshah Flow & Punchline', desc: 'Catchy syncopated rap bars', tag: 'VERSE', tagColor: '#06b6d4', startTime: 103.219, endTime: 112.191, songName: 'Kala Chashma', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'kco_sec_rap2',
+        name: 'Badshah Rap Verse 2 & Heavy Drop ("Saari City...")',
+        desc: 'High energy rap climax & dance build (112.2s - 130.1s)',
+        tag: 'DROP',
+        tagColor: '#10b981',
+        startTime: 112.191,
+        endTime: 130.135,
+        songName: 'Kala Chashma',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'kco_bar_51_54', name: 'Bars 51-54: Rap Verse 2 Acceleration', desc: 'High energy rap flow', tag: 'DROP', tagColor: '#10b981', startTime: 112.191, endTime: 121.163, songName: 'Kala Chashma', sourceTrack: 'B' },
+          { id: 'kco_bar_55_58', name: 'Bars 55-58: Pre-Drop Riser & Vocal Shouts', desc: 'Drum rolls into final peak', tag: 'BUILD', tagColor: '#ec4899', startTime: 121.163, endTime: 130.135, songName: 'Kala Chashma', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'kco_sec_peak_chorus',
+        name: 'Grand Climax Chorus Drop ("Kaala Kaala Chashma Peak")',
+        desc: 'Massive dance floor explosion & all-guest choreography peak (130.1s - 148.1s)',
+        tag: 'CHORUS',
+        tagColor: '#f97316',
+        startTime: 130.135,
+        endTime: 148.079,
+        songName: 'Kala Chashma',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'kco_bar_59_62', name: 'Bars 59-62: All-Hands Dance Peak Hook', desc: 'Peak energy chorus drop', tag: 'CHORUS', tagColor: '#f97316', startTime: 130.135, endTime: 139.107, songName: 'Kala Chashma', sourceTrack: 'B' },
+          { id: 'kco_bar_63_66', name: 'Bars 63-66: Peak Horn Harmony & Cheers', desc: 'Full band brass accompaniment', tag: 'CHORUS', tagColor: '#f97316', startTime: 139.107, endTime: 148.079, songName: 'Kala Chashma', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'kco_sec_grand_outro',
+        name: 'Celebration Grand Finale & Confetti Bow (148.1s - 173.5s)',
+        desc: 'Driving bhangra dhol rolls, family stage bow & confetti finish (148.1s - 173.5s)',
+        tag: 'FINALE',
+        tagColor: '#10b981',
+        startTime: 148.079,
+        endTime: 173.450,
+        songName: 'Kala Chashma',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'kco_bar_67_72', name: 'Bars 67-72: Driving Bhangra Dhol Outro Groove', desc: 'Celebratory drum groove', tag: 'DROP', tagColor: '#10b981', startTime: 148.079, endTime: 161.537, songName: 'Kala Chashma', sourceTrack: 'B' },
+          { id: 'kco_bar_73_78', name: 'Bars 73-78: Final Bow, Fireworks & Confetti Finish', desc: 'Final stage pose and applause', tag: 'FINALE', tagColor: '#10b981', startTime: 161.537, endTime: 173.450, songName: 'Kala Chashma', sourceTrack: 'B' }
         ]
       }
     ]
@@ -2132,6 +2313,9 @@ function splitBlock(idx) {
     return;
   }
 
+  stopArrangementPlayback();
+  saveUndoState(`Split "${blk.name}"`);
+
   // Look up if this section has constituent subParts in the catalog
   const allSecs = getSongSectionsCatalog();
   const matched = allSecs.find(s => Math.abs(s.startTime - blk.startTime) < 0.15 && Math.abs(s.endTime - blk.endTime) < 0.15);
@@ -2180,6 +2364,9 @@ function mergeBlockWithNext(idx) {
   const b1 = appState.arrangementBlocks[idx];
   const b2 = appState.arrangementBlocks[idx + 1];
 
+  stopArrangementPlayback();
+  saveUndoState(`Merge Pieces`);
+
   const merged = {
     ...b1,
     id: `merged_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -2218,11 +2405,274 @@ function handleTimelineItemDragStart(e, index) {
   if (target) target.classList.add('dragging');
 }
 
-function handleDragEnd(e) {
-  document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
-  document.querySelectorAll('.drag-over-item').forEach(el => el.classList.remove('drag-over-item'));
+// ============================================================================
+// UNDO / REDO STATE MANAGER
+// ============================================================================
+let undoStack = [];
+let redoStack = [];
+
+function saveUndoState(actionName = "Edit") {
+  const snapshot = {
+    arrangementBlocks: JSON.parse(JSON.stringify(appState.arrangementBlocks || [])),
+    userHasCustomizedBlocks: appState.userHasCustomizedBlocks,
+    actionName: actionName,
+    timestamp: Date.now()
+  };
+  undoStack.push(snapshot);
+  if (undoStack.length > 50) undoStack.shift();
+  redoStack = []; // reset redo stack when a new action is performed
+  updateUndoRedoButtons();
+}
+
+function triggerUndo() {
+  if (undoStack.length === 0) {
+    showToast("ℹ️ Nothing to undo.");
+    return;
+  }
+  stopAuditionPlayback();
+  stopArrangementPlayback();
+
+  // Save current state to redoStack
+  const currentState = {
+    arrangementBlocks: JSON.parse(JSON.stringify(appState.arrangementBlocks || [])),
+    userHasCustomizedBlocks: appState.userHasCustomizedBlocks,
+    actionName: "Current State"
+  };
+  redoStack.push(currentState);
+
+  const prevState = undoStack.pop();
+  appState.arrangementBlocks = prevState.arrangementBlocks;
+  appState.userHasCustomizedBlocks = prevState.userHasCustomizedBlocks;
+
+  renderTimelineLineUI();
+  drawWaveformTimeline();
+  updateUndoRedoButtons();
+  showToast(`↩️ Undid: ${prevState.actionName || 'last change'}`);
+}
+
+function triggerRedo() {
+  if (redoStack.length === 0) {
+    showToast("ℹ️ Nothing to redo.");
+    return;
+  }
+  stopAuditionPlayback();
+  stopArrangementPlayback();
+
+  const currentState = {
+    arrangementBlocks: JSON.parse(JSON.stringify(appState.arrangementBlocks || [])),
+    userHasCustomizedBlocks: appState.userHasCustomizedBlocks,
+    actionName: "Current State"
+  };
+  undoStack.push(currentState);
+
+  const nextState = redoStack.pop();
+  appState.arrangementBlocks = nextState.arrangementBlocks;
+  appState.userHasCustomizedBlocks = nextState.userHasCustomizedBlocks;
+
+  renderTimelineLineUI();
+  drawWaveformTimeline();
+  updateUndoRedoButtons();
+  showToast(`↪️ Redid: ${nextState.actionName || 'change'}`);
+}
+
+function updateUndoRedoButtons() {
+  const undoBtns = [document.getElementById('undoBtn'), document.getElementById('undoBtnHeader')];
+  const redoBtns = [document.getElementById('redoBtn'), document.getElementById('redoBtnHeader')];
+
+  undoBtns.forEach(btn => {
+    if (btn) {
+      btn.disabled = undoStack.length === 0;
+      btn.style.opacity = undoStack.length === 0 ? "0.45" : "1";
+      btn.style.cursor = undoStack.length === 0 ? "not-allowed" : "pointer";
+    }
+  });
+
+  redoBtns.forEach(btn => {
+    if (btn) {
+      btn.disabled = redoStack.length === 0;
+      btn.style.opacity = redoStack.length === 0 ? "0.45" : "1";
+      btn.style.cursor = redoStack.length === 0 ? "not-allowed" : "pointer";
+    }
+  });
+}
+
+// Global keyboard shortcuts for Undo/Redo
+window.addEventListener('keydown', (e) => {
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    if (e.shiftKey) {
+      triggerRedo();
+    } else {
+      triggerUndo();
+    }
+  } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
+    e.preventDefault();
+    triggerRedo();
+  }
+});
+
+// ============================================================================
+// "END SONG HERE" / TRIM FEATURE
+// Allows user to stop/finish the song at the current paused spot, trimming rest
+// ============================================================================
+function trimArrangementAtCurrentPosition() {
+  const blocks = appState.arrangementBlocks || [];
+  if (blocks.length === 0) {
+    showToast("⚠️ Timeline is empty.");
+    return;
+  }
+
+  // Get current playhead position
+  let pos = appState.playbackPosition || 0;
+  const masterAudio = document.getElementById('masterAudioPlayer');
+  if (masterAudio && !masterAudio.paused) {
+    pos = masterAudio.currentTime;
+  }
+  const officialAudio = document.getElementById('officialAudioPlayer');
+  if (officialAudio && !officialAudio.paused) {
+    pos = appState.playbackPosition || officialAudio.currentTime;
+  }
+
+  if (pos <= 0.2) {
+    showToast("ℹ️ Play or seek to where you want your dance/routine to end, then click this button.");
+    return;
+  }
+
+  // Stop playback cleanly before trimming
+  triggerStopPlayback();
+
+  // Find which block contains this position
+  let accumulated = 0;
+  let targetBlockIdx = -1;
+  let offsetInBlock = 0;
+
+  for (let i = 0; i < blocks.length; i++) {
+    const blk = blocks[i];
+    const dur = Math.max(0.05, blk.endTime - blk.startTime);
+    if (pos >= accumulated && pos < accumulated + dur) {
+      targetBlockIdx = i;
+      offsetInBlock = pos - accumulated;
+      break;
+    }
+    accumulated += dur;
+  }
+
+  if (targetBlockIdx === -1) {
+    targetBlockIdx = blocks.length - 1;
+    offsetInBlock = blocks[targetBlockIdx].endTime - blocks[targetBlockIdx].startTime;
+  }
+
+  saveUndoState(`End Song at ${appState.engine.formatTime(pos)}`);
+
+  const blk = blocks[targetBlockIdx];
+  const exactEndInAudio = blk.startTime + offsetInBlock;
+
+  // If offsetInBlock is more than 0.4s into the block, trim this block and cut everything after it
+  if (offsetInBlock > 0.4) {
+    blk.endTime = exactEndInAudio;
+    appState.arrangementBlocks = blocks.slice(0, targetBlockIdx + 1);
+  } else {
+    // If right at the start of this block, cut everything from this block onward
+    appState.arrangementBlocks = blocks.slice(0, Math.max(1, targetBlockIdx));
+  }
+
+  appState.userHasCustomizedBlocks = true;
+  renderTimelineLineUI();
+  drawWaveformTimeline(0);
+  appState.playbackPosition = 0;
+
+  showToast(`✂️ Music trimmed to end at ${appState.engine.formatTime(pos)}! Everything after has been cut. (Click Undo to revert)`);
+}
+
+// ============================================================================
+// ENHANCED DRAG & DROP: PRECISE INTER-BLOCK INSERTION
+// Calculates exact insertion between blocks, shows glowing indicator, no end-drop!
+// ============================================================================
+function getTimelineInsertionIndex(clientX) {
+  const pills = Array.from(document.querySelectorAll('.timeline-item-pill'));
+  if (pills.length === 0) return 0;
+
+  const firstRect = pills[0].getBoundingClientRect();
+  if (clientX < firstRect.left + firstRect.width * 0.3) {
+    return 0;
+  }
+
+  const lastRect = pills[pills.length - 1].getBoundingClientRect();
+  if (clientX > lastRect.right - lastRect.width * 0.3) {
+    return pills.length;
+  }
+
+  for (let i = 0; i < pills.length; i++) {
+    const rect = pills[i].getBoundingClientRect();
+    const mid = rect.left + rect.width / 2;
+
+    // Inside this pill: left half = before (i), right half = after (i+1)
+    if (clientX >= rect.left && clientX <= rect.right) {
+      return clientX < mid ? i : i + 1;
+    }
+
+    // In the gap / connector arrow between pill i and pill i + 1
+    if (i < pills.length - 1) {
+      const nextRect = pills[i + 1].getBoundingClientRect();
+      if (clientX > rect.right && clientX < nextRect.left) {
+        return i + 1;
+      }
+    }
+  }
+
+  // Distance fallback to closest boundary
+  let closestIdx = 0;
+  let minDistance = Infinity;
+  for (let i = 0; i < pills.length; i++) {
+    const rect = pills[i].getBoundingClientRect();
+    const mid = rect.left + rect.width / 2;
+    const dist = Math.abs(clientX - mid);
+    if (dist < minDistance) {
+      minDistance = dist;
+      closestIdx = clientX < mid ? i : i + 1;
+    }
+  }
+  return Math.min(closestIdx, (appState.arrangementBlocks || []).length);
+}
+
+function updateDragInsertionIndicator(targetIdx) {
+  const pills = document.querySelectorAll('.timeline-item-pill');
+  const connectors = document.querySelectorAll('.timeline-connector');
+
+  pills.forEach((p, idx) => {
+    p.classList.remove('drag-insert-before', 'drag-insert-after', 'drag-over-item');
+    if (idx === targetIdx) {
+      p.classList.add('drag-insert-before');
+    } else if (targetIdx === pills.length && idx === pills.length - 1) {
+      p.classList.add('drag-insert-after');
+    }
+  });
+
+  connectors.forEach((c, idx) => {
+    if (idx === targetIdx - 1) {
+      c.classList.add('drag-insert-active');
+    } else {
+      c.classList.remove('drag-insert-active');
+    }
+  });
+}
+
+function clearDragIndicators() {
+  document.querySelectorAll('.timeline-item-pill').forEach(p => {
+    p.classList.remove('drag-insert-before', 'drag-insert-after', 'drag-over-item');
+  });
+  document.querySelectorAll('.timeline-connector').forEach(c => {
+    c.classList.remove('drag-insert-active');
+  });
   const dropWrapper = document.getElementById('timelineDropWrapper');
   if (dropWrapper) dropWrapper.classList.remove('drag-over');
+}
+
+function handleDragEnd(e) {
+  document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+  clearDragIndicators();
 }
 
 function handleTimelineDragOver(e) {
@@ -2230,71 +2680,43 @@ function handleTimelineDragOver(e) {
   e.dataTransfer.dropEffect = 'copy';
   const dropWrapper = document.getElementById('timelineDropWrapper');
   if (dropWrapper) dropWrapper.classList.add('drag-over');
+
+  const targetIdx = getTimelineInsertionIndex(e.clientX);
+  updateDragInsertionIndicator(targetIdx);
 }
 
 function handleTimelineDragLeave(e) {
-  const dropWrapper = document.getElementById('timelineDropWrapper');
-  if (dropWrapper) dropWrapper.classList.remove('drag-over');
+  if (!e.currentTarget.contains(e.relatedTarget)) {
+    clearDragIndicators();
+  }
 }
 
 function handleTimelineDrop(e) {
-  e.preventDefault();
-  const dropWrapper = document.getElementById('timelineDropWrapper');
-  if (dropWrapper) dropWrapper.classList.remove('drag-over');
-
-  try {
-    const raw = e.dataTransfer.getData('text/plain');
-    if (!raw) return;
-    const payload = JSON.parse(raw);
-
-    if (payload.type === 'from_palette') {
-      const catalog = getDetectedSongPartsCatalog();
-      const part = catalog.find(p => p.id === payload.partId);
-      if (part) {
-        if (!appState.arrangementBlocks) appState.arrangementBlocks = [];
-        appState.arrangementBlocks.push({
-          ...part,
-          id: `${part.id}_${Date.now()}`,
-          isDuplicated: false
-        });
-        renderTimelineLineUI();
-        drawWaveformTimeline();
-        showToast(`✨ Dropped "${part.name}" onto your timeline line!`);
-      }
-    } else if (payload.type === 'from_timeline') {
-      const fromIdx = payload.index;
-      if (fromIdx !== undefined && appState.arrangementBlocks && appState.arrangementBlocks[fromIdx]) {
-        const item = appState.arrangementBlocks.splice(fromIdx, 1)[0];
-        appState.arrangementBlocks.push(item);
-        renderTimelineLineUI();
-        drawWaveformTimeline();
-        showToast(`↔️ Moved "${item.name}" to end of line.`);
-      }
-    }
-  } catch (err) {
-    console.error("Drop error:", err);
-  }
+  executeTimelineDrop(e);
 }
 
 function handleTimelineItemDragOver(e, targetIdx) {
   e.preventDefault();
   e.stopPropagation();
-  const pill = document.getElementById(`timelinePill_${targetIdx}`);
-  if (pill) pill.classList.add('drag-over-item');
+  e.dataTransfer.dropEffect = 'move';
+  const computedIdx = getTimelineInsertionIndex(e.clientX);
+  updateDragInsertionIndicator(computedIdx);
 }
 
 function handleTimelineItemDragLeave(e, targetIdx) {
-  const pill = document.getElementById(`timelinePill_${targetIdx}`);
-  if (pill) pill.classList.remove('drag-over-item');
+  // Maintained smoothly by track dragover
 }
 
 function handleTimelineItemDrop(e, targetIdx) {
+  executeTimelineDrop(e);
+}
+
+function executeTimelineDrop(e) {
   e.preventDefault();
   e.stopPropagation();
-  const pill = document.getElementById(`timelinePill_${targetIdx}`);
-  if (pill) pill.classList.remove('drag-over-item');
-  const dropWrapper = document.getElementById('timelineDropWrapper');
-  if (dropWrapper) dropWrapper.classList.remove('drag-over');
+
+  const targetIdx = getTimelineInsertionIndex(e.clientX);
+  clearDragIndicators();
 
   try {
     const raw = e.dataTransfer.getData('text/plain');
@@ -2305,30 +2727,46 @@ function handleTimelineItemDrop(e, targetIdx) {
       const catalog = getDetectedSongPartsCatalog();
       const part = catalog.find(p => p.id === payload.partId);
       if (part) {
+        stopArrangementPlayback();
         if (!appState.arrangementBlocks) appState.arrangementBlocks = [];
+        saveUndoState(`Add "${part.name}"`);
         appState.userHasCustomizedBlocks = true;
-        appState.arrangementBlocks.splice(targetIdx, 0, {
+
+        const newBlock = {
           ...part,
-          id: `${part.id}_${Date.now()}`,
+          id: `${part.id}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
           isDuplicated: false
-        });
+        };
+
+        // Insert at exact computed position between blocks
+        appState.arrangementBlocks.splice(targetIdx, 0, newBlock);
+
         renderTimelineLineUI();
         drawWaveformTimeline();
         showToast(`✨ Inserted "${part.name}" at position #${targetIdx + 1}!`);
       }
     } else if (payload.type === 'from_timeline') {
       const fromIdx = payload.index;
-      if (fromIdx !== undefined && fromIdx !== targetIdx && appState.arrangementBlocks) {
-        appState.userHasCustomizedBlocks = true;
-        const item = appState.arrangementBlocks.splice(fromIdx, 1)[0];
-        appState.arrangementBlocks.splice(targetIdx, 0, item);
-        renderTimelineLineUI();
-        drawWaveformTimeline();
-        showToast(`↔️ Moved "${item.name}" to position #${targetIdx + 1}!`);
+      if (fromIdx !== undefined && appState.arrangementBlocks && appState.arrangementBlocks[fromIdx]) {
+        const item = appState.arrangementBlocks[fromIdx];
+        // Only move if destination differs from current position
+        if (fromIdx !== targetIdx && fromIdx !== targetIdx - 1) {
+          stopArrangementPlayback();
+          saveUndoState(`Move "${item.name}"`);
+          appState.userHasCustomizedBlocks = true;
+
+          const [movedItem] = appState.arrangementBlocks.splice(fromIdx, 1);
+          const adjustedIdx = fromIdx < targetIdx ? targetIdx - 1 : targetIdx;
+          appState.arrangementBlocks.splice(adjustedIdx, 0, movedItem);
+
+          renderTimelineLineUI();
+          drawWaveformTimeline();
+          showToast(`↔️ Moved "${movedItem.name}" between blocks (position #${adjustedIdx + 1})!`);
+        }
       }
     }
   } catch (err) {
-    console.error("Item drop error:", err);
+    console.error("Timeline drop error:", err);
   }
 }
 
@@ -2336,6 +2774,9 @@ function addPartToTimeline(partId) {
   const catalog = getDetectedSongPartsCatalog();
   const part = catalog.find(p => p.id === partId);
   if (!part) return;
+
+  stopArrangementPlayback();
+  saveUndoState(`Add "${part.name}"`);
 
   if (!appState.arrangementBlocks) appState.arrangementBlocks = [];
   appState.userHasCustomizedBlocks = true;
@@ -2352,6 +2793,7 @@ function addPartToTimeline(partId) {
 
 function clearTimeline() {
   stopArrangementPlayback();
+  saveUndoState(`Clear Timeline`);
   appState.userHasCustomizedBlocks = true;
   appState.arrangementBlocks = [];
   renderTimelineLineUI();
@@ -2363,6 +2805,8 @@ function duplicateBlock(idx) {
   if (!appState.arrangementBlocks || !appState.arrangementBlocks[idx]) return;
   stopArrangementPlayback();
   const original = appState.arrangementBlocks[idx];
+  saveUndoState(`Duplicate "${original.name}"`);
+
   const clone = {
     ...original,
     id: `${original.id}_dup_${Date.now()}`,
@@ -2383,8 +2827,11 @@ function duplicateBlock(idx) {
 function deleteBlock(idx) {
   if (!appState.arrangementBlocks || !appState.arrangementBlocks[idx]) return;
   stopArrangementPlayback();
+  const removed = appState.arrangementBlocks[idx];
+  saveUndoState(`Remove "${removed.name}"`);
+
   appState.userHasCustomizedBlocks = true;
-  const removed = appState.arrangementBlocks.splice(idx, 1)[0];
+  appState.arrangementBlocks.splice(idx, 1);
   renderTimelineLineUI();
   drawWaveformTimeline();
   showToast(`✂️ Removed "${removed.name}" from timeline.`);
@@ -2620,10 +3067,13 @@ async function soloPalettePart(partId) {
 }
 
 function resetBlocksToPreset(preset) {
+  stopArrangementPlayback();
+  saveUndoState(`Apply Preset: ${preset}`);
   document.querySelectorAll('.arranger-presets-group .btn-cut-preset').forEach(b => b.classList.remove('active'));
 
   if (preset === 'default_rep') {
     appState.arrangementBlocks = getDefaultKalaChashmaBlocks(true);
+    appState.userHasCustomizedBlocks = false;
     document.getElementById('presetBlockRep1')?.classList.add('active');
     showToast("⭐ Preset Applied: Bar 1 Brass Hook Repeated (Verified Choreo)");
   } else if (preset === 'two_bar_rep') {
@@ -2634,10 +3084,12 @@ function resetBlocksToPreset(preset) {
     const bar2Dup = { ...catalog[1], id: 'bar_2_dup', name: 'Bar 2 Repeat: Brass Phrase', tag: 'REPEAT', tagColor: '#f59e0b', isDuplicated: true };
     blocks.splice(2, 0, bar1Dup, bar2Dup);
     appState.arrangementBlocks = blocks;
+    appState.userHasCustomizedBlocks = true;
     document.getElementById('presetBlockRep2')?.classList.add('active');
     showToast("⭐ Preset Applied: Bars 1-2 Hook Repeated");
   } else if (preset === 'straight') {
     appState.arrangementBlocks = getDefaultKalaChashmaBlocks(false);
+    appState.userHasCustomizedBlocks = true;
     document.getElementById('presetBlockStraight')?.classList.add('active');
     showToast("↺ Preset Applied: Straight Full Original Song");
   }
@@ -2669,6 +3121,9 @@ function submitCustomSlice() {
     showToast("⚠️ End time must be greater than start time.");
     return;
   }
+
+  stopArrangementPlayback();
+  saveUndoState(`Add Slice "${name}"`);
 
   const tagColors = {
     INTRO: '#a855f7',
