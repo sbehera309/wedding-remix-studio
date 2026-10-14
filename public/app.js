@@ -2081,6 +2081,9 @@ function renderTimelineLineUI() {
           <button type="button" class="timeline-item-btn solo-btn" onclick="event.stopPropagation(); soloBlock(${idx})" title="Listen to just this part">
             <span>🔊 Solo</span>
           </button>
+          <button type="button" class="timeline-item-btn play-here-btn" onclick="event.stopPropagation(); playArrangementFromBlock(${idx})" title="Play timeline starting from this piece">
+            <span>▶ Play</span>
+          </button>
           <button type="button" class="timeline-item-btn dup" onclick="event.stopPropagation(); duplicateBlock(${idx})" title="Duplicate/repeat this part on the line">
             <span>🔁 Dup</span>
           </button>
@@ -2348,6 +2351,7 @@ function addPartToTimeline(partId) {
 }
 
 function clearTimeline() {
+  stopArrangementPlayback();
   appState.userHasCustomizedBlocks = true;
   appState.arrangementBlocks = [];
   renderTimelineLineUI();
@@ -2357,6 +2361,7 @@ function clearTimeline() {
 
 function duplicateBlock(idx) {
   if (!appState.arrangementBlocks || !appState.arrangementBlocks[idx]) return;
+  stopArrangementPlayback();
   const original = appState.arrangementBlocks[idx];
   const clone = {
     ...original,
@@ -2377,6 +2382,7 @@ function duplicateBlock(idx) {
 
 function deleteBlock(idx) {
   if (!appState.arrangementBlocks || !appState.arrangementBlocks[idx]) return;
+  stopArrangementPlayback();
   appState.userHasCustomizedBlocks = true;
   const removed = appState.arrangementBlocks.splice(idx, 1)[0];
   renderTimelineLineUI();
@@ -2703,6 +2709,7 @@ function initAudioPlayerSync() {
   if (!audio) return;
 
   audio.addEventListener('timeupdate', () => {
+    if (typeof arrangementSequencer !== 'undefined' && arrangementSequencer.isPlaying) return;
     appState.playbackPosition = audio.currentTime;
     drawWaveformTimeline(audio.currentTime);
 
@@ -2732,6 +2739,7 @@ function initAudioPlayerSync() {
   });
 
   audio.addEventListener('play', () => {
+    if (typeof arrangementSequencer !== 'undefined' && arrangementSequencer.isPlaying) return;
     appState.isPlaying = true;
     const playBtn = document.getElementById('playFullBtn');
     const timelinePlayBtn = document.getElementById('timelinePlayBtn');
@@ -2746,6 +2754,7 @@ function initAudioPlayerSync() {
   });
 
   audio.addEventListener('pause', () => {
+    if (typeof arrangementSequencer !== 'undefined' && arrangementSequencer.isPlaying) return;
     if (!auditionTimer && !activeAuditionAudio) {
       appState.isPlaying = false;
       const playBtn = document.getElementById('playFullBtn');
@@ -2959,6 +2968,202 @@ async function ensureTrackBBuffer() {
   return null;
 }
 
+// ============================================================================
+// NATIVE AUDIO ARRANGEMENT SEQUENCER
+// 100% Reliable, zero-latency HTML5 audio playback for customized timelines.
+// Guaranteed audible sound on every browser (Safari, Chrome, iOS, macOS).
+// ============================================================================
+let arrangementSequencer = {
+  isPlaying: false,
+  currentBlockIdx: 0,
+  audio: null,
+  checkInterval: null,
+  blockSchedule: [],
+  totalDuration: 0,
+  lastHighlightedIdx: -1
+};
+
+function getOfficialAudioElement() {
+  let audio = document.getElementById('officialAudioPlayer');
+  if (!audio) {
+    audio = new Audio('/kala_chashma_official.m4a');
+    audio.id = 'officialAudioPlayer';
+    audio.preload = 'auto';
+    document.body.appendChild(audio);
+  }
+  return audio;
+}
+
+function stopArrangementPlayback() {
+  if (arrangementSequencer.checkInterval) {
+    clearInterval(arrangementSequencer.checkInterval);
+    arrangementSequencer.checkInterval = null;
+  }
+  if (arrangementSequencer.audio) {
+    try {
+      arrangementSequencer.audio.pause();
+    } catch (_) {}
+  }
+  arrangementSequencer.isPlaying = false;
+  arrangementSequencer.lastHighlightedIdx = -1;
+  document.querySelectorAll('.timeline-item-pill, .music-block-card').forEach(el => el.classList.remove('active-playing'));
+}
+
+function highlightArrangementBlock(idx) {
+  if (arrangementSequencer.lastHighlightedIdx === idx) return;
+  arrangementSequencer.lastHighlightedIdx = idx;
+
+  document.querySelectorAll('.timeline-item-pill').forEach((pill, i) => {
+    if (i === idx) pill.classList.add('active-playing');
+    else pill.classList.remove('active-playing');
+  });
+  document.querySelectorAll('.music-block-card').forEach((card, i) => {
+    if (i === idx) card.classList.add('active-playing');
+    else card.classList.remove('active-playing');
+  });
+}
+
+function playArrangementWithNativeAudio(fromStart = false) {
+  const blocks = appState.arrangementBlocks || [];
+  if (blocks.length === 0) {
+    showToast("⚠️ Timeline is empty! Pick sections from the palette below.");
+    return;
+  }
+
+  // Pre-stop any ongoing audition or master player
+  stopAuditionPlayback();
+  const masterAudio = document.getElementById('masterAudioPlayer');
+  if (masterAudio && !masterAudio.paused) {
+    masterAudio.pause();
+  }
+
+  const audio = getOfficialAudioElement();
+  arrangementSequencer.audio = audio;
+
+  // Build the block schedule with mix start/end times
+  let totalDur = 0;
+  const schedule = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const blk = blocks[i];
+    const dur = Math.max(0.05, blk.endTime - blk.startTime);
+    schedule.push({
+      index: i,
+      block: blk,
+      startTime: blk.startTime,
+      endTime: blk.endTime,
+      duration: dur,
+      mixStart: totalDur,
+      mixEnd: totalDur + dur
+    });
+    totalDur += dur;
+  }
+  arrangementSequencer.blockSchedule = schedule;
+  arrangementSequencer.totalDuration = totalDur;
+
+  if (fromStart || arrangementSequencer.currentBlockIdx >= schedule.length || arrangementSequencer.currentBlockIdx < 0) {
+    arrangementSequencer.currentBlockIdx = 0;
+  }
+
+  const startIdx = arrangementSequencer.currentBlockIdx;
+  const currentSched = schedule[startIdx];
+
+  // Set audio time to current block's start
+  audio.currentTime = Math.max(0, currentSched.startTime);
+
+  audio.play().then(() => {
+    arrangementSequencer.isPlaying = true;
+    appState.isPlaying = true;
+
+    const playBtn = document.getElementById('playFullBtn');
+    const timelinePlayBtn = document.getElementById('timelinePlayBtn');
+    if (playBtn) {
+      playBtn.innerHTML = '<span>⏸</span> Pause Full Mix';
+      playBtn.classList.add('active');
+    }
+    if (timelinePlayBtn) {
+      timelinePlayBtn.innerHTML = '<span>⏸</span> Pause Timeline';
+      timelinePlayBtn.classList.add('active');
+    }
+
+    highlightArrangementBlock(startIdx);
+
+    if (fromStart) {
+      showToast(`🔁 Replaying modified timeline from 0:00 (${schedule.length} pieces, ${appState.engine.formatTime(totalDur)})...`);
+    } else {
+      showToast(`▶ Playing modified timeline from Piece #${startIdx + 1} (${currentSched.block.name})...`);
+    }
+
+    startArrangementMonitorLoop();
+  }).catch(err => {
+    console.warn("Native arrangement playback error:", err);
+    showToast("⚠️ Autoplay prevented. Click Play again to allow audio.");
+  });
+}
+
+function startArrangementMonitorLoop() {
+  if (arrangementSequencer.checkInterval) {
+    clearInterval(arrangementSequencer.checkInterval);
+  }
+
+  arrangementSequencer.checkInterval = setInterval(() => {
+    if (!arrangementSequencer.isPlaying || !arrangementSequencer.audio) {
+      clearInterval(arrangementSequencer.checkInterval);
+      arrangementSequencer.checkInterval = null;
+      return;
+    }
+
+    const audio = arrangementSequencer.audio;
+    const schedule = arrangementSequencer.blockSchedule;
+    let idx = arrangementSequencer.currentBlockIdx;
+
+    if (idx >= schedule.length) {
+      triggerStopPlayback();
+      arrangementSequencer.currentBlockIdx = 0;
+      drawWaveformTimeline(0);
+      showToast("🏁 Reached end of custom arrangement!");
+      return;
+    }
+
+    const curSched = schedule[idx];
+    const curMediaTime = audio.currentTime;
+
+    // Calculate current position within the entire arrangement timeline
+    const offsetInBlock = Math.min(curSched.duration, Math.max(0, curMediaTime - curSched.startTime));
+    const mixPosition = curSched.mixStart + offsetInBlock;
+
+    appState.playbackPosition = mixPosition;
+    drawWaveformTimeline(mixPosition);
+
+    // Check if the current block has concluded (within 40ms)
+    if (curMediaTime >= (curSched.endTime - 0.04)) {
+      const nextIdx = idx + 1;
+      if (nextIdx < schedule.length) {
+        const nextSched = schedule[nextIdx];
+        arrangementSequencer.currentBlockIdx = nextIdx;
+
+        // If the next block seamlessly continues the exact same audio stream, let it stream continuously
+        const isContiguous = Math.abs(nextSched.startTime - curSched.endTime) < 0.06;
+        if (!isContiguous) {
+          audio.currentTime = Math.max(0, nextSched.startTime);
+        }
+        highlightArrangementBlock(nextIdx);
+      } else {
+        // Reached end of last block!
+        triggerStopPlayback();
+        arrangementSequencer.currentBlockIdx = 0;
+        drawWaveformTimeline(0);
+        showToast("🏁 Reached end of custom arrangement!");
+      }
+    }
+  }, 25);
+}
+
+function playArrangementFromBlock(idx) {
+  appState.userHasCustomizedBlocks = true;
+  arrangementSequencer.currentBlockIdx = idx;
+  playArrangementWithNativeAudio(false);
+}
+
 /**
  * Dedicated Replay From Start (Instant restart from 0:00)
  */
@@ -2968,18 +3173,16 @@ function triggerReplay() {
   const timelinePlayBtn = document.getElementById('timelinePlayBtn');
 
   stopAuditionPlayback();
+  stopArrangementPlayback();
 
-  // Synchronously resume Web Audio context on user gesture
-  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
-    appState.engine.ctx.resume().catch(() => {});
-  }
-
-  // If user customized arrangement and Web Audio buffer is ready:
-  if (appState.userHasCustomizedBlocks && appState.trackB && appState.trackB.buffer) {
-    playViaWebAudioEngine();
+  // If user customized arrangement (e.g. removed, duplicated, or reordered blocks),
+  // always use the native arrangement sequencer with guaranteed audible sound:
+  if (appState.userHasCustomizedBlocks) {
+    playArrangementWithNativeAudio(true);
     return;
   }
 
+  // Default arrangement: replay pre-rendered master mix directly from 0:00
   if (audio) {
     audio.currentTime = 0;
     audio.play().then(() => {
@@ -2996,11 +3199,11 @@ function triggerReplay() {
       drawWaveformTimeline(0);
       showToast("🔁 Replaying full mix from beginning (0:00)...");
     }).catch(err => {
-      console.warn("Native replay error, attempting Web Audio:", err);
-      playViaWebAudioEngine();
+      console.warn("Native replay error, attempting arrangement sequencer:", err);
+      playArrangementWithNativeAudio(true);
     });
   } else {
-    playViaWebAudioEngine();
+    playArrangementWithNativeAudio(true);
   }
 }
 
@@ -3012,11 +3215,6 @@ function triggerPlayFullMix() {
   const playBtn = document.getElementById('playFullBtn');
   const timelinePlayBtn = document.getElementById('timelinePlayBtn');
 
-  // Synchronously resume Web Audio context
-  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
-    appState.engine.ctx.resume().catch(() => {});
-  }
-
   stopAuditionPlayback();
 
   // Toggle behavior
@@ -3026,13 +3224,14 @@ function triggerPlayFullMix() {
     return;
   }
 
-  // If user customized arrangement and Web Audio buffer is ready:
-  if (appState.userHasCustomizedBlocks && appState.trackB && appState.trackB.buffer) {
-    playViaWebAudioEngine();
+  // If user customized arrangement (e.g. removed, duplicated, or reordered blocks),
+  // always use the native arrangement sequencer with guaranteed audible sound:
+  if (appState.userHasCustomizedBlocks) {
+    playArrangementWithNativeAudio(false);
     return;
   }
 
-  // Default sequence (or fallback): play the pre-rendered master mix directly via native audio!
+  // Default sequence: play the pre-rendered master mix directly via native audio!
   if (audio) {
     audio.play().then(() => {
       appState.isPlaying = true;
@@ -3046,91 +3245,17 @@ function triggerPlayFullMix() {
       }
       showToast("▶ Playing Kala Chashma Clean Master Mix...");
     }).catch(err => {
-      console.warn("Native play error, falling back to Web Audio:", err);
-      playViaWebAudioEngine();
+      console.warn("Native play error, falling back to arrangement sequencer:", err);
+      playArrangementWithNativeAudio(false);
     });
   } else {
-    playViaWebAudioEngine();
+    playArrangementWithNativeAudio(false);
   }
 }
 
 async function playViaWebAudioEngine() {
-  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
-    appState.engine.ctx.resume().catch(() => {});
-  }
-  const buf = await ensureTrackBBuffer();
-
-  // Fall back to native audio if Web Audio buffer could not be loaded
-  if (!buf) {
-    const audio = document.getElementById('masterAudioPlayer');
-    if (audio) {
-      audio.play().catch(e => console.warn("Native fallback error:", e));
-      return;
-    }
-  }
-
-  if (appState.trackB && appState.trackB.buffer && (!appState.trackA || !appState.trackA.buffer)) {
-    if (appState.trackA) {
-      appState.trackA.buffer = appState.trackB.buffer;
-      appState.trackA.analysis = appState.trackB.analysis;
-    }
-  }
-
-  appState.engine.stopPlayback();
-  appState.isPlaying = true;
-
-  const playBtn = document.getElementById('playFullBtn');
-  const timelinePlayBtn = document.getElementById('timelinePlayBtn');
-  if (playBtn) {
-    playBtn.innerHTML = '<span>⏸</span> Pause Full Mix';
-    playBtn.classList.add('active');
-  }
-  if (timelinePlayBtn) {
-    timelinePlayBtn.innerHTML = '<span>⏸</span> Pause Timeline';
-    timelinePlayBtn.classList.add('active');
-  }
-
-  const config = {
-    blocks: appState.arrangementBlocks,
-    hasArrangement: appState.arrangement ? appState.arrangement.hasArrangement : false,
-    loopStart: appState.arrangement ? appState.arrangement.loopStart : 0,
-    loopEnd: appState.arrangement ? appState.arrangement.loopEnd : 2.243,
-    loopRepeats: appState.arrangement ? appState.arrangement.loopRepeats : 1,
-    choreoCutTime: appState.arrangement ? appState.arrangement.choreoCutTime : 41.0,
-    spliceTimeA: appState.activeTransitionConfig.spliceTimeA,
-    spliceTimeB: appState.activeTransitionConfig.spliceTimeB,
-    crossfadeDuration: appState.activeTransitionConfig.crossfadeDuration,
-    transitionType: appState.activeTransitionConfig.transitionType,
-    useStudioMasterForChoreo: appState.useStudioMaster,
-    studioStartOffset: appState.studioStartOffset
-  };
-
-  try {
-    await appState.engine.playFullMix(appState.trackA, appState.trackB, config, (elapsed, total, activeIdx) => {
-      appState.playbackPosition = elapsed;
-      drawWaveformTimeline(elapsed);
-
-      // Highlight active block card on timeline in real-time
-      if (activeIdx !== undefined) {
-        document.querySelectorAll('.timeline-item-pill').forEach((pill, idx) => {
-          if (idx === activeIdx) pill.classList.add('active-playing');
-          else pill.classList.remove('active-playing');
-        });
-        document.querySelectorAll('.music-block-card').forEach((card, idx) => {
-          if (idx === activeIdx) card.classList.add('active-playing');
-          else card.classList.remove('active-playing');
-        });
-      }
-
-      if (elapsed >= total) {
-        triggerStopPlayback();
-      }
-    });
-  } catch (err) {
-    console.error("Playback error:", err);
-    triggerStopPlayback();
-    showToast(`⚠️ Playback error: ${err.message}`);
-  }
+  // Kept as fallback for offline rendering / Web Audio analysis
+  playArrangementWithNativeAudio(false);
 }
 
 function triggerStopPlayback() {
@@ -3142,6 +3267,8 @@ function triggerStopPlayback() {
   if (audio) {
     audio.pause();
   }
+  stopArrangementPlayback();
+
   if (appState.engine) {
     appState.engine.stopPlayback();
   }

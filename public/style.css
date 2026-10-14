@@ -1552,6 +1552,18 @@ canvas#waveformCanvas {
   border-color: var(--accent-emerald);
 }
 
+.timeline-item-btn.play-here-btn {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: rgba(6, 182, 212, 0.4);
+  color: #67e8f9;
+  font-weight: 700;
+}
+
+.timeline-item-btn.play-here-btn:hover {
+  background: rgba(6, 182, 212, 0.3);
+  border-color: var(--accent-cyan);
+}
+
 .palette-audition-hint {
   font-size: 9.5px;
   font-weight: 700;
