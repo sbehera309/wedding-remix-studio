@@ -2369,6 +2369,9 @@ let activeAuditionState = {
 };
 
 function handleTimelineBlockCardClick(event, idx) {
+  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
+    appState.engine.ctx.resume().catch(() => {});
+  }
   // If clicked inside an interactive button or control, let that button's action fire
   if (event.target.closest('button') || event.target.closest('input')) {
     return;
@@ -2377,6 +2380,9 @@ function handleTimelineBlockCardClick(event, idx) {
 }
 
 function handlePaletteCardClick(event, secId) {
+  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
+    appState.engine.ctx.resume().catch(() => {});
+  }
   if (event.target.closest('button') || event.target.closest('.subpart-pill-row')) {
     return;
   }
@@ -2384,6 +2390,9 @@ function handlePaletteCardClick(event, secId) {
 }
 
 function handlePaletteSubpartClick(event, subId) {
+  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
+    appState.engine.ctx.resume().catch(() => {});
+  }
   if (event.target.closest('button')) {
     return;
   }
@@ -2391,6 +2400,9 @@ function handlePaletteSubpartClick(event, subId) {
 }
 
 function handlePaletteDetailedCardClick(event, partId) {
+  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
+    appState.engine.ctx.resume().catch(() => {});
+  }
   if (event.target.closest('button')) {
     return;
   }
@@ -2398,6 +2410,9 @@ function handlePaletteDetailedCardClick(event, partId) {
 }
 
 async function soloBlock(idx) {
+  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
+    appState.engine.ctx.resume().catch(() => {});
+  }
   if (!appState.arrangementBlocks || !appState.arrangementBlocks[idx]) return;
   const blk = appState.arrangementBlocks[idx];
 
@@ -2446,6 +2461,9 @@ async function soloBlock(idx) {
 }
 
 async function soloPalettePart(partId) {
+  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
+    appState.engine.ctx.resume().catch(() => {});
+  }
   const allParts = getAllSongPartsAndSections();
   const part = allParts.find(p => p.id === partId);
   if (!part) return;
@@ -2857,7 +2875,17 @@ function triggerPlayFullMix() {
 }
 
 async function playViaWebAudioEngine() {
+  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
+    appState.engine.ctx.resume().catch(() => {});
+  }
   await ensureTrackBBuffer();
+
+  if (appState.trackB && appState.trackB.buffer && (!appState.trackA || !appState.trackA.buffer)) {
+    if (appState.trackA) {
+      appState.trackA.buffer = appState.trackB.buffer;
+      appState.trackA.analysis = appState.trackB.analysis;
+    }
+  }
 
   appState.engine.stopPlayback();
   appState.isPlaying = true;
