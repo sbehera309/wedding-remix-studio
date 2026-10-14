@@ -295,37 +295,77 @@
           </div>
         </div>
 
-        <!-- Interactive Music Piece Arranger & Slicer -->
-        <div class="block-arranger-header" style="margin-top: 22px;">
+        <!-- Drag-and-Drop Remix Timeline Line -->
+        <div class="timeline-drop-zone-wrapper" id="timelineDropWrapper">
+          <div class="timeline-line-header">
+            <div class="timeline-title-row">
+              <h4 style="margin: 0; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; color: var(--text-main);">
+                <span>🎶</span> Your Remix Timeline Line
+              </h4>
+              <span class="timeline-stats-badge" id="timelineStatsBadge">16 Pieces • 2:55.7</span>
+            </div>
+            <div class="arranger-presets-group">
+              <button type="button" class="btn-cut-preset active" id="presetBlockRep1" onclick="resetBlocksToPreset('default_rep')">
+                ⭐ Duplicate Bar 1 (Choreo Match)
+              </button>
+              <button type="button" class="btn-cut-preset" id="presetBlockRep2" onclick="resetBlocksToPreset('two_bar_rep')">
+                ⭐ Duplicate Bars 1-2 Hook
+              </button>
+              <button type="button" class="btn-cut-preset" id="presetBlockStraight" onclick="resetBlocksToPreset('straight')">
+                ↺ Full Original Song
+              </button>
+              <button type="button" class="btn-cut-preset" style="color: #fca5a5; border-color: rgba(239, 68, 68, 0.4);" onclick="clearTimeline()">
+                🗑️ Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- Horizontal Sequencer Line Drop Zone -->
+          <div class="timeline-line-track" id="timelineTrack" ondragover="handleTimelineDragOver(event)" ondragleave="handleTimelineDragLeave(event)" ondrop="handleTimelineDrop(event)">
+            <!-- Populated dynamically by renderTimelineLineUI() -->
+          </div>
+
+          <!-- Timeline Dedicated Transport Bar -->
+          <div class="timeline-transport-row">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn-primary highlight" id="timelinePlayBtn" onclick="triggerPlayFullMix()" style="background: linear-gradient(135deg, #10b981, #059669); font-weight: 700; font-size: 13.5px; padding: 8px 16px;">
+                <span>▶</span> Play My Timeline
+              </button>
+              <button type="button" class="btn-replay" onclick="triggerReplay()">
+                <span>🔁</span> Replay From Start
+              </button>
+              <button type="button" class="btn-secondary" onclick="triggerStopPlayback()">
+                <span>⏹</span> Stop
+              </button>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button type="button" class="btn-export" onclick="triggerExportWav()">
+                <span>💾</span> Download Master WAV
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Auto-Detected Song Parts Palette (Pick & Drop Tray) -->
+        <div class="block-arranger-header" style="margin-top: 10px;">
           <div>
-            <h4 style="margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; color: var(--text-main);">
-              <span>🎼</span> Interactive Music Piece Arranger & Slicer
+            <h4 style="margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--text-main);">
+              <span>🎼</span> Auto-Detected Song Parts Palette
             </h4>
             <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-muted);">
-              Identify, duplicate (repeat), rearrange, solo audition, or cut out individual musical sections in real time.
+              Pick any part below and <strong>drag & drop it onto the line above</strong>, or click <strong>"+ Add to Line"</strong> to insert it.
             </p>
           </div>
           <div class="arranger-presets-group">
             <button type="button" class="btn-add-slice" onclick="openAddSliceModal()">
               <span>➕</span> Add Custom Slice
             </button>
-            <button type="button" class="btn-cut-preset active" id="presetBlockRep1" onclick="resetBlocksToPreset('default_rep')">
-              ⭐ Duplicate Bar 1 (Choreo Match)
-            </button>
-            <button type="button" class="btn-cut-preset" id="presetBlockRep2" onclick="resetBlocksToPreset('two_bar_rep')">
-              ⭐ Duplicate Bars 1-2
-            </button>
-            <button type="button" class="btn-cut-preset" id="presetBlockStraight" onclick="resetBlocksToPreset('straight')">
-              ↺ Straight Original
-            </button>
           </div>
         </div>
 
-        <!-- Scrollable Music Blocks List -->
-        <div class="blocks-scroll-area">
-          <div class="blocks-list" id="blocksListContainer">
-            <!-- Dynamically populated by renderArrangementBlocksUI() -->
-          </div>
+        <!-- Palette Grid -->
+        <div class="palette-grid" id="paletteGridContainer">
+          <!-- Populated dynamically by renderPaletteUI() -->
         </div>
       </div>
 

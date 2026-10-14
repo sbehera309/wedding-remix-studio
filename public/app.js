@@ -421,13 +421,32 @@ async function loadMedleyDemo() {
 }
 
 function updateTrackCardUI(deck, trackObj) {
-  document.getElementById(`deckStatus${deck}`).innerText = "Loaded ✓";
-  document.getElementById(`deckStatus${deck}`).style.color = "var(--accent-emerald)";
-  document.getElementById(`metaBadge${deck}`).style.display = "flex";
-  document.getElementById(`trackName${deck}`).innerText = trackObj.name;
-  document.getElementById(`trackBpm${deck}`).innerText = `${trackObj.analysis.bpm} BPM`;
-  document.getElementById(`trackKey${deck}`).innerText = `${trackObj.analysis.keyInfo.camelot} (${trackObj.analysis.keyInfo.keyName})`;
-  document.getElementById(`trackDuration${deck}`).innerText = appState.engine.formatTime(trackObj.buffer.duration);
+  const statusEl = document.getElementById(`deckStatus${deck}`);
+  if (statusEl) {
+    statusEl.innerText = "Loaded ✓";
+    statusEl.style.color = "var(--accent-emerald)";
+  }
+  const metaBadge = document.getElementById(`metaBadge${deck}`);
+  if (metaBadge) metaBadge.style.display = "flex";
+
+  const nameEl = document.getElementById(`trackName${deck}`);
+  if (nameEl && trackObj.name) nameEl.innerText = trackObj.name;
+
+  const bpmEl = document.getElementById(`trackBpm${deck}`);
+  if (bpmEl && trackObj.analysis && trackObj.analysis.bpm) bpmEl.innerText = `${trackObj.analysis.bpm} BPM`;
+
+  const keyEl = document.getElementById(`trackKey${deck}`);
+  if (keyEl && trackObj.analysis && trackObj.analysis.keyInfo) {
+    keyEl.innerText = `${trackObj.analysis.keyInfo.camelot} (${trackObj.analysis.keyInfo.keyName})`;
+  }
+
+  const durationEl = document.getElementById(`trackDuration${deck}`);
+  if (durationEl) {
+    const durSec = (trackObj.buffer && trackObj.buffer.duration) 
+      ? trackObj.buffer.duration 
+      : (deck === 'A' ? 41.0 : 173.45);
+    durationEl.innerText = appState.engine.formatTime(durSec);
+  }
 }
 
 function checkBothTracksReady() {
@@ -1130,47 +1149,29 @@ function setQualityMode(mode) {
   drawWaveformTimeline();
 }
 
-// ==========================================
-// Interactive Music Piece Arranger & Slicer
-// ==========================================
+// ========================================================
+// Drag-and-Drop Timeline Line & Song Parts Palette Engine
+// ========================================================
 
-function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
-  const blocks = [
+function getDetectedSongPartsCatalog() {
+  return [
     {
       id: 'bar_1',
       name: 'Bar 1: Intro Brass Fanfare',
-      desc: 'Iconic opening 4-beat horn hook',
+      desc: 'Iconic opening 4-beat horn hook (Entrance mark)',
       tag: 'INTRO',
       tagColor: '#a855f7',
       startTime: 0.00,
-      endTime: 2.243,
-      isDuplicated: false
-    }
-  ];
-
-  if (includeDuplicatedIntro) {
-    blocks.push({
-      id: 'bar_1_dup',
-      name: 'Bar 1 Repeat: Choreo Extra Riff',
-      desc: 'Repeated opening brass hook (Choreo pattern)',
-      tag: 'REPEAT',
-      tagColor: '#f59e0b',
-      startTime: 0.00,
-      endTime: 2.243,
-      isDuplicated: true
-    });
-  }
-
-  blocks.push(
+      endTime: 2.243
+    },
     {
       id: 'bar_2',
       name: 'Bar 2: Intro Brass Phrase 2',
-      desc: 'Second brass reply bar (4 beats)',
+      desc: 'Second brass answer bar (4 beats)',
       tag: 'INTRO',
       tagColor: '#a855f7',
       startTime: 2.243,
-      endTime: 4.486,
-      isDuplicated: false
+      endTime: 4.486
     },
     {
       id: 'bar_3',
@@ -1179,18 +1180,16 @@ function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
       tag: 'INTRO',
       tagColor: '#a855f7',
       startTime: 4.486,
-      endTime: 6.729,
-      isDuplicated: false
+      endTime: 6.729
     },
     {
       id: 'bar_4',
-      name: 'Bar 4: Brass End & Pre-roll Pause',
-      desc: 'Horn decay & anticipatory silence',
+      name: 'Bar 4: Brass End & Silence Pre-Roll',
+      desc: 'Horn decay & anticipatory pause',
       tag: 'INTRO',
       tagColor: '#a855f7',
       startTime: 6.729,
-      endTime: 8.972,
-      isDuplicated: false
+      endTime: 8.972
     },
     {
       id: 'bar_5',
@@ -1199,8 +1198,7 @@ function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
       tag: 'BUILD',
       tagColor: '#ec4899',
       startTime: 8.972,
-      endTime: 11.215,
-      isDuplicated: false
+      endTime: 11.215
     },
     {
       id: 'bar_6',
@@ -1209,8 +1207,7 @@ function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
       tag: 'DROP',
       tagColor: '#10b981',
       startTime: 11.215,
-      endTime: 13.458,
-      isDuplicated: false
+      endTime: 13.458
     },
     {
       id: 'bar_7',
@@ -1219,8 +1216,7 @@ function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
       tag: 'DROP',
       tagColor: '#10b981',
       startTime: 13.458,
-      endTime: 15.701,
-      isDuplicated: false
+      endTime: 15.701
     },
     {
       id: 'bar_8',
@@ -1229,8 +1225,7 @@ function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
       tag: 'VERSE',
       tagColor: '#06b6d4',
       startTime: 15.701,
-      endTime: 17.944,
-      isDuplicated: false
+      endTime: 17.944
     },
     {
       id: 'bar_9',
@@ -1239,8 +1234,7 @@ function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
       tag: 'VERSE',
       tagColor: '#06b6d4',
       startTime: 17.944,
-      endTime: 20.187,
-      isDuplicated: false
+      endTime: 20.187
     },
     {
       id: 'bar_10',
@@ -1249,8 +1243,7 @@ function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
       tag: 'BUILD',
       tagColor: '#ec4899',
       startTime: 20.187,
-      endTime: 22.430,
-      isDuplicated: false
+      endTime: 22.430
     },
     {
       id: 'bar_11_12',
@@ -1259,8 +1252,7 @@ function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
       tag: 'CHORUS',
       tagColor: '#f97316',
       startTime: 22.430,
-      endTime: 26.916,
-      isDuplicated: false
+      endTime: 26.916
     },
     {
       id: 'bar_13_14',
@@ -1269,8 +1261,7 @@ function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
       tag: 'CHORUS',
       tagColor: '#f97316',
       startTime: 26.916,
-      endTime: 31.402,
-      isDuplicated: false
+      endTime: 31.402
     },
     {
       id: 'bar_15_16',
@@ -1279,18 +1270,16 @@ function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
       tag: 'CHORUS',
       tagColor: '#f97316',
       startTime: 31.402,
-      endTime: 35.888,
-      isDuplicated: false
+      endTime: 35.888
     },
     {
       id: 'bar_17_18',
       name: 'Bars 17-18: Chorus Outro (Choreo Cut-Off)',
-      desc: 'End of rehearsed performance video (38.8s - 40.37s)',
+      desc: 'End of rehearsed choreo video (38.8s - 40.37s)',
       tag: 'CHOREO',
       tagColor: '#8b5cf6',
       startTime: 35.888,
-      endTime: 40.374,
-      isDuplicated: false
+      endTime: 40.374
     },
     {
       id: 'bar_finale',
@@ -1299,63 +1288,81 @@ function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
       tag: 'FINALE',
       tagColor: '#10b981',
       startTime: 40.374,
-      endTime: 173.45,
-      isDuplicated: false
+      endTime: 173.45
     }
-  );
+  ];
+}
+
+function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
+  const catalog = getDetectedSongPartsCatalog();
+  const blocks = [];
+
+  // Bar 1
+  blocks.push({ ...catalog[0], id: 'bar_1', isDuplicated: false });
+
+  // Optional Bar 1 Repeat (for Choreo Video Match)
+  if (includeDuplicatedIntro) {
+    blocks.push({
+      ...catalog[0],
+      id: 'bar_1_dup',
+      name: 'Bar 1 Repeat: Choreo Extra Riff',
+      desc: 'Repeated opening horn hook (Choreo pattern)',
+      tag: 'REPEAT',
+      tagColor: '#f59e0b',
+      isDuplicated: true
+    });
+  }
+
+  // Push remaining parts in sequence
+  for (let i = 1; i < catalog.length; i++) {
+    blocks.push({ ...catalog[i], isDuplicated: false });
+  }
 
   return blocks;
 }
 
-function renderArrangementBlocksUI() {
-  const container = document.getElementById('blocksListContainer');
+// Render Palette of Auto-Detected Song Parts
+function renderPaletteUI() {
+  const container = document.getElementById('paletteGridContainer');
   if (!container) return;
 
-  if (!appState.arrangementBlocks || appState.arrangementBlocks.length === 0) {
-    container.innerHTML = '<p class="text-xs text-muted" style="padding: 12px;">No blocks arranged. Click a preset button above to load pieces.</p>';
-    return;
-  }
+  const catalog = getDetectedSongPartsCatalog();
 
-  const html = appState.arrangementBlocks.map((blk, idx) => {
-    const dur = (blk.endTime - blk.startTime).toFixed(2);
-    const tagBg = blk.tagColor || '#818cf8';
-    const isFirst = idx === 0;
-    const isLast = idx === appState.arrangementBlocks.length - 1;
+  const html = catalog.map(part => {
+    const dur = (part.endTime - part.startTime).toFixed(2);
+    const tagBg = part.tagColor || '#818cf8';
 
     return `
-      <div class="music-block-card" id="blockCard_${idx}" data-index="${idx}" data-id="${blk.id}">
-        <div class="block-card-header">
-          <span class="block-index-badge">#${idx + 1}</span>
-          <span class="block-tag-badge" style="background: ${tagBg}22; color: ${tagBg}; border: 1px solid ${tagBg}55;">
-            ${blk.tag}
+      <div class="palette-item-card" 
+           id="palette_${part.id}"
+           draggable="true" 
+           ondragstart="handlePaletteDragStart(event, '${part.id}')"
+           ondragend="handleDragEnd(event)">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: ${tagBg}22; color: ${tagBg}; border: 1px solid ${tagBg}55;">
+            ${part.tag}
           </span>
-          <span style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-left: auto;">
-            ${dur}s
+          <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">
+            ⏱ ${dur}s
           </span>
         </div>
-        <div class="block-title-row">
-          <div class="block-name" title="${blk.name}">${blk.name}</div>
-          <div class="block-desc">${blk.desc || ''}</div>
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <strong style="font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${part.name}
+          </strong>
+          <span style="font-size: 11px; color: var(--text-muted); line-height: 1.3;">
+            ${part.desc}
+          </span>
         </div>
-        <div class="block-time-bar">
-          <span>⏱ Time Span:</span>
-          <span>${appState.engine.formatTime(blk.startTime)} - ${appState.engine.formatTime(blk.endTime)}</span>
+        <div style="font-size: 10.5px; font-family: monospace; color: var(--accent-cyan); background: rgba(0,0,0,0.25); padding: 3px 6px; border-radius: 4px;">
+          Span: ${appState.engine.formatTime(part.startTime)} - ${appState.engine.formatTime(part.endTime)}
         </div>
-        <div class="block-toolbar">
-          <button type="button" class="btn-block-action solo" onclick="soloBlock(${idx})" title="Listen to just this section">
+        <div class="palette-actions-row">
+          <button type="button" class="timeline-item-btn" onclick="soloPalettePart('${part.id}')" title="Audition this part in isolation">
             <span>🔊</span> Solo
           </button>
-          <button type="button" class="btn-block-action duplicate" onclick="duplicateBlock(${idx})" title="Duplicate/repeat this section">
-            <span>🔁</span> Duplicate
-          </button>
-          <button type="button" class="btn-block-action move" onclick="moveBlock(${idx}, -1)" ${isFirst ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''} title="Move earlier in song">
-            <span>◀</span> Move
-          </button>
-          <button type="button" class="btn-block-action move" onclick="moveBlock(${idx}, 1)" ${isLast ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''} title="Move later in song">
-            <span>▶</span> Move
-          </button>
-          <button type="button" class="btn-block-action delete" onclick="deleteBlock(${idx})" title="Cut out / remove this section">
-            <span>✂️</span> Cut
+          <button type="button" class="btn-add-to-timeline" onclick="addPartToTimeline('${part.id}')" title="Drop this part onto the Timeline Line">
+            <span>➕</span> Add to Line
           </button>
         </div>
       </div>
@@ -1363,20 +1370,246 @@ function renderArrangementBlocksUI() {
   }).join('');
 
   container.innerHTML = html;
-  updateTotalBlocksSummary();
 }
 
-function updateTotalBlocksSummary() {
-  if (!appState.arrangementBlocks) return;
+// Render the Sequencer Timeline Line
+function renderTimelineLineUI() {
+  const track = document.getElementById('timelineTrack');
+  if (!track) return;
+
+  const blocks = appState.arrangementBlocks || [];
+
+  if (blocks.length === 0) {
+    track.innerHTML = `
+      <div class="timeline-empty-hint">
+        <span>👉 Your Timeline Line is empty! Pick parts from the Song Palette below and drag & drop them here (or click "+ Add to Line").</span>
+      </div>
+    `;
+    updateTimelineStatsBadge(0, 0);
+    return;
+  }
+
   let totalDur = 0;
-  for (let b of appState.arrangementBlocks) {
+  for (let b of blocks) {
     totalDur += Math.max(0.01, b.endTime - b.startTime);
+  }
+
+  const html = blocks.map((blk, idx) => {
+    const dur = (blk.endTime - blk.startTime).toFixed(2);
+    const tagBg = blk.tagColor || '#818cf8';
+
+    return `
+      <div class="timeline-item-pill" 
+           id="timelinePill_${idx}" 
+           data-index="${idx}" 
+           draggable="true" 
+           ondragstart="handleTimelineItemDragStart(event, ${idx})"
+           ondragover="handleTimelineItemDragOver(event, ${idx})"
+           ondragleave="handleTimelineItemDragLeave(event, ${idx})"
+           ondrop="handleTimelineItemDrop(event, ${idx})"
+           ondragend="handleDragEnd(event)">
+        <div class="timeline-item-header">
+          <span style="font-size: 10px; font-weight: 700; background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; color: var(--text-muted);">
+            #${idx + 1}
+          </span>
+          <span style="font-size: 9.5px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: ${tagBg}22; color: ${tagBg}; border: 1px solid ${tagBg}44;">
+            ${blk.tag}
+          </span>
+          <span style="font-size: 10.5px; font-weight: 600; color: var(--text-muted); margin-left: auto;">
+            ${dur}s
+          </span>
+        </div>
+        <div class="timeline-item-title" title="${blk.name}">${blk.name}</div>
+        <div class="timeline-item-time">
+          ${appState.engine.formatTime(blk.startTime)} - ${appState.engine.formatTime(blk.endTime)}
+        </div>
+        <div class="timeline-item-actions">
+          <button type="button" class="timeline-item-btn" onclick="soloBlock(${idx})" title="Listen to just this part">
+            <span>🔊</span> Solo
+          </button>
+          <button type="button" class="timeline-item-btn dup" onclick="duplicateBlock(${idx})" title="Duplicate/repeat this part on the line">
+            <span>🔁</span> Dup
+          </button>
+          <button type="button" class="timeline-item-btn del" onclick="deleteBlock(${idx})" title="Cut out this part">
+            <span>✕</span>
+          </button>
+        </div>
+      </div>
+      ${idx < blocks.length - 1 ? '<span class="timeline-connector">➔</span>' : ''}
+    `;
+  }).join('');
+
+  track.innerHTML = html;
+  updateTimelineStatsBadge(blocks.length, totalDur);
+}
+
+function updateTimelineStatsBadge(count, totalDur) {
+  const badge = document.getElementById('timelineStatsBadge');
+  if (badge) {
+    badge.innerText = `${count} Pieces • ${appState.engine.formatTime(totalDur)} (${totalDur.toFixed(1)}s)`;
   }
 
   const impactTotal = document.getElementById('impactTotalDuration');
   if (impactTotal) {
     impactTotal.innerText = `${appState.engine.formatTime(totalDur)} (${totalDur.toFixed(1)}s)`;
   }
+}
+
+// Alias for backwards compatibility
+function renderArrangementBlocksUI() {
+  renderTimelineLineUI();
+  renderPaletteUI();
+}
+
+// Drag & Drop Handlers
+function handlePaletteDragStart(e, partId) {
+  e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'from_palette', partId }));
+  e.dataTransfer.effectAllowed = 'copy';
+  const target = document.getElementById(`palette_${partId}`);
+  if (target) target.classList.add('dragging');
+}
+
+function handleTimelineItemDragStart(e, index) {
+  e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'from_timeline', index }));
+  e.dataTransfer.effectAllowed = 'move';
+  const target = document.getElementById(`timelinePill_${index}`);
+  if (target) target.classList.add('dragging');
+}
+
+function handleDragEnd(e) {
+  document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+  document.querySelectorAll('.drag-over-item').forEach(el => el.classList.remove('drag-over-item'));
+  const dropWrapper = document.getElementById('timelineDropWrapper');
+  if (dropWrapper) dropWrapper.classList.remove('drag-over');
+}
+
+function handleTimelineDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  const dropWrapper = document.getElementById('timelineDropWrapper');
+  if (dropWrapper) dropWrapper.classList.add('drag-over');
+}
+
+function handleTimelineDragLeave(e) {
+  const dropWrapper = document.getElementById('timelineDropWrapper');
+  if (dropWrapper) dropWrapper.classList.remove('drag-over');
+}
+
+function handleTimelineDrop(e) {
+  e.preventDefault();
+  const dropWrapper = document.getElementById('timelineDropWrapper');
+  if (dropWrapper) dropWrapper.classList.remove('drag-over');
+
+  try {
+    const raw = e.dataTransfer.getData('text/plain');
+    if (!raw) return;
+    const payload = JSON.parse(raw);
+
+    if (payload.type === 'from_palette') {
+      const catalog = getDetectedSongPartsCatalog();
+      const part = catalog.find(p => p.id === payload.partId);
+      if (part) {
+        if (!appState.arrangementBlocks) appState.arrangementBlocks = [];
+        appState.arrangementBlocks.push({
+          ...part,
+          id: `${part.id}_${Date.now()}`,
+          isDuplicated: false
+        });
+        renderTimelineLineUI();
+        drawWaveformTimeline();
+        showToast(`✨ Dropped "${part.name}" onto your timeline line!`);
+      }
+    } else if (payload.type === 'from_timeline') {
+      const fromIdx = payload.index;
+      if (fromIdx !== undefined && appState.arrangementBlocks && appState.arrangementBlocks[fromIdx]) {
+        const item = appState.arrangementBlocks.splice(fromIdx, 1)[0];
+        appState.arrangementBlocks.push(item);
+        renderTimelineLineUI();
+        drawWaveformTimeline();
+        showToast(`↔️ Moved "${item.name}" to end of line.`);
+      }
+    }
+  } catch (err) {
+    console.error("Drop error:", err);
+  }
+}
+
+function handleTimelineItemDragOver(e, targetIdx) {
+  e.preventDefault();
+  e.stopPropagation();
+  const pill = document.getElementById(`timelinePill_${targetIdx}`);
+  if (pill) pill.classList.add('drag-over-item');
+}
+
+function handleTimelineItemDragLeave(e, targetIdx) {
+  const pill = document.getElementById(`timelinePill_${targetIdx}`);
+  if (pill) pill.classList.remove('drag-over-item');
+}
+
+function handleTimelineItemDrop(e, targetIdx) {
+  e.preventDefault();
+  e.stopPropagation();
+  const pill = document.getElementById(`timelinePill_${targetIdx}`);
+  if (pill) pill.classList.remove('drag-over-item');
+  const dropWrapper = document.getElementById('timelineDropWrapper');
+  if (dropWrapper) dropWrapper.classList.remove('drag-over');
+
+  try {
+    const raw = e.dataTransfer.getData('text/plain');
+    if (!raw) return;
+    const payload = JSON.parse(raw);
+
+    if (payload.type === 'from_palette') {
+      const catalog = getDetectedSongPartsCatalog();
+      const part = catalog.find(p => p.id === payload.partId);
+      if (part) {
+        if (!appState.arrangementBlocks) appState.arrangementBlocks = [];
+        appState.arrangementBlocks.splice(targetIdx, 0, {
+          ...part,
+          id: `${part.id}_${Date.now()}`,
+          isDuplicated: false
+        });
+        renderTimelineLineUI();
+        drawWaveformTimeline();
+        showToast(`✨ Inserted "${part.name}" at position #${targetIdx + 1}!`);
+      }
+    } else if (payload.type === 'from_timeline') {
+      const fromIdx = payload.index;
+      if (fromIdx !== undefined && fromIdx !== targetIdx && appState.arrangementBlocks) {
+        const item = appState.arrangementBlocks.splice(fromIdx, 1)[0];
+        appState.arrangementBlocks.splice(targetIdx, 0, item);
+        renderTimelineLineUI();
+        drawWaveformTimeline();
+        showToast(`↔️ Moved "${item.name}" to position #${targetIdx + 1}!`);
+      }
+    }
+  } catch (err) {
+    console.error("Item drop error:", err);
+  }
+}
+
+function addPartToTimeline(partId) {
+  const catalog = getDetectedSongPartsCatalog();
+  const part = catalog.find(p => p.id === partId);
+  if (!part) return;
+
+  if (!appState.arrangementBlocks) appState.arrangementBlocks = [];
+  appState.arrangementBlocks.push({
+    ...part,
+    id: `${part.id}_${Date.now()}`,
+    isDuplicated: false
+  });
+
+  renderTimelineLineUI();
+  drawWaveformTimeline();
+  showToast(`➕ Added "${part.name}" onto your timeline line!`);
+}
+
+function clearTimeline() {
+  appState.arrangementBlocks = [];
+  renderTimelineLineUI();
+  drawWaveformTimeline();
+  showToast(`🗑️ Timeline cleared! Pick parts from the palette below and drop them in.`);
 }
 
 function duplicateBlock(idx) {
@@ -1393,36 +1626,17 @@ function duplicateBlock(idx) {
   };
 
   appState.arrangementBlocks.splice(idx + 1, 0, clone);
-  renderArrangementBlocksUI();
+  renderTimelineLineUI();
   drawWaveformTimeline();
   showToast(`🔁 Duplicated "${original.name}" (inserted at #${idx + 2})`);
 }
 
-function moveBlock(idx, dir) {
-  if (!appState.arrangementBlocks) return;
-  const targetIdx = idx + dir;
-  if (targetIdx < 0 || targetIdx >= appState.arrangementBlocks.length) return;
-
-  const temp = appState.arrangementBlocks[idx];
-  appState.arrangementBlocks[idx] = appState.arrangementBlocks[targetIdx];
-  appState.arrangementBlocks[targetIdx] = temp;
-
-  renderArrangementBlocksUI();
-  drawWaveformTimeline();
-  showToast(`↔️ Moved "${temp.name}" to position #${targetIdx + 1}`);
-}
-
 function deleteBlock(idx) {
-  if (!appState.arrangementBlocks) return;
-  if (appState.arrangementBlocks.length <= 1) {
-    showToast("⚠️ You must have at least one block in the mix.");
-    return;
-  }
-
+  if (!appState.arrangementBlocks || !appState.arrangementBlocks[idx]) return;
   const removed = appState.arrangementBlocks.splice(idx, 1)[0];
-  renderArrangementBlocksUI();
+  renderTimelineLineUI();
   drawWaveformTimeline();
-  showToast(`✂️ Cut out / deleted "${removed.name}"`);
+  showToast(`✂️ Removed "${removed.name}" from timeline.`);
 }
 
 async function soloBlock(idx) {
@@ -1435,15 +1649,36 @@ async function soloBlock(idx) {
     return;
   }
 
-  // Highlight this card
-  document.querySelectorAll('.music-block-card').forEach(c => c.classList.remove('active-playing'));
-  const card = document.getElementById(`blockCard_${idx}`);
-  if (card) card.classList.add('active-playing');
+  // Highlight pill on line
+  document.querySelectorAll('.timeline-item-pill').forEach(c => c.classList.remove('active-playing'));
+  const pill = document.getElementById(`timelinePill_${idx}`);
+  if (pill) pill.classList.add('active-playing');
 
   showToast(`🔊 Solo audition: ${blk.name} (${blk.startTime.toFixed(2)}s - ${blk.endTime.toFixed(2)}s)`);
 
   await appState.engine.playBlockSolo(blk, buf, () => {
-    if (card) card.classList.remove('active-playing');
+    if (pill) pill.classList.remove('active-playing');
+  });
+}
+
+async function soloPalettePart(partId) {
+  const catalog = getDetectedSongPartsCatalog();
+  const part = catalog.find(p => p.id === partId);
+  if (!part) return;
+
+  const buf = await ensureTrackBBuffer();
+  if (!buf) {
+    showToast("⚠️ Loading audio buffer for solo audition...");
+    return;
+  }
+
+  const card = document.getElementById(`palette_${partId}`);
+  if (card) card.style.borderColor = 'var(--accent-emerald)';
+
+  showToast(`🔊 Solo audition: ${part.name} (${part.startTime.toFixed(2)}s - ${part.endTime.toFixed(2)}s)`);
+
+  await appState.engine.playBlockSolo(part, buf, () => {
+    if (card) card.style.borderColor = '';
   });
 }
 
@@ -1453,41 +1688,24 @@ function resetBlocksToPreset(preset) {
   if (preset === 'default_rep') {
     appState.arrangementBlocks = getDefaultKalaChashmaBlocks(true);
     document.getElementById('presetBlockRep1')?.classList.add('active');
-    showToast("⭐ Preset Applied: Bar 1 Brass Hook Repeat (Verified Choreo)");
+    showToast("⭐ Preset Applied: Bar 1 Brass Hook Repeated (Verified Choreo)");
   } else if (preset === 'two_bar_rep') {
     const blocks = getDefaultKalaChashmaBlocks(false);
-    // Duplicate both Bar 1 and Bar 2
-    const bar1Dup = {
-      id: 'bar_1_dup',
-      name: 'Bar 1 Repeat: Opening Brass',
-      desc: 'Repeated opening hook',
-      tag: 'REPEAT',
-      tagColor: '#f59e0b',
-      startTime: 0.00,
-      endTime: 2.243,
-      isDuplicated: true
-    };
-    const bar2Dup = {
-      id: 'bar_2_dup',
-      name: 'Bar 2 Repeat: Brass Phrase',
-      desc: 'Repeated second brass bar',
-      tag: 'REPEAT',
-      tagColor: '#f59e0b',
-      startTime: 2.243,
-      endTime: 4.486,
-      isDuplicated: true
-    };
+    const catalog = getDetectedSongPartsCatalog();
+    // Insert repeated Bar 1 & Bar 2
+    const bar1Dup = { ...catalog[0], id: 'bar_1_dup', name: 'Bar 1 Repeat: Opening Brass', tag: 'REPEAT', tagColor: '#f59e0b', isDuplicated: true };
+    const bar2Dup = { ...catalog[1], id: 'bar_2_dup', name: 'Bar 2 Repeat: Brass Phrase', tag: 'REPEAT', tagColor: '#f59e0b', isDuplicated: true };
     blocks.splice(2, 0, bar1Dup, bar2Dup);
     appState.arrangementBlocks = blocks;
     document.getElementById('presetBlockRep2')?.classList.add('active');
-    showToast("⭐ Preset Applied: Bars 1-2 Full Hook Repeat");
+    showToast("⭐ Preset Applied: Bars 1-2 Hook Repeated");
   } else if (preset === 'straight') {
     appState.arrangementBlocks = getDefaultKalaChashmaBlocks(false);
     document.getElementById('presetBlockStraight')?.classList.add('active');
-    showToast("↺ Preset Applied: Straight Original Song (No Repeated Bars)");
+    showToast("↺ Preset Applied: Straight Full Original Song");
   }
 
-  renderArrangementBlocksUI();
+  renderTimelineLineUI();
   drawWaveformTimeline();
 }
 
@@ -1541,9 +1759,9 @@ function submitCustomSlice() {
   appState.arrangementBlocks.push(newBlock);
 
   closeAddSliceModal();
-  renderArrangementBlocksUI();
+  renderTimelineLineUI();
   drawWaveformTimeline();
-  showToast(`➕ Added custom piece: "${name}" (${(endTime - startTime).toFixed(2)}s)`);
+  showToast(`➕ Added custom slice "${name}" onto your timeline line!`);
 }
 
 let auditionTimer = null;
@@ -1683,6 +1901,7 @@ function initKalaChashmaDefaultState() {
 }
 
 async function preloadAudioBuffersInBackground() {
+  // Pre-load Deck B (Official YouTube Song)
   try {
     let respB = await fetch('/kala_chashma_official.m4a');
     if (!respB.ok) respB = await fetch('/kala_chashma_official.wav');
@@ -1693,12 +1912,32 @@ async function preloadAudioBuffersInBackground() {
       if (appState.trackB) {
         appState.trackB.buffer = bufferB;
         appState.trackB.analysis = analysisB;
-        drawWaveformTimeline();
+        updateTrackCardUI('B', appState.trackB);
       }
     }
   } catch (e) {
-    console.log("Background audio decode note:", e.message);
+    console.log("Background audio decode note B:", e.message);
   }
+
+  // Pre-load Deck A (Performance video audio)
+  try {
+    let respA = await fetch('/performance_audio.m4a');
+    if (!respA.ok) respA = await fetch('/performance_audio.wav');
+    if (respA.ok) {
+      const arrayBufA = await respA.arrayBuffer();
+      const bufferA = await appState.engine.decodeAudio(arrayBufA);
+      const analysisA = appState.engine.analyzeTrack(bufferA);
+      if (appState.trackA) {
+        appState.trackA.buffer = bufferA;
+        appState.trackA.analysis = analysisA;
+        updateTrackCardUI('A', appState.trackA);
+      }
+    }
+  } catch (e) {
+    console.log("Background audio decode note A:", e.message);
+  }
+
+  drawWaveformTimeline();
 }
 
 async function ensureTrackBBuffer() {
@@ -1820,9 +2059,14 @@ async function playViaWebAudioEngine() {
   appState.isPlaying = true;
 
   const playBtn = document.getElementById('playFullBtn');
+  const timelinePlayBtn = document.getElementById('timelinePlayBtn');
   if (playBtn) {
     playBtn.innerHTML = '<span>⏸</span> Pause Full Mix';
     playBtn.classList.add('active');
+  }
+  if (timelinePlayBtn) {
+    timelinePlayBtn.innerHTML = '<span>⏸</span> Pause Timeline';
+    timelinePlayBtn.classList.add('active');
   }
 
   const config = {
@@ -1845,10 +2089,13 @@ async function playViaWebAudioEngine() {
       appState.playbackPosition = elapsed;
       drawWaveformTimeline(elapsed);
 
-      // Highlight active block card in real-time
+      // Highlight active block card on timeline in real-time
       if (activeIdx !== undefined) {
-        const cards = document.querySelectorAll('.music-block-card');
-        cards.forEach((card, idx) => {
+        document.querySelectorAll('.timeline-item-pill').forEach((pill, idx) => {
+          if (idx === activeIdx) pill.classList.add('active-playing');
+          else pill.classList.remove('active-playing');
+        });
+        document.querySelectorAll('.music-block-card').forEach((card, idx) => {
           if (idx === activeIdx) card.classList.add('active-playing');
           else card.classList.remove('active-playing');
         });
@@ -1883,13 +2130,19 @@ function triggerStopPlayback() {
     appState.playheadAnimationId = null;
   }
 
-  // Remove active-playing highlight from cards
+  // Remove active-playing highlight from cards & pills
+  document.querySelectorAll('.timeline-item-pill').forEach(c => c.classList.remove('active-playing'));
   document.querySelectorAll('.music-block-card').forEach(c => c.classList.remove('active-playing'));
 
   const playBtn = document.getElementById('playFullBtn');
   if (playBtn) {
     playBtn.innerHTML = '<span>▶</span> Play Full Mix';
     playBtn.classList.remove('active');
+  }
+  const timelinePlayBtn = document.getElementById('timelinePlayBtn');
+  if (timelinePlayBtn) {
+    timelinePlayBtn.innerHTML = '<span>▶</span> Play My Timeline';
+    timelinePlayBtn.classList.remove('active');
   }
 
   drawWaveformTimeline(null);
