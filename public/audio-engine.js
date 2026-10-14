@@ -693,8 +693,9 @@ class AudioRemixEngine {
     const startA = Math.max(0, spliceTimeA - previewPreRoll);
     const actualPreRoll = spliceTimeA - startA;
 
-    const canUseStudio = useStudioMasterForChoreo && trackB && trackB.buffer && (trackB.buffer.duration > (studioStartOffset + startA));
-    const bufferA = canUseStudio ? trackB.buffer : trackA.buffer;
+    const isMultiSong = config.mode === 'medley' || (trackA && trackB && trackA.name !== trackB.name);
+    const canUseStudio = !isMultiSong && useStudioMasterForChoreo && trackB && trackB.buffer && (trackB.buffer.duration > (studioStartOffset + startA));
+    const bufferA = canUseStudio ? trackB.buffer : (trackA ? trackA.buffer : null);
     const startOffsetA = canUseStudio ? (studioStartOffset + startA) : startA;
 
     const sourceA = this.ctx.createBufferSource();
@@ -710,34 +711,127 @@ class AudioRemixEngine {
     const transitionStartTime = now + actualPreRoll;
     const transitionEndTime = transitionStartTime + crossfadeDuration;
 
-    if (transitionType === 'bass_swap') {
+    if (transitionType === 'drum_riser') {
+      // 1. Drum Roll & DJ Impact Drop (Recommended for Dance Battles)
+      const riserDuration = Math.min(1.5, actualPreRoll);
+      const riserStart = transitionStartTime - riserDuration;
+
+      filterA.type = 'lowpass';
+      filterA.frequency.setValueAtTime(20000, now);
+      filterA.frequency.exponentialRampToValueAtTime(4000, riserStart);
+      filterA.frequency.exponentialRampToValueAtTime(800, transitionStartTime);
+
+      gainA.gain.setValueAtTime(1.0, now);
+      gainA.gain.setValueAtTime(1.0, riserStart);
+      gainA.gain.linearRampToValueAtTime(0.001, transitionStartTime);
+
+      // Accelerating 16th-note snare riser
+      const riserGain = this.ctx.createGain();
+      riserGain.gain.setValueAtTime(0.01, riserStart);
+      riserGain.gain.exponentialRampToValueAtTime(0.85, transitionStartTime - 0.05);
+      riserGain.gain.linearRampToValueAtTime(0.001, transitionStartTime);
+      riserGain.connect(this.ctx.destination);
+
+      const sixteenth = (60 / 107) / 4;
+      for (let t = riserStart; t < transitionStartTime; t += sixteenth) {
+        const osc = this.ctx.createOscillator();
+        const oscGain = this.ctx.createGain();
+        osc.type = 'triangle';
+        const prog = (t - riserStart) / riserDuration;
+        osc.frequency.setValueAtTime(160 + prog * 240, t);
+        oscGain.gain.setValueAtTime(0.3 + prog * 0.4, t);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+        osc.connect(oscGain);
+        oscGain.connect(riserGain);
+        osc.start(t);
+        osc.stop(t + 0.05);
+      }
+
+      // Sub-bass impact drop on Song B downbeat
+      const subOsc = this.ctx.createOscillator();
+      const subGain = this.ctx.createGain();
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(130, transitionStartTime);
+      subOsc.frequency.exponentialRampToValueAtTime(40, transitionStartTime + 0.45);
+      subGain.gain.setValueAtTime(0.85, transitionStartTime);
+      subGain.gain.exponentialRampToValueAtTime(0.001, transitionStartTime + 0.65);
+      subOsc.connect(subGain);
+      subGain.connect(this.ctx.destination);
+      subOsc.start(transitionStartTime);
+      subOsc.stop(transitionStartTime + 0.7);
+
+      gainB.gain.setValueAtTime(0.001, transitionStartTime);
+      gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.01);
+
+    } else if (transitionType === 'vinyl_brake') {
+      // 2. Vinyl Brake / Tape Stop
+      const brakeDuration = Math.min(0.65, actualPreRoll);
+      const brakeStart = transitionStartTime - brakeDuration;
+
+      sourceA.playbackRate.setValueAtTime(1.0, now);
+      sourceA.playbackRate.setValueAtTime(1.0, brakeStart);
+      sourceA.playbackRate.exponentialRampToValueAtTime(0.02, transitionStartTime - 0.06);
+
+      gainA.gain.setValueAtTime(1.0, now);
+      gainA.gain.setValueAtTime(1.0, brakeStart);
+      gainA.gain.linearRampToValueAtTime(0.001, transitionStartTime);
+
+      gainB.gain.setValueAtTime(0.001, transitionStartTime);
+      gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.04);
+
+    } else if (transitionType === 'echo_out') {
+      // 3. Echo Out & Reverb Wash
+      const delay = this.ctx.createDelay();
+      const delayFeedback = this.ctx.createGain();
+      const delayFilter = this.ctx.createBiquadFilter();
+
+      delay.delayTime.value = 0.28;
+      delayFeedback.gain.value = 0.55;
+      delayFilter.type = 'lowpass';
+      delayFilter.frequency.value = 3500;
+
+      delay.connect(delayFilter);
+      delayFilter.connect(delayFeedback);
+      delayFeedback.connect(delay);
+      delay.connect(this.ctx.destination);
+
+      sourceA.connect(delay);
+
+      const echoStart = transitionStartTime - 0.4;
+      gainA.gain.setValueAtTime(1.0, now);
+      gainA.gain.setValueAtTime(1.0, echoStart);
+      gainA.gain.linearRampToValueAtTime(0.001, transitionStartTime);
+
+      delayFeedback.gain.setValueAtTime(0.55, transitionStartTime);
+      delayFeedback.gain.linearRampToValueAtTime(0.001, transitionStartTime + 1.8);
+
+      gainB.gain.setValueAtTime(0.001, transitionStartTime);
+      gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.04);
+
+    } else if (transitionType === 'bass_swap') {
+      // 4. Frequency Filter / Bass Swap
       filterA.type = 'highpass';
       filterA.frequency.setValueAtTime(20, now);
-      filterA.frequency.exponentialRampToValueAtTime(800, transitionEndTime);
+      filterA.frequency.exponentialRampToValueAtTime(900, transitionEndTime);
 
       filterB.type = 'lowpass';
-      filterB.frequency.setValueAtTime(200, transitionStartTime);
-      filterB.frequency.exponentialRampToValueAtTime(20000, transitionEndTime + 1.0);
+      filterB.frequency.setValueAtTime(250, transitionStartTime);
+      filterB.frequency.exponentialRampToValueAtTime(20000, transitionEndTime + 0.8);
 
       gainA.gain.setValueAtTime(1.0, now);
       gainA.gain.linearRampToValueAtTime(0.001, transitionEndTime);
 
       gainB.gain.setValueAtTime(0.001, transitionStartTime);
       gainB.gain.linearRampToValueAtTime(1.0, transitionEndTime);
-    } else if (transitionType === 'quick_cut') {
-      gainA.gain.setValueAtTime(1.0, now);
-      gainA.gain.setValueAtTime(1.0, transitionStartTime);
-      gainA.gain.linearRampToValueAtTime(0.001, transitionStartTime + 0.05);
 
-      gainB.gain.setValueAtTime(0.001, transitionStartTime);
-      gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.05);
     } else {
+      // 5. Sudden Punch Cut
       gainA.gain.setValueAtTime(1.0, now);
       gainA.gain.setValueAtTime(1.0, transitionStartTime);
-      gainA.gain.exponentialRampToValueAtTime(0.001, transitionStartTime + Math.max(0.1, crossfadeDuration));
+      gainA.gain.linearRampToValueAtTime(0.001, transitionStartTime + 0.02);
 
       gainB.gain.setValueAtTime(0.001, transitionStartTime);
-      gainB.gain.exponentialRampToValueAtTime(1.0, transitionStartTime + Math.max(0.1, crossfadeDuration));
+      gainB.gain.setValueAtTime(1.0, transitionStartTime + 0.02);
     }
 
     sourceA.connect(filterA);
@@ -841,7 +935,14 @@ class AudioRemixEngine {
           const blkDur = Math.max(0.05, blk.endTime - blk.startTime);
           const src = this.ctx.createBufferSource();
           let blkBuf = activeBuf;
-          if (useStudioMasterForChoreo && trackB && trackB.buffer) {
+          const isMultiSong = config.mode === 'medley' || (trackA && trackB && trackA.name !== trackB.name);
+          if (isMultiSong) {
+            if (blk.sourceTrack === 'B' && trackB && trackB.buffer) {
+              blkBuf = trackB.buffer;
+            } else if (blk.sourceTrack === 'A' && trackA && trackA.buffer) {
+              blkBuf = trackA.buffer;
+            }
+          } else if (useStudioMasterForChoreo && trackB && trackB.buffer) {
             blkBuf = trackB.buffer;
           } else if (blk.sourceTrack === 'A' && trackA && trackA.buffer) {
             blkBuf = trackA.buffer;
@@ -1092,21 +1193,110 @@ class AudioRemixEngine {
         const totalFrames = Math.max(1, Math.floor(sampleRate * totalDuration));
         const offlineCtx = new OfflineAudioContext(2, totalFrames, sampleRate);
 
+        // Studio Multi-Band Audio Mastering Chain
+        const hp = offlineCtx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = 32;
+
+        const bass = offlineCtx.createBiquadFilter();
+        bass.type = 'lowshelf';
+        bass.frequency.value = 75;
+        bass.gain.value = 2.6;
+
+        const demud = offlineCtx.createBiquadFilter();
+        demud.type = 'peaking';
+        demud.frequency.value = 320;
+        demud.gain.value = -2.2;
+        demud.Q.value = 1.2;
+
+        const presence = offlineCtx.createBiquadFilter();
+        presence.type = 'peaking';
+        presence.frequency.value = 3400;
+        presence.gain.value = 3.2;
+        presence.Q.value = 1.1;
+
+        const air = offlineCtx.createBiquadFilter();
+        air.type = 'highshelf';
+        air.frequency.value = 10500;
+        air.gain.value = 3.6;
+
+        hp.connect(bass);
+        bass.connect(demud);
+        demud.connect(presence);
+        presence.connect(air);
+        air.connect(offlineCtx.destination);
+
         let currentMixTime = 0;
-        for (let blk of blocks) {
+        for (let i = 0; i < blocks.length; i++) {
+          const blk = blocks[i];
           const blkDur = Math.max(0.05, blk.endTime - blk.startTime);
           const src = offlineCtx.createBufferSource();
           let blkBuf = activeBuf;
-          if (useStudioMasterForChoreo && trackB && trackB.buffer) {
+
+          // In multi-song or dance-off mode, strictly honor the block's source track
+          const isMultiSong = config.mode === 'medley' || (trackA && trackB && trackA.name !== trackB.name);
+          if (isMultiSong) {
+            if (blk.sourceTrack === 'B' && trackB && trackB.buffer) {
+              blkBuf = trackB.buffer;
+            } else if (blk.sourceTrack === 'A' && trackA && trackA.buffer) {
+              blkBuf = trackA.buffer;
+            }
+          } else if (useStudioMasterForChoreo && trackB && trackB.buffer) {
             blkBuf = trackB.buffer;
           } else if (blk.sourceTrack === 'A' && trackA && trackA.buffer) {
             blkBuf = trackA.buffer;
           } else if (blk.sourceTrack === 'B' && trackB && trackB.buffer) {
             blkBuf = trackB.buffer;
           }
+
           src.buffer = blkBuf;
-          src.connect(offlineCtx.destination);
+          src.connect(hp);
           src.start(currentMixTime, blk.startTime, blkDur);
+
+          // Check if this block transitions from Track A to Track B
+          const nextBlk = blocks[i + 1];
+          if (nextBlk && blk.sourceTrack === 'A' && nextBlk.sourceTrack === 'B') {
+            const transSpot = currentMixTime + blkDur;
+            if (config.transitionType === 'drum_riser') {
+              // Synthesize drum riser and sub-bass drop impact in offline render
+              const riserDur = Math.min(1.5, blkDur);
+              const riserStart = transSpot - riserDur;
+              const riserGain = offlineCtx.createGain();
+              riserGain.gain.setValueAtTime(0.01, riserStart);
+              riserGain.gain.exponentialRampToValueAtTime(0.8, transSpot - 0.05);
+              riserGain.gain.linearRampToValueAtTime(0.001, transSpot);
+              riserGain.connect(hp);
+
+              const sixteenth = (60 / 107) / 4;
+              for (let t = riserStart; t < transSpot; t += sixteenth) {
+                const osc = offlineCtx.createOscillator();
+                const oGain = offlineCtx.createGain();
+                osc.type = 'triangle';
+                const p = (t - riserStart) / riserDur;
+                osc.frequency.setValueAtTime(160 + p * 240, t);
+                oGain.gain.setValueAtTime(0.3 + p * 0.4, t);
+                oGain.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+                osc.connect(oGain);
+                oGain.connect(riserGain);
+                osc.start(t);
+                osc.stop(t + 0.05);
+              }
+
+              // Sub-bass impact drop
+              const subOsc = offlineCtx.createOscillator();
+              const subGain = offlineCtx.createGain();
+              subOsc.type = 'sine';
+              subOsc.frequency.setValueAtTime(130, transSpot);
+              subOsc.frequency.exponentialRampToValueAtTime(40, transSpot + 0.45);
+              subGain.gain.setValueAtTime(0.85, transSpot);
+              subGain.gain.exponentialRampToValueAtTime(0.001, transSpot + 0.65);
+              subOsc.connect(subGain);
+              subGain.connect(hp);
+              subOsc.start(transSpot);
+              subOsc.stop(transSpot + 0.7);
+            }
+          }
+
           currentMixTime += blkDur;
         }
 

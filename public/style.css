@@ -2843,4 +2843,272 @@ canvas#waveformCanvas {
   font-weight: 900;
 }
 
+/* ======================================================== */
+/* ⚡ DANCE-OFF BATTLE TRANSITION METHODS PANEL             */
+/* ======================================================== */
+.btn-starter-battle {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.2), rgba(245, 158, 11, 0.2)) !important;
+  border-color: rgba(249, 115, 22, 0.5) !important;
+  color: #fed7aa !important;
+  font-weight: 700 !important;
+}
+
+.btn-starter-battle:hover, .btn-starter-battle.active {
+  background: linear-gradient(135deg, #f97316, #ea580c) !important;
+  color: white !important;
+  border-color: #ffedd5 !important;
+  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.45) !important;
+}
+
+.transition-methods-panel {
+  background: linear-gradient(180deg, rgba(24, 24, 27, 0.95), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin: 14px 0;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.transition-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.battle-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  color: white;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.transition-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.transition-heading-row h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.active-method-tag {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+.transition-title-group p {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+}
+
+.btn-audition-active-transition {
+  background: linear-gradient(135deg, #06b6d4, #0284c7);
+  color: white;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+}
+
+.btn-audition-active-transition:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(6, 182, 212, 0.5);
+}
+
+.transition-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 10px;
+}
+
+.transition-method-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.transition-method-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(249, 115, 22, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.transition-method-card.active {
+  background: linear-gradient(180deg, rgba(249, 115, 22, 0.15), rgba(234, 88, 12, 0.08));
+  border-color: #f97316;
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.method-card-badge {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #fb923c;
+  opacity: 0.9;
+}
+
+.method-card-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.method-card-icon {
+  font-size: 18px;
+}
+
+.method-card-top h4 {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.method-card-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+  flex-grow: 1;
+}
+
+.method-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.btn-method-audition {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-method-audition:hover {
+  background: #06b6d4;
+  border-color: #38bdf8;
+  color: white;
+}
+
+.method-selected-indicator {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #34d399;
+  display: none;
+}
+
+.transition-method-card.active .method-selected-indicator {
+  display: inline-block;
+}
+
+.btn-audition-trans-transport {
+  background: linear-gradient(135deg, #f97316, #ea580c) !important;
+  color: white !important;
+  border: 1px solid rgba(253, 186, 116, 0.5) !important;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.4) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  padding: 11px 16px !important;
+  border-radius: 10px !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-audition-trans-transport:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.6) !important;
+}
+
+/* Battle Connector in Timeline */
+.timeline-item-connector.battle-connector {
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  transition: all 0.2s ease;
+}
+
+.timeline-item-connector.battle-connector:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 18px rgba(249, 115, 22, 0.9);
+}
+
+.transition-method-card.auditioning {
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.6) !important;
+  animation: pulse-audition 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-audition {
+  from {
+    transform: translateY(-2px) scale(1);
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
+  }
+  to {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 0 24px rgba(6, 182, 212, 0.8);
+  }
+}
+
+
 

@@ -96,6 +96,11 @@ function switchRemixMode(mode) {
     document.getElementById('crossfadeDurationVal').innerText = "4.0s";
   }
 
+  const transPanel = document.getElementById('transitionMethodsPanel');
+  if (transPanel) {
+    transPanel.style.display = (mode === 'medley') ? 'block' : 'none';
+  }
+
   if (appState.trackA && appState.trackB) {
     runRemixAnalysis();
   }
@@ -1703,6 +1708,133 @@ const WEDDING_SONG_CATALOG = {
         ]
       }
     ]
+  },
+  tauba_tauba_movie1: {
+    id: 'tauba_tauba_movie1',
+    name: 'Tauba Tauba (Movie 1 - Team 1)',
+    shortName: 'Tauba Tauba (Movie 1)',
+    bpm: 107,
+    keyInfo: { camelot: '10A', keyName: 'B Minor' },
+    duration: 32.92,
+    audioUrl: '/tauba_tauba_movie1.m4a',
+    sections: [
+      {
+        id: 'tt1_sec_intro',
+        name: 'Opening Beat & Team 1 Entrance (Bars 1-4)',
+        desc: 'Intro groove & Team 1 dance floor entrance (0:00 - 8.97s)',
+        tag: 'INTRO',
+        tagColor: '#a855f7',
+        startTime: 0.00,
+        endTime: 8.972,
+        songName: 'Tauba Tauba (Movie 1)',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'tt1_bar_1_2', name: 'Bars 1-2: Opening Beat Stems', desc: 'Entrance setup beat (8 counts)', tag: 'INTRO', tagColor: '#a855f7', startTime: 0.00, endTime: 4.486, songName: 'Tauba Tauba (Movie 1)', sourceTrack: 'A' },
+          { id: 'tt1_bar_3_4', name: 'Bars 3-4: Synth Horns & Floor Takeover', desc: 'Team 1 takes dance floor', tag: 'INTRO', tagColor: '#a855f7', startTime: 4.486, endTime: 8.972, songName: 'Tauba Tauba (Movie 1)', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'tt1_sec_verse',
+        name: 'Lead Verse Choreography (Bars 5-8)',
+        desc: 'Main vocal verse & synchronized footwork (8.97s - 17.94s)',
+        tag: 'VERSE',
+        tagColor: '#06b6d4',
+        startTime: 8.972,
+        endTime: 17.944,
+        songName: 'Tauba Tauba (Movie 1)',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'tt1_bar_5_6', name: 'Bars 5-6: Verse Vocal Lines', desc: 'Main vocal line choreography', tag: 'VERSE', tagColor: '#06b6d4', startTime: 8.972, endTime: 13.458, songName: 'Tauba Tauba (Movie 1)', sourceTrack: 'A' },
+          { id: 'tt1_bar_7_8', name: 'Bars 7-8: Build to Signature Hook', desc: 'Pre-chorus rising energy', tag: 'BUILD', tagColor: '#ec4899', startTime: 13.458, endTime: 17.944, songName: 'Tauba Tauba (Movie 1)', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'tt1_sec_chorus',
+        name: 'Signature "Tauba Tauba" Hook Climax (Bars 9-12)',
+        desc: 'Team 1 signature viral hook & battle challenge (17.94s - 26.92s)',
+        tag: 'CHORUS',
+        tagColor: '#f97316',
+        startTime: 17.944,
+        endTime: 26.916,
+        songName: 'Tauba Tauba (Movie 1)',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'tt1_bar_9_10', name: 'Bars 9-10: "Tauba Tauba" Main Hook', desc: 'Viral hand hook moves (Team 1 peak)', tag: 'CHORUS', tagColor: '#f97316', startTime: 17.944, endTime: 22.430, songName: 'Tauba Tauba (Movie 1)', sourceTrack: 'A' },
+          { id: 'tt1_bar_11_12', name: 'Bars 11-12: Hook Response & Challenge Pose', desc: 'Battle challenge pose & handover', tag: 'CHORUS', tagColor: '#f97316', startTime: 22.430, endTime: 26.916, songName: 'Tauba Tauba (Movie 1)', sourceTrack: 'A' }
+        ]
+      },
+      {
+        id: 'tt1_sec_outro',
+        name: 'Extended Beat / Handover to Team 2 (Bars 13-14)',
+        desc: 'Transition groove & riser into Team 2 (26.92s - 32.92s)',
+        tag: 'OUTRO',
+        tagColor: '#10b981',
+        startTime: 26.916,
+        endTime: 32.924,
+        songName: 'Tauba Tauba (Movie 1)',
+        sourceTrack: 'A',
+        subParts: [
+          { id: 'tt1_bar_13_14', name: 'Bars 13-14: Outro Riser Beat', desc: 'Riser into transition point', tag: 'OUTRO', tagColor: '#10b981', startTime: 26.916, endTime: 31.402, songName: 'Tauba Tauba (Movie 1)', sourceTrack: 'A' },
+          { id: 'tt1_bar_tail', name: 'Final Beat Decay & Drop Handover', desc: 'Drop handover to Team 2', tag: 'OUTRO', tagColor: '#10b981', startTime: 31.402, endTime: 32.924, songName: 'Tauba Tauba (Movie 1)', sourceTrack: 'A' }
+        ]
+      }
+    ]
+  },
+  tauba_tauba_movie2: {
+    id: 'tauba_tauba_movie2',
+    name: 'Tauba Tauba (Movie 2 - Team 2)',
+    shortName: 'Tauba Tauba (Movie 2)',
+    bpm: 112,
+    keyInfo: { camelot: '10A', keyName: 'B Minor' },
+    duration: 17.46,
+    audioUrl: '/tauba_tauba_movie2.m4a',
+    sections: [
+      {
+        id: 'tt2_sec_entry',
+        name: 'Team 2 Battle Entry & Heavy Beat Slam (Bars 1-2)',
+        desc: 'Team 2 charges the dance floor with explosive rhythm (0:00 - 4.29s)',
+        tag: 'DROP',
+        tagColor: '#10b981',
+        startTime: 0.00,
+        endTime: 4.286,
+        songName: 'Tauba Tauba (Movie 2)',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'tt2_bar_1', name: 'Bar 1: Downbeat Takeover & Slam', desc: 'Team 2 downbeat entrance (4 beats)', tag: 'DROP', tagColor: '#10b981', startTime: 0.00, endTime: 2.143, songName: 'Tauba Tauba (Movie 2)', sourceTrack: 'B' },
+          { id: 'tt2_bar_2', name: 'Bar 2: Dhol Roll & Battle Turn', desc: 'Dhol turnaround choreography', tag: 'DROP', tagColor: '#10b981', startTime: 2.143, endTime: 4.286, songName: 'Tauba Tauba (Movie 2)', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'tt2_sec_hook',
+        name: 'Team 2 "Tauba Tauba" Counter-Hook (Bars 3-5)',
+        desc: 'Energetic counter-routine & vocal hook response (4.29s - 10.71s)',
+        tag: 'CHORUS',
+        tagColor: '#f97316',
+        startTime: 4.286,
+        endTime: 10.714,
+        songName: 'Tauba Tauba (Movie 2)',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'tt2_bar_3_4', name: 'Bars 3-4: Counter-Hook Choreography', desc: 'Team 2 signature dance answer', tag: 'CHORUS', tagColor: '#f97316', startTime: 4.286, endTime: 8.571, songName: 'Tauba Tauba (Movie 2)', sourceTrack: 'B' },
+          { id: 'tt2_bar_5', name: 'Bar 5: High-Speed Vocal Spin', desc: 'Spin transition into climax', tag: 'BUILD', tagColor: '#ec4899', startTime: 8.571, endTime: 10.714, songName: 'Tauba Tauba (Movie 2)', sourceTrack: 'B' }
+        ]
+      },
+      {
+        id: 'tt2_sec_finale',
+        name: 'Grand Dance-Off Climax & Joint Bow (Bars 6-8)',
+        desc: 'Both teams join together for final celebration drop (10.71s - 17.46s)',
+        tag: 'FINALE',
+        tagColor: '#a855f7',
+        startTime: 10.714,
+        endTime: 17.460,
+        songName: 'Tauba Tauba (Movie 2)',
+        sourceTrack: 'B',
+        subParts: [
+          { id: 'tt2_bar_6_7', name: 'Bars 6-7: Double-Time Finale Drop', desc: 'High energy fast footwork', tag: 'FINALE', tagColor: '#a855f7', startTime: 10.714, endTime: 15.000, songName: 'Tauba Tauba (Movie 2)', sourceTrack: 'B' },
+          { id: 'tt2_bar_8', name: 'Bar 8: Grand Bow & Confetti Pose', desc: 'Final pose & crowd cheer cutoff', tag: 'FINALE', tagColor: '#a855f7', startTime: 15.000, endTime: 17.460, songName: 'Tauba Tauba (Movie 2)', sourceTrack: 'B' }
+        ]
+      }
+    ]
   }
 };
 
@@ -1770,8 +1902,9 @@ function getDetectedSongPartsCatalog() {
 
 function getAllSongPartsAndSections() {
   const secs = getSongSectionsCatalog();
+  const subParts = secs.flatMap(s => s.subParts || []);
   const parts = getDetectedSongPartsCatalog();
-  return [...secs, ...parts];
+  return [...secs, ...subParts, ...parts];
 }
 
 function setPaletteFilter(filter) {
@@ -1801,6 +1934,34 @@ async function loadSongBuffer(songId) {
       appState._cachedSauda = await appState.demoGen.generateCelebrationSong();
     }
     return appState._cachedSauda;
+  } else if (songId === 'tauba_tauba_movie1') {
+    if (!appState._cachedTauba1) {
+      try {
+        const resp = await fetch('/tauba_tauba_movie1.m4a');
+        const ab = await resp.arrayBuffer();
+        appState._cachedTauba1 = await appState.engine.ctx.decodeAudioData(ab);
+      } catch (e) {
+        console.warn("Could not load tauba 1 m4a, trying wav:", e);
+        const resp2 = await fetch('/tauba_tauba_movie1.wav');
+        const ab2 = await resp2.arrayBuffer();
+        appState._cachedTauba1 = await appState.engine.ctx.decodeAudioData(ab2);
+      }
+    }
+    return appState._cachedTauba1;
+  } else if (songId === 'tauba_tauba_movie2') {
+    if (!appState._cachedTauba2) {
+      try {
+        const resp = await fetch('/tauba_tauba_movie2.m4a');
+        const ab = await resp.arrayBuffer();
+        appState._cachedTauba2 = await appState.engine.ctx.decodeAudioData(ab);
+      } catch (e) {
+        console.warn("Could not load tauba 2 m4a, trying wav:", e);
+        const resp2 = await fetch('/tauba_tauba_movie2.wav');
+        const ab2 = await resp2.arrayBuffer();
+        appState._cachedTauba2 = await appState.engine.ctx.decodeAudioData(ab2);
+      }
+    }
+    return appState._cachedTauba2;
   } else if (songId === 'choreo_demo') {
     if (!appState._cachedChoreoDemo) {
       appState._cachedChoreoDemo = await appState.demoGen.generateChoreoEdit();
@@ -1808,6 +1969,73 @@ async function loadSongBuffer(songId) {
     return appState._cachedChoreoDemo;
   }
   return await ensureTrackBBuffer();
+}
+
+function getTaubaTaubaDanceOffBlocks() {
+  const song1 = WEDDING_SONG_CATALOG['tauba_tauba_movie1'];
+  const song2 = WEDDING_SONG_CATALOG['tauba_tauba_movie2'];
+
+  const blocks = [];
+
+  // Team 1 Sequence (Tauba Tauba Movie 1): 0:00 to 22.43s
+  // 1. Intro Hook (Bars 1-4)
+  if (song1 && song1.sections[0]) {
+    blocks.push({
+      ...song1.sections[0],
+      sourceTrack: 'A',
+      songId: 'tauba_tauba_movie1',
+      teamLabel: '🕺 Team 1 (Movie 1)'
+    });
+  }
+  // 2. Verse Choreography (Bars 5-8)
+  if (song1 && song1.sections[1]) {
+    blocks.push({
+      ...song1.sections[1],
+      sourceTrack: 'A',
+      songId: 'tauba_tauba_movie1',
+      teamLabel: '🕺 Team 1 (Movie 1)'
+    });
+  }
+  // 3. Signature Hook Climax (Bars 9-10, 17.94s - 22.43s)
+  if (song1 && song1.sections[2] && song1.sections[2].subParts && song1.sections[2].subParts[0]) {
+    blocks.push({
+      ...song1.sections[2].subParts[0],
+      sourceTrack: 'A',
+      songId: 'tauba_tauba_movie1',
+      teamLabel: '🕺 Team 1 (Movie 1)'
+    });
+  }
+
+  // Team 2 Sequence (Tauba Tauba Movie 2): 0:00 to 17.46s
+  // 4. Team 2 Battle Entry (Bars 1-2, 0.0s - 4.29s)
+  if (song2 && song2.sections[0]) {
+    blocks.push({
+      ...song2.sections[0],
+      sourceTrack: 'B',
+      songId: 'tauba_tauba_movie2',
+      teamLabel: '💃 Team 2 (Movie 2)'
+    });
+  }
+  // 5. Team 2 Counter-Hook (Bars 3-5, 4.29s - 10.71s)
+  if (song2 && song2.sections[1]) {
+    blocks.push({
+      ...song2.sections[1],
+      sourceTrack: 'B',
+      songId: 'tauba_tauba_movie2',
+      teamLabel: '💃 Team 2 (Movie 2)'
+    });
+  }
+  // 6. Grand Dance-Off Finale & Bow (Bars 6-8, 10.71s - 17.46s)
+  if (song2 && song2.sections[2]) {
+    blocks.push({
+      ...song2.sections[2],
+      sourceTrack: 'B',
+      songId: 'tauba_tauba_movie2',
+      teamLabel: '💃 Team 2 (Movie 2)'
+    });
+  }
+
+  return blocks;
 }
 
 async function selectMixStarter(starterId) {
@@ -1826,6 +2054,55 @@ async function selectMixStarter(starterId) {
     renderArrangementBlocksUI();
     drawWaveformTimeline();
     showToast("🔥 Loaded Kala Chashma Choreo Extension (Bar 1 Repeat + Outro Extension)!");
+
+  } else if (starterId === 'tauba_dance_off') {
+    switchRemixMode('medley');
+    const selA = document.getElementById('songSelectA');
+    const selB = document.getElementById('songSelectB');
+    if (selA) selA.value = 'tauba_tauba_movie1';
+    if (selB) selB.value = 'tauba_tauba_movie2';
+
+    showToast("⚡ Loading Tauba Tauba ➔ Tauba Tauba Dance-Off Face-Off...");
+    const bufA = await loadSongBuffer('tauba_tauba_movie1');
+    const bufB = await loadSongBuffer('tauba_tauba_movie2');
+
+    appState.trackA = {
+      name: "Tauba Tauba (Movie 1 • Team 1)",
+      buffer: bufA,
+      analysis: { bpm: 107, key: 'B Minor' },
+      source: 'catalog',
+      sourceUrl: '/tauba_tauba_movie1.m4a'
+    };
+    appState.trackB = {
+      name: "Tauba Tauba (Movie 2 • Team 2)",
+      buffer: bufB,
+      analysis: { bpm: 112, key: 'B Minor' },
+      source: 'catalog',
+      sourceUrl: '/tauba_tauba_movie2.m4a'
+    };
+
+    updateTrackCardUI('A', appState.trackA);
+    updateTrackCardUI('B', appState.trackB);
+
+    const statusBadge = document.getElementById('globalStatusName');
+    if (statusBadge) statusBadge.innerText = "Tauba Tauba Face-Off (Movie 1 ➔ Movie 2)";
+
+    appState.activeTransitionConfig = {
+      spliceTimeA: 22.430,
+      spliceTimeB: 0.0,
+      crossfadeDuration: 1.0,
+      transitionType: 'drum_riser'
+    };
+
+    saveUndoState("Load Tauba Tauba Dance-Off Preset");
+    appState.arrangementBlocks = getTaubaTaubaDanceOffBlocks();
+    appState.userHasCustomizedBlocks = true;
+
+    selectTransitionMethod('drum_riser');
+    renderArrangementBlocksUI();
+    drawWaveformTimeline();
+    renderPalette();
+    showToast("⚡ Tauba Tauba Dance-Off loaded! Use transition options below to audition styles.");
 
   } else if (starterId === 'kala_gallan_mashup') {
     switchRemixMode('medley');
@@ -1968,6 +2245,153 @@ function getCuratedMashupBlocks(songAId, songBId) {
   }
 
   return blocks;
+}
+
+/**
+ * ========================================================
+ * ⚡ DANCE-OFF BATTLE TRANSITION SUITE & AUDITION LAB
+ * ========================================================
+ */
+
+function selectTransitionMethod(methodType) {
+  if (!appState.activeTransitionConfig) {
+    appState.activeTransitionConfig = {
+      spliceTimeA: 22.430,
+      spliceTimeB: 0.0,
+      crossfadeDuration: 1.0,
+      transitionType: 'drum_riser'
+    };
+  }
+  appState.activeTransitionConfig.transitionType = methodType;
+
+  // Update card UI
+  document.querySelectorAll('.transition-method-card').forEach(card => card.classList.remove('active'));
+  const activeCard = document.getElementById(`card_method_${methodType}`);
+  if (activeCard) activeCard.classList.add('active');
+
+  const methodNames = {
+    drum_riser: 'Drum Roll & DJ Impact Drop',
+    vinyl_brake: 'Vinyl Brake / Tape Stop',
+    echo_out: 'Echo Out & Reverb Wash',
+    bass_swap: 'Frequency Filter / Bass Swap',
+    quick_cut: 'Sudden Punch Cut'
+  };
+
+  const tag = document.getElementById('activeMethodTag');
+  if (tag) tag.innerText = `Active: ${methodNames[methodType] || methodType}`;
+
+  // Also sync dropdown if available
+  const transSelect = document.getElementById('transitionTypeSelect');
+  if (transSelect) {
+    if ([...transSelect.options].some(o => o.value === methodType)) {
+      transSelect.value = methodType;
+    }
+  }
+
+  showToast(`⚡ Selected Battle Transition: ${methodNames[methodType] || methodType}`);
+}
+
+async function triggerAuditionCurrentTransition() {
+  const method = (appState.activeTransitionConfig && appState.activeTransitionConfig.transitionType) || 'drum_riser';
+  await auditionSpecificTransition(method);
+}
+
+async function auditionSpecificTransition(methodType) {
+  selectTransitionMethod(methodType);
+
+  stopAuditionPlayback();
+  stopArrangementPlayback();
+  const masterAudio = document.getElementById('masterAudioPlayer');
+  if (masterAudio && !masterAudio.paused) masterAudio.pause();
+
+  if (appState.engine && appState.engine.ctx && appState.engine.ctx.state !== 'running') {
+    await appState.engine.ctx.resume().catch(() => {});
+  }
+
+  const methodNames = {
+    drum_riser: 'Drum Roll & DJ Impact Drop',
+    vinyl_brake: 'Vinyl Brake / Tape Stop',
+    echo_out: 'Echo Out & Reverb Wash',
+    bass_swap: 'Frequency Filter / Bass Swap',
+    quick_cut: 'Sudden Punch Cut'
+  };
+
+  showToast(`🎧 Auditioning 5s "${methodNames[methodType] || methodType}" Transition...`);
+
+  // Ensure buffers are loaded for track A and track B
+  if (!appState.trackA || !appState.trackA.buffer) {
+    const bufA = await loadSongBuffer('tauba_tauba_movie1');
+    if (!appState.trackA) {
+      appState.trackA = {
+        name: "Tauba Tauba (Movie 1 • Team 1)",
+        buffer: bufA,
+        analysis: { bpm: 107, key: 'B Minor' },
+        source: 'catalog',
+        sourceUrl: '/tauba_tauba_movie1.m4a'
+      };
+    } else {
+      appState.trackA.buffer = bufA;
+    }
+  }
+  if (!appState.trackB || !appState.trackB.buffer) {
+    const bufB = await loadSongBuffer('tauba_tauba_movie2');
+    if (!appState.trackB) {
+      appState.trackB = {
+        name: "Tauba Tauba (Movie 2 • Team 2)",
+        buffer: bufB,
+        analysis: { bpm: 112, key: 'B Minor' },
+        source: 'catalog',
+        sourceUrl: '/tauba_tauba_movie2.m4a'
+      };
+    } else {
+      appState.trackB.buffer = bufB;
+    }
+  }
+
+  // Calculate actual transition points based on blocks in timeline if available
+  let spliceA = 22.430;
+  let spliceB = 0.0;
+
+  const blocks = appState.arrangementBlocks || [];
+  for (let i = 0; i < blocks.length - 1; i++) {
+    if (blocks[i].sourceTrack === 'A' && blocks[i + 1].sourceTrack === 'B') {
+      spliceA = blocks[i].endTime;
+      spliceB = blocks[i + 1].startTime;
+      break;
+    }
+  }
+
+  const config = {
+    mode: 'medley',
+    spliceTimeA: spliceA,
+    spliceTimeB: spliceB,
+    crossfadeDuration: methodType === 'drum_riser' ? 1.0 : (methodType === 'quick_cut' ? 0.05 : 0.8),
+    transitionType: methodType,
+    previewPreRoll: 3.0,
+    previewPostRoll: 3.0,
+    useStudioMasterForChoreo: false
+  };
+
+  const btn = document.getElementById('btnAuditionActive');
+  if (btn) btn.classList.add('active');
+
+  const card = document.getElementById(`card_method_${methodType}`);
+  if (card) card.classList.add('auditioning');
+
+  try {
+    const res = await appState.engine.previewTransition(appState.trackA, appState.trackB, config);
+    const dur = res && res.auditionDuration ? res.auditionDuration : 6.0;
+
+    setTimeout(() => {
+      if (btn) btn.classList.remove('active');
+      if (card) card.classList.remove('auditioning');
+    }, dur * 1000);
+  } catch (err) {
+    console.error("Audition transition error:", err);
+    if (btn) btn.classList.remove('active');
+    if (card) card.classList.remove('auditioning');
+    showToast("⚠️ Could not play transition audition. Try clicking again.");
+  }
 }
 
 function getDefaultKalaChashmaBlocks(includeDuplicatedIntro = true) {
@@ -2285,7 +2709,11 @@ function renderTimelineLineUI() {
           </button>
         </div>
       </div>
-      ${idx < blocks.length - 1 ? '<span class="timeline-connector">➔</span>' : ''}
+      ${idx < blocks.length - 1 ? (
+        (blk.sourceTrack === 'A' && blocks[idx + 1].sourceTrack === 'B')
+          ? `<span class="timeline-item-connector battle-connector" onclick="triggerAuditionCurrentTransition()" title="⚡ Dance-Off Battle Transition! Click to audition handoff switch">⚡ BATTLE HANDOFF ➔</span>`
+          : '<span class="timeline-connector">➔</span>'
+      ) : ''}
     `;
   }).join('');
 
@@ -2773,7 +3201,7 @@ function executeTimelineDrop(e) {
 }
 
 function addPartToTimeline(partId) {
-  const catalog = getDetectedSongPartsCatalog();
+  const catalog = getAllSongPartsAndSections();
   const part = catalog.find(p => p.id === partId);
   if (!part) return;
 
@@ -2938,8 +3366,18 @@ async function soloBlock(idx) {
 
   const dur = Math.max(0.1, blk.endTime - blk.startTime);
 
-  // 1. Try Web Audio buffer source if buffer is ready and context is running
-  const activeBuf = (appState.trackB && appState.trackB.buffer) || (appState.trackA && appState.trackA.buffer);
+  // 1. Determine correct audio buffer & URL for the block
+  let activeBuf = null;
+  let audioUrl = '/kala_chashma_official.m4a';
+
+  if (blk.sourceTrack === 'B') {
+    activeBuf = appState.trackB && appState.trackB.buffer;
+    audioUrl = (appState.trackB && appState.trackB.sourceUrl) || '/tauba_tauba_movie2.m4a';
+  } else {
+    activeBuf = appState.trackA && appState.trackA.buffer;
+    audioUrl = (appState.trackA && appState.trackA.sourceUrl) || (appState.currentMode === 'choreo' ? '/kala_chashma_official.m4a' : '/tauba_tauba_movie1.m4a');
+  }
+
   if (activeBuf && appState.engine && appState.engine.ctx && appState.engine.ctx.state === 'running') {
     await appState.engine.playBlockSolo(blk, activeBuf, () => {
       if (pill) pill.classList.remove('active-playing');
@@ -2952,7 +3390,7 @@ async function soloBlock(idx) {
 
   // 2. Instant Zero-Latency HTML5 Audio Audition Fallback:
   try {
-    const audio = new Audio('/kala_chashma_official.m4a');
+    const audio = new Audio(audioUrl);
     activeAuditionAudio = audio;
 
     const playSlice = () => {
@@ -3019,8 +3457,18 @@ async function soloPalettePart(partId) {
 
   const dur = Math.max(0.1, part.endTime - part.startTime);
 
-  // 1. Try Web Audio buffer source if buffer is ready and context is running
-  const activeBuf = (appState.trackB && appState.trackB.buffer) || (appState.trackA && appState.trackA.buffer);
+  // 1. Determine correct audio buffer & URL for the palette part
+  let activeBuf = null;
+  let audioUrl = '/kala_chashma_official.m4a';
+
+  if (part.sourceTrack === 'B') {
+    activeBuf = appState.trackB && appState.trackB.buffer;
+    audioUrl = (appState.trackB && appState.trackB.sourceUrl) || '/tauba_tauba_movie2.m4a';
+  } else {
+    activeBuf = appState.trackA && appState.trackA.buffer;
+    audioUrl = (appState.trackA && appState.trackA.sourceUrl) || (appState.currentMode === 'choreo' ? '/kala_chashma_official.m4a' : '/tauba_tauba_movie1.m4a');
+  }
+
   if (activeBuf && appState.engine && appState.engine.ctx && appState.engine.ctx.state === 'running') {
     await appState.engine.playBlockSolo(part, activeBuf, () => {
       if (card) card.classList.remove('active-playing');
@@ -3033,7 +3481,7 @@ async function soloPalettePart(partId) {
 
   // 2. Instant Zero-Latency HTML5 Audio Audition Fallback:
   try {
-    const audio = new Audio('/kala_chashma_official.m4a');
+    const audio = new Audio(audioUrl);
     activeAuditionAudio = audio;
 
     const playSlice = () => {
@@ -3451,6 +3899,30 @@ function getOfficialAudioElement() {
   return audio;
 }
 
+function getAudioElementForBlock(blk) {
+  if (appState.currentMode === 'choreo') {
+    return getOfficialAudioElement();
+  }
+  if (blk && blk.sourceTrack === 'B') {
+    let audioB = document.getElementById('deckBAudioPlayer');
+    if (!audioB) {
+      audioB = new Audio((appState.trackB && appState.trackB.sourceUrl) || '/tauba_tauba_movie2.m4a');
+      audioB.id = 'deckBAudioPlayer';
+      audioB.preload = 'auto';
+      document.body.appendChild(audioB);
+    }
+    return audioB;
+  }
+  let audioA = document.getElementById('deckAAudioPlayer');
+  if (!audioA) {
+    audioA = new Audio((appState.trackA && appState.trackA.sourceUrl) || '/tauba_tauba_movie1.m4a');
+    audioA.id = 'deckAAudioPlayer';
+    audioA.preload = 'auto';
+    document.body.appendChild(audioA);
+  }
+  return audioA;
+}
+
 function stopArrangementPlayback() {
   if (arrangementSequencer.checkInterval) {
     clearInterval(arrangementSequencer.checkInterval);
@@ -3461,6 +3933,13 @@ function stopArrangementPlayback() {
       arrangementSequencer.audio.pause();
     } catch (_) {}
   }
+  const deckA = document.getElementById('deckAAudioPlayer');
+  const deckB = document.getElementById('deckBAudioPlayer');
+  const official = document.getElementById('officialAudioPlayer');
+  if (deckA) { try { deckA.pause(); } catch (_) {} }
+  if (deckB) { try { deckB.pause(); } catch (_) {} }
+  if (official) { try { official.pause(); } catch (_) {} }
+
   arrangementSequencer.isPlaying = false;
   arrangementSequencer.lastHighlightedIdx = -1;
   document.querySelectorAll('.timeline-item-pill, .music-block-card').forEach(el => el.classList.remove('active-playing'));
@@ -3494,8 +3973,13 @@ function playArrangementWithNativeAudio(fromStart = false) {
     masterAudio.pause();
   }
 
-  const audio = getOfficialAudioElement();
-  arrangementSequencer.audio = audio;
+  // Pause all potential audio elements
+  const deckA = document.getElementById('deckAAudioPlayer');
+  const deckB = document.getElementById('deckBAudioPlayer');
+  const official = document.getElementById('officialAudioPlayer');
+  if (deckA) { try { deckA.pause(); } catch (_) {} }
+  if (deckB) { try { deckB.pause(); } catch (_) {} }
+  if (official) { try { official.pause(); } catch (_) {} }
 
   // Build the block schedule with mix start/end times
   let totalDur = 0;
@@ -3523,6 +4007,9 @@ function playArrangementWithNativeAudio(fromStart = false) {
 
   const startIdx = arrangementSequencer.currentBlockIdx;
   const currentSched = schedule[startIdx];
+
+  const audio = getAudioElementForBlock(currentSched.block);
+  arrangementSequencer.audio = audio;
 
   // Set audio time to current block's start
   audio.currentTime = Math.max(0, currentSched.startTime);
@@ -3598,10 +4085,21 @@ function startArrangementMonitorLoop() {
         const nextSched = schedule[nextIdx];
         arrangementSequencer.currentBlockIdx = nextIdx;
 
-        // If the next block seamlessly continues the exact same audio stream, let it stream continuously
-        const isContiguous = Math.abs(nextSched.startTime - curSched.endTime) < 0.06;
-        if (!isContiguous) {
-          audio.currentTime = Math.max(0, nextSched.startTime);
+        const nextAudio = getAudioElementForBlock(nextSched.block);
+
+        if (nextAudio !== audio) {
+          // Cross-deck handoff (e.g. Track A -> Track B in Dance-Off!)
+          try { audio.pause(); } catch (_) {}
+          nextAudio.currentTime = Math.max(0, nextSched.startTime);
+          nextAudio.play().catch(e => console.warn("Deck handoff play error:", e));
+          arrangementSequencer.audio = nextAudio;
+          showToast(`⚡ Switched to ${nextSched.block.teamLabel || nextSched.block.name}!`);
+        } else {
+          // Same audio stream
+          const isContiguous = Math.abs(nextSched.startTime - curSched.endTime) < 0.06;
+          if (!isContiguous) {
+            audio.currentTime = Math.max(0, nextSched.startTime);
+          }
         }
         highlightArrangementBlock(nextIdx);
       } else {

@@ -76,6 +76,9 @@
           <button type="button" class="btn-mix-starter active" id="starter_kala_chashma_choreo" onclick="selectMixStarter('kala_chashma_choreo')">
             <span>🔥</span> Kala Chashma Choreo Extension
           </button>
+          <button type="button" class="btn-mix-starter btn-starter-battle" id="starter_tauba_dance_off" onclick="selectMixStarter('tauba_dance_off')" title="Tauba Tauba (Movie 1) ➔ Tauba Tauba (Movie 2) Dance Battle">
+            <span>⚡</span> Tauba Tauba ➔ Tauba Tauba (Dance-Off)
+          </button>
           <button type="button" class="btn-mix-starter" id="starter_kala_gallan_mashup" onclick="selectMixStarter('kala_gallan_mashup')">
             <span>🎛️</span> Kala Chashma ➔ Gallan Goodiyaan Mashup
           </button>
@@ -102,6 +105,7 @@
           <!-- Song Select Dropdown -->
           <select id="songSelectA" class="deck-song-select" onchange="handleSongSelectChange('A', this.value)">
             <option value="kala_chashma">🎵 Kala Chashma (Amar Arshi / Badshah • 107 BPM)</option>
+            <option value="tauba_tauba_movie1">⚡ Tauba Tauba (Movie 1 • Team 1 • 107 BPM)</option>
             <option value="london_thumakda">🎵 London Thumakda (Queen • 130 BPM)</option>
             <option value="choreo_demo">🎵 Wedding Choreo Edit (Dhol & Synth • 128 BPM)</option>
             <option value="custom">📁 Upload Custom File / Paste YouTube Link...</option>
@@ -153,6 +157,7 @@
           <!-- Song Select Dropdown -->
           <select id="songSelectB" class="deck-song-select" onchange="handleSongSelectChange('B', this.value)">
             <option value="kala_chashma_official">🎵 Kala Chashma (Full Official Song Outro)</option>
+            <option value="tauba_tauba_movie2">⚡ Tauba Tauba (Movie 2 • Team 2 • 112 BPM)</option>
             <option value="gallan_goodiyaan">🎵 Gallan Goodiyaan (Celebration Bhangra • 128 BPM)</option>
             <option value="sauda_khara">🎵 Sauda Khara Khara (Sukhbir Dhol • 105 BPM)</option>
             <option value="custom">📁 Upload Custom File / Paste YouTube Link...</option>
@@ -254,6 +259,107 @@
         </div>
       </div>
 
+      <!-- ⚡ Dance-Off Transition Methods & Audition Lab -->
+      <div class="transition-methods-panel" id="transitionMethodsPanel">
+        <div class="transition-panel-header">
+          <div class="transition-title-group">
+            <span class="battle-badge">⚡ DANCE-OFF BATTLE TRANSITION</span>
+            <div class="transition-heading-row">
+              <h3>Song 1 ➔ Song 2 Transition Switch</h3>
+              <span class="active-method-tag" id="activeMethodTag">Active: Drum Roll & DJ Impact Drop</span>
+            </div>
+            <p>Pick how the music transitions when Team 1 hands off the floor to Team 2. Click <strong>Audition (5s)</strong> to test each style:</p>
+          </div>
+          <div class="transition-quick-audition">
+            <button type="button" class="btn-audition-active-transition" id="btnAuditionActive" onclick="triggerAuditionCurrentTransition()">
+              <span>🎧</span> Audition Transition (5s Preview)
+            </button>
+          </div>
+        </div>
+
+        <div class="transition-methods-grid" id="transitionMethodsGrid">
+          <!-- Method 1: Drum Roll Riser -->
+          <div class="transition-method-card active" id="card_method_drum_riser" data-type="drum_riser" onclick="selectTransitionMethod('drum_riser')">
+            <div class="method-card-badge">RECOMMENDED FOR BATTLE</div>
+            <div class="method-card-top">
+              <span class="method-card-icon">⚡</span>
+              <h4>Drum Roll & DJ Impact Drop</h4>
+            </div>
+            <p class="method-card-desc">4-beat accelerating snare riser into an explosive sub-bass drop when Team 2 enters. Maximum battle hype!</p>
+            <div class="method-card-footer">
+              <button type="button" class="btn-method-audition" onclick="event.stopPropagation(); auditionSpecificTransition('drum_riser')">
+                <span>▶</span> Audition (5s)
+              </button>
+              <span class="method-selected-indicator">✓ Selected</span>
+            </div>
+          </div>
+
+          <!-- Method 2: Vinyl Brake -->
+          <div class="transition-method-card" id="card_method_vinyl_brake" data-type="vinyl_brake" onclick="selectTransitionMethod('vinyl_brake')">
+            <div class="method-card-badge">CLASSIC HIP-HOP</div>
+            <div class="method-card-top">
+              <span class="method-card-icon">🛑</span>
+              <h4>Vinyl Brake / Tape Stop</h4>
+            </div>
+            <p class="method-card-desc">Song 1 spins down to a sudden turntable stop, brief dramatic pause, then Song 2 slams in on the downbeat.</p>
+            <div class="method-card-footer">
+              <button type="button" class="btn-method-audition" onclick="event.stopPropagation(); auditionSpecificTransition('vinyl_brake')">
+                <span>▶</span> Audition (5s)
+              </button>
+              <span class="method-selected-indicator">✓ Selected</span>
+            </div>
+          </div>
+
+          <!-- Method 3: Vocal Echo Out -->
+          <div class="transition-method-card" id="card_method_echo_out" data-type="echo_out" onclick="selectTransitionMethod('echo_out')">
+            <div class="method-card-badge">SPATIAL DISSOLVE</div>
+            <div class="method-card-top">
+              <span class="method-card-icon">🌊</span>
+              <h4>Echo Out & Reverb Wash</h4>
+            </div>
+            <p class="method-card-desc">Vocal "Tauba Tauba" echoes out in rhythm and floats into the background while Team 2's beat takes over.</p>
+            <div class="method-card-footer">
+              <button type="button" class="btn-method-audition" onclick="event.stopPropagation(); auditionSpecificTransition('echo_out')">
+                <span>▶</span> Audition (5s)
+              </button>
+              <span class="method-selected-indicator">✓ Selected</span>
+            </div>
+          </div>
+
+          <!-- Method 4: Bass Swap -->
+          <div class="transition-method-card" id="card_method_bass_swap" data-type="bass_swap" onclick="selectTransitionMethod('bass_swap')">
+            <div class="method-card-badge">SMOOTH CLUB BLEND</div>
+            <div class="method-card-top">
+              <span class="method-card-icon">🔊</span>
+              <h4>Frequency Filter / Bass Swap</h4>
+            </div>
+            <p class="method-card-desc">High-pass EQ filter sweep on Song 1 while Song 2's punchy bass and drums blend in with an EQ crossover.</p>
+            <div class="method-card-footer">
+              <button type="button" class="btn-method-audition" onclick="event.stopPropagation(); auditionSpecificTransition('bass_swap')">
+                <span>▶</span> Audition (5s)
+              </button>
+              <span class="method-selected-indicator">✓ Selected</span>
+            </div>
+          </div>
+
+          <!-- Method 5: Quick Punch Cut -->
+          <div class="transition-method-card" id="card_method_quick_cut" data-type="quick_cut" onclick="selectTransitionMethod('quick_cut')">
+            <div class="method-card-badge">INSTANT DROP</div>
+            <div class="method-card-top">
+              <span class="method-card-icon">✂️</span>
+              <h4>Sudden Punch Cut</h4>
+            </div>
+            <p class="method-card-desc">Instant switch directly on the beat with zero delay. Sudden, aggressive team takeover on downbeat 1.</p>
+            <div class="method-card-footer">
+              <button type="button" class="btn-method-audition" onclick="event.stopPropagation(); auditionSpecificTransition('quick_cut')">
+                <span>▶</span> Audition (5s)
+              </button>
+              <span class="method-selected-indicator">✓ Selected</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Big Obvious Transport Bar -->
       <div class="studio-transport-bar">
         <div class="transport-main-controls">
@@ -262,6 +368,9 @@
           </button>
           <button type="button" class="btn-transport btn-replay-main" id="replayBtn" onclick="triggerReplay()">
             <span>🔁</span> Replay from 0:00
+          </button>
+          <button type="button" class="btn-transport btn-audition-trans-transport" id="auditionTransitionBtn" onclick="triggerAuditionCurrentTransition()" title="Audition only the transition between Song 1 and Song 2">
+            <span>⚡</span> Audition Transition
           </button>
           <button type="button" class="btn-transport btn-stop-main" id="stopBtn" onclick="triggerStopPlayback()">
             <span>⏹</span> Stop
@@ -458,6 +567,8 @@
   <!-- High-Resolution Native Audio Player -->
   <audio id="masterAudioPlayer" preload="auto" src="/Kala_Chashma_Performance_Extended_Mix.m4a"></audio>
   <audio id="officialAudioPlayer" preload="auto" src="/kala_chashma_official.m4a"></audio>
+  <audio id="deckAAudioPlayer" preload="auto" src="/tauba_tauba_movie1.m4a"></audio>
+  <audio id="deckBAudioPlayer" preload="auto" src="/tauba_tauba_movie2.m4a"></audio>
 
   <!-- Rehearsal Cue Sheet Modal -->
   <div class="modal-overlay" id="cueSheetModal">
