@@ -4228,3 +4228,253 @@ canvas#waveformCanvas {
     padding: 10px;
   }
 }
+
+/* ======================================================== */
+/* 🎶 PLUG-AND-PLAY MODULAR SEQUENCER STYLES                */
+/* ======================================================== */
+
+.boundary-transition-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0;
+}
+
+.btn-boundary-transition {
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  border-radius: 20px;
+  padding: 8px 18px;
+  color: #f1f5f9;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 40px;
+}
+
+.btn-boundary-transition:hover {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+}
+
+.boundary-label {
+  color: var(--text-muted);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.boundary-edit-icon {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* Modular Song Library Cards */
+.song-library-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.song-library-card {
+  background: rgba(20, 24, 38, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 16px 18px;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+  position: relative;
+}
+
+.song-library-card:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+}
+
+.song-card-actions-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.btn-add-to-timeline {
+  background: linear-gradient(135deg, #06b6d4, #0284c7);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  min-height: 40px;
+}
+
+.btn-add-to-timeline:hover {
+  background: linear-gradient(135deg, #0891b2, #0369a1);
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.4);
+}
+
+.btn-view-parts {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e2e8f0;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  min-height: 40px;
+}
+
+.btn-view-parts:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #fff;
+}
+
+/* Interactive Transition Seam Button Between Blocks */
+.transition-seam-connector-btn {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.18), rgba(245, 158, 11, 0.18));
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fde68a;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 6px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+  min-height: 42px;
+  flex-shrink: 0;
+}
+
+.transition-seam-connector-btn:hover {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.35), rgba(245, 158, 11, 0.35));
+  border-color: #f59e0b;
+  transform: scale(1.05);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.5);
+}
+
+/* Transition Seam Modal / Bottom Sheet */
+.transition-seam-modal-content {
+  max-width: 640px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.transition-styles-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.trans-style-option {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.trans-style-option:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.06);
+}
+
+.trans-style-option.active {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+}
+
+.trans-style-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.trans-style-header strong {
+  font-size: 13.5px;
+  color: #fff;
+}
+
+.trans-style-option p {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Timeline Pill Piece Mobile Buttons */
+.timeline-item-pill {
+  min-width: 170px;
+  padding: 10px 12px;
+}
+
+.pill-mobile-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-pill-action {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 32px;
+  transition: all 0.15s ease;
+}
+
+.btn-pill-action:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #fff;
+}
+
+.btn-pill-solo:hover {
+  background: #06b6d4;
+  color: #000;
+}
+
+.btn-pill-split:hover {
+  background: #f59e0b;
+  color: #000;
+}
+
+.btn-pill-dup:hover {
+  background: #10b981;
+  color: #000;
+}
+
+.btn-pill-remove:hover {
+  background: #ef4444;
+  color: #fff;
+}

@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wedding Remix Studio - Sangeet & Performance Mix Lab</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Wedding Remix Studio - Plug & Play Sangeet & Performance Mix Lab</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,422 +12,220 @@
     <header class="studio-header">
       <div class="logo-group">
         <h1><span>✨</span> Wedding Remix Studio</h1>
-        <p class="studio-subtitle">Wedding & Sangeet Dance Mashup Lab • Mix Songs, Cut Beats & Create DJ Edits</p>
+        <p class="studio-subtitle">Plug-and-Play Wedding & Sangeet Mix Lab • Modular Audio Slices & Seamless DJ Transitions</p>
       </div>
 
-      <!-- Quick Global Actions -->
+      <!-- Quick Global Actions & Live Mix Status -->
       <div class="header-right-group">
         <div class="track-status-badge">
           <span class="status-pulse-dot"></span>
           <div class="status-badge-text">
-            <span class="track-status-name" id="globalStatusName">Kala Chashma (107 BPM • B Minor)</span>
+            <span class="track-status-name" id="globalStatusName">Kala Chashma (Choreo Riff Repeat)</span>
             <span class="track-status-tag" id="globalStatusTag">Ready to Play</span>
           </div>
         </div>
         <div class="header-action-buttons">
-          <button type="button" class="btn-header-glow" onclick="triggerPlayFullMix()" title="Play entire mix">
+          <button type="button" class="btn-header-glow" id="headerPlayBtn" onclick="triggerPlayFullMix()" title="Play entire mix">
             <span>▶</span> Play Mix
           </button>
-          <button type="button" class="btn-header-action" onclick="triggerExport('iphone')" title="Download iPhone-compatible remix (Apple M4A / MP3)">
-            <span>📱</span> Download (iPhone)
+          <button type="button" class="btn-header-action" onclick="exportModularMix('mp3')" title="Download universal 256kbps MP3 (iPhone & Android)">
+            <span>📱</span> Download MP3
           </button>
         </div>
       </div>
     </header>
 
     <!-- ======================================================== -->
-    <!-- STEP 1: 🎛️ SELECT SONGS TO MIX                           -->
+    <!-- ⚡ 1-CLICK POPULAR STARTER MIXES (HORIZONTAL SWIPEABLE)   -->
     <!-- ======================================================== -->
-    <section class="studio-card song-selector-card" id="songSelectorSection">
-      <div class="timeline-title-meta" style="margin-bottom: 14px;">
-        <span class="step-badge" style="background: linear-gradient(135deg, #06b6d4, #0284c7);">STEP 1</span>
-        <div>
-          <h2 style="font-size: 19px; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
-            <span>🎛️</span> Select Songs to Mix & Choose Project Type
-          </h2>
-          <p style="font-size: 12.5px; color: var(--text-muted); margin: 3px 0 0;">
-            Choose whether you are arranging a single dance track or mixing two songs together into a wedding medley.
-          </p>
-        </div>
-      </div>
-
-      <!-- Project Type Selector (Tabs) -->
-      <div class="project-type-nav">
-        <div id="modeChoreoTab" class="project-type-btn active" onclick="switchRemixMode('choreo')">
-          <div class="project-type-icon">✂️</div>
-          <div class="project-type-text">
-            <strong>Single Song Choreo Arranger</strong>
-            <p>Cut, repeat bars for bridal entry, duplicate hooks, or extend the ending of a single song (e.g. Kala Chashma).</p>
-          </div>
-        </div>
-        <div id="modeMedleyTab" class="project-type-btn" onclick="switchRemixMode('medley')">
-          <div class="project-type-icon">🎚️</div>
-          <div class="project-type-text">
-            <strong>2-Song Wedding Mashup (Song 1 ➔ Song 2)</strong>
-            <p>Mix two different songs together with an 8-bar beat-matched DJ transition (Entrance ➔ High-Energy Party).</p>
-          </div>
-        </div>
-        <div id="modeCeremonyTab" class="project-type-btn" onclick="switchRemixMode('ceremony')">
-          <div class="project-type-icon">💖</div>
-          <div class="project-type-text">
-            <strong>Multi-Song Ceremony Mashup (2+ Songs)</strong>
-            <p>Chain 2+ songs with studio crossfades for Bridal Entry, Kanyadaan & Pheras via YouTube or Audio Files.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- 1-Click Popular Starter Mixes -->
-      <div class="mix-starters-section">
+    <div class="mix-starters-section" style="margin-bottom: 20px;">
+      <div class="starters-header-row">
         <span class="starters-label">⚡ 1-Click Starter Mixes:</span>
-        <div class="starters-pills-row">
-          <button type="button" class="btn-mix-starter active" id="starter_kala_chashma_choreo" onclick="selectMixStarter('kala_chashma_choreo')">
-            <span>🔥</span> Kala Chashma Choreo Extension
-          </button>
-          <button type="button" class="btn-mix-starter btn-starter-ceremony" id="starter_kudmayi_ceremony" onclick="selectMixStarter('kudmayi_ceremony')" title="Kudmayi ➔ Kanyadaan ➔ Tere Hawaale Ceremony Mashup (3 Songs)">
-            <span>💖</span> Kudmayi ➔ Kanyadaan ➔ Tere Hawaale (3 Songs)
-          </button>
-          <button type="button" class="btn-mix-starter btn-starter-ceremony" id="starter_din_shagna_ceremony" onclick="selectMixStarter('din_shagna_ceremony')" title="Din Shagna Da ➔ Ranjha (2-Song Bridal Entry)">
-            <span>✨</span> Din Shagna Da ➔ Ranjha (2 Songs)
-          </button>
-          <button type="button" class="btn-mix-starter btn-starter-battle" id="starter_tauba_dance_off" onclick="selectMixStarter('tauba_dance_off')" title="Tauba Tauba (Movie 1) ➔ Tauba Tauba (Movie 2) Dance Battle">
-            <span>⚡</span> Tauba Tauba ➔ Tauba Tauba (Dance-Off)
-          </button>
-          <button type="button" class="btn-mix-starter" id="starter_kala_gallan_mashup" onclick="selectMixStarter('kala_gallan_mashup')">
-            <span>🎛️</span> Kala Chashma ➔ Gallan Goodiyaan Mashup
-          </button>
-          <button type="button" class="btn-mix-starter" id="starter_london_sauda_medley" onclick="selectMixStarter('london_sauda_medley')">
-            <span>🎛️</span> London Thumakda ➔ Sauda Khara Khara
-          </button>
-          <button type="button" class="btn-mix-starter" id="starter_custom_upload" onclick="selectMixStarter('custom_upload')">
-            <span>📁</span> Upload Custom Songs (MP3 / WAV / MP4)
-          </button>
+        <span class="starters-hint">Tap any starter to instantly load songs & timeline pieces</span>
+      </div>
+      <div class="starters-pills-row">
+        <button type="button" class="btn-mix-starter active" id="starter_kala_chashma_choreo" onclick="selectMixStarter('kala_chashma_choreo')" title="Kala Chashma with Bar 1 Intro repeat for dance choreography">
+          <span>🔥</span> Kala Chashma Choreo Extension
+        </button>
+        <button type="button" class="btn-mix-starter btn-starter-ceremony" id="starter_kudmayi_ceremony" onclick="selectMixStarter('kudmayi_ceremony')" title="Kudmayi ➔ Kanyadaan ➔ Tere Hawaale Ceremony Mashup (3 Songs with 3s Crossfades)">
+          <span>💖</span> Kudmayi ➔ Kanyadaan ➔ Tere Hawaale (3 Songs)
+        </button>
+        <button type="button" class="btn-mix-starter btn-starter-ceremony" id="starter_din_shagna_ceremony" onclick="selectMixStarter('din_shagna_ceremony')" title="Din Shagna Da ➔ Ranjha (2-Song Bridal Entry)">
+          <span>✨</span> Din Shagna Da ➔ Ranjha (2 Songs)
+        </button>
+        <button type="button" class="btn-mix-starter btn-starter-battle" id="starter_tauba_dance_off" onclick="selectMixStarter('tauba_dance_off')" title="Tauba Tauba (Movie 1) ➔ Tauba Tauba (Movie 2) Dance Battle with Snare Drum Riser">
+          <span>⚡</span> Tauba Tauba ➔ Tauba Tauba (Dance Battle)
+        </button>
+        <button type="button" class="btn-mix-starter" id="starter_custom_upload" onclick="selectMixStarter('custom_upload')" title="Start from scratch with custom songs">
+          <span>📁</span> Start Clean Blank Mix
+        </button>
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- STEP 1: 🎵 LOADED SONGS (MODULAR MULTI-TRACK LIBRARY)    -->
+    <!-- ======================================================== -->
+    <section class="studio-card song-library-section" id="songLibrarySection">
+      <div class="timeline-title-meta" style="margin-bottom: 16px;">
+        <span class="step-badge" style="background: linear-gradient(135deg, #06b6d4, #0284c7);">STEP 1</span>
+        <div style="flex: 1; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <h2 style="font-size: 19px; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
+              <span>🎵</span> Loaded Songs Library (2+ Songs)
+            </h2>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin: 3px 0 0;">
+              Load songs via demo presets, files, or YouTube. Add a whole clip to the timeline or split it into modular parts.
+            </p>
+          </div>
+          <div class="ceremony-stats-badge">
+            <span class="status-pulse-dot" style="background: #06b6d4;"></span>
+            <span id="librarySongsCountBadge">2 Songs Loaded</span>
+          </div>
         </div>
       </div>
 
-      <!-- Dual Song Decks Row -->
-      <div class="song-decks-row">
-        <!-- Deck 1: Track 1 -->
-        <div class="deck-selector-card track-a" id="deckCardA">
-          <div class="deck-selector-header">
-            <span class="deck-selector-label">
-              <span>🎵</span> <span id="deckTitleA">Track 1: Opening Song / Choreo Edit</span>
-            </span>
-            <span id="deckStatusA" class="metric-pill" style="color: var(--accent-emerald);">Loaded ✓</span>
-          </div>
+      <!-- Modular Song Cards Container -->
+      <div class="song-library-cards-grid" id="songLibraryCards">
+        <!-- Rendered dynamically by renderSongLibraryUI() in app.js -->
+      </div>
 
-          <!-- Song Select Dropdown -->
-          <select id="songSelectA" class="deck-song-select" onchange="handleSongSelectChange('A', this.value)">
-            <option value="kala_chashma">🎵 Kala Chashma (Amar Arshi / Badshah • 107 BPM)</option>
-            <option value="tauba_tauba_movie1">⚡ Tauba Tauba (Movie 1 • Team 1 • 107 BPM)</option>
-            <option value="london_thumakda">🎵 London Thumakda (Queen • 130 BPM)</option>
-            <option value="choreo_demo">🎵 Wedding Choreo Edit (Dhol & Synth • 128 BPM)</option>
-            <option value="custom">📁 Upload Custom File / Paste YouTube Link...</option>
-          </select>
-
-          <!-- Track Metadata Chips -->
-          <div class="deck-meta-strip">
-            <span class="meta-chip">Song: <strong id="trackNameA">Kala Chashma (Official Song)</strong></span>
-            <span class="meta-chip">BPM: <strong id="trackBpmA">107 BPM</strong></span>
-            <span class="meta-chip">Key: <strong id="trackKeyA">10A / B Minor</strong></span>
-            <span class="meta-chip">Length: <strong id="trackDurationA">2:53.4</strong></span>
-          </div>
-
-          <!-- Upload Toggle Link -->
-          <div class="deck-action-links">
-            <button type="button" class="btn-toggle-upload" onclick="toggleDeckUpload('A')">
-              <span>📁</span> Upload custom audio/video or paste YouTube link ▾
-            </button>
-          </div>
-
-          <!-- Hidden/Collapsible Upload Box -->
-          <div id="deckUploadDrawerA" style="display: none; margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 10px;">
-            <div class="link-input-group" style="margin-bottom: 8px;">
-              <input type="text" id="trackInputUrlA" placeholder="Paste YouTube link...">
-              <button class="btn-fetch" onclick="handleFetchTrack('A')">Load</button>
-            </div>
-            <div class="drop-zone" id="dropZoneA" onclick="document.getElementById('fileInputA').click()">
-              <input type="file" id="fileInputA" accept="audio/*,video/mp4,video/quicktime,video/webm" onchange="handleFileUpload('A', this.files[0])">
-              <strong>Drop rehearsal video (.mp4/.mov) or audio (.mp3/.wav)</strong>
-            </div>
-          </div>
-        </div>
-
-        <!-- Center Transition Bridge -->
-        <div class="deck-bridge-indicator">
-          <span class="bridge-arrow">➔</span>
-          <span class="bridge-pill" id="compatibilityBadge">8-Bar DJ Mix</span>
-        </div>
-
-        <!-- Deck 2: Track 2 -->
-        <div class="deck-selector-card track-b" id="deckCardB">
-          <div class="deck-selector-header">
-            <span class="deck-selector-label">
-              <span>🎵</span> <span id="deckTitleB">Track 2: Second Song / Full Anthem</span>
-            </span>
-            <span id="deckStatusB" class="metric-pill" style="color: var(--accent-emerald);">Loaded ✓</span>
-          </div>
-
-          <!-- Song Select Dropdown -->
-          <select id="songSelectB" class="deck-song-select" onchange="handleSongSelectChange('B', this.value)">
-            <option value="kala_chashma_official">🎵 Kala Chashma (Full Official Song Outro)</option>
-            <option value="tauba_tauba_movie2">⚡ Tauba Tauba (Movie 2 • Team 2 • 112 BPM)</option>
-            <option value="gallan_goodiyaan">🎵 Gallan Goodiyaan (Celebration Bhangra • 128 BPM)</option>
-            <option value="sauda_khara">🎵 Sauda Khara Khara (Sukhbir Dhol • 105 BPM)</option>
-            <option value="custom">📁 Upload Custom File / Paste YouTube Link...</option>
-          </select>
-
-          <!-- Track Metadata Chips -->
-          <div class="deck-meta-strip">
-            <span class="meta-chip">Song: <strong id="trackNameB">Kala Chashma (Official Song)</strong></span>
-            <span class="meta-chip">BPM: <strong id="trackBpmB">107 BPM</strong></span>
-            <span class="meta-chip">Key: <strong id="trackKeyB">10A / B Minor</strong></span>
-            <span class="meta-chip">Length: <strong id="trackDurationB">2:53.4</strong></span>
-          </div>
-
-          <!-- Upload Toggle Link -->
-          <div class="deck-action-links">
-            <button type="button" class="btn-toggle-upload" onclick="toggleDeckUpload('B')">
-              <span>📁</span> Upload custom audio/video or paste YouTube link ▾
-            </button>
-          </div>
-
-          <!-- Hidden/Collapsible Upload Box -->
-          <div id="deckUploadDrawerB" style="display: none; margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 10px;">
-            <div class="link-input-group" style="margin-bottom: 8px;">
-              <input type="text" id="trackInputUrlB" placeholder="Paste YouTube link...">
-              <button class="btn-fetch" onclick="handleFetchTrack('B')">Load</button>
-            </div>
-            <div class="drop-zone" id="dropZoneB" onclick="document.getElementById('fileInputB').click()">
-              <input type="file" id="fileInputB" accept="audio/*,video/mp4,video/quicktime,video/webm" onchange="handleFileUpload('B', this.files[0])">
-              <strong>Drop full official song (.mp3/.wav/.mp4)</strong>
-            </div>
-          </div>
-        </div>
+      <!-- Add Song Button -->
+      <div class="add-song-row" style="margin-top: 14px; text-align: center;">
+        <button type="button" class="btn-ceremony-add-track" onclick="addNewSongToLibrary()">
+          <span>➕</span> Add Another Song to Studio
+        </button>
       </div>
     </section>
 
     <!-- ======================================================== -->
-    <!-- 💖 STEP 1 & 2: MULTI-TRACK CEREMONY MASHUP STUDIO        -->
+    <!-- STEP 2: 🎶 YOUR MODULAR TIMELINE LINE (THE SEQUENCER)   -->
     <!-- ======================================================== -->
-    <section class="studio-card ceremony-mashup-card" id="ceremonyMashupSection" style="display: none;">
-      <!-- Header -->
-      <div class="timeline-title-meta" style="margin-bottom: 18px;">
-        <span class="step-badge" style="background: linear-gradient(135deg, #ec4899, #f43f5e);">CEREMONY MASHUP</span>
-        <div style="flex: 1; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <h2 style="font-size: 20px; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
-              <span>💖</span> Multi-Song Ceremony Sequence (2+ Songs)
-            </h2>
-            <p style="font-size: 13px; color: var(--text-muted); margin: 3px 0 0;">
-              Mix 2 or more songs together with smooth beginning, middle, and end crossfades. Loudness-balanced (-16 LUFS).
-            </p>
+    <section class="studio-card timeline-card" id="timelineSection">
+      <div class="timeline-card-header">
+        <div class="timeline-title-meta">
+          <span class="step-badge">STEP 2</span>
+          <div class="title-with-pill">
+            <h2><span>🎶</span> Your Modular Timeline Line</h2>
+            <span class="timeline-stats-badge" id="timelineStatsBadge">4 Pieces • 02:45 Total</span>
           </div>
-          <div class="ceremony-stats-badge">
-            <span class="status-pulse-dot" style="background: #ec4899;"></span>
-            <span id="ceremonyTotalStats">3 Songs • ~4m 12s Total Mix</span>
+        </div>
+
+        <!-- Arrangement Presets & History -->
+        <div class="timeline-presets-bar">
+          <span class="presets-label">Arrangement:</span>
+          <div class="arranger-presets-group">
+            <button type="button" class="btn-cut-preset active" id="presetBlockRep1" onclick="resetBlocksToPreset('default_rep')">
+              ⭐ Choreo Match
+            </button>
+            <button type="button" class="btn-cut-preset" id="presetBlockRep2" onclick="resetBlocksToPreset('two_bar_rep')">
+              ⭐ 2-Bar Repeat
+            </button>
+            <button type="button" class="btn-cut-preset" id="presetBlockStraight" onclick="resetBlocksToPreset('straight')">
+              ↺ Full Song
+            </button>
+            <button type="button" class="btn-cut-preset btn-clear" onclick="clearTimeline()">
+              🗑️ Clear
+            </button>
+            <button type="button" class="btn-cut-preset btn-history" id="undoBtnHeader" onclick="triggerUndo()" title="Undo (Cmd+Z)" disabled>
+              ↩️ Undo
+            </button>
+            <button type="button" class="btn-cut-preset btn-history" id="redoBtnHeader" onclick="triggerRedo()" title="Redo (Cmd+Shift+Z)" disabled>
+              ↪️ Redo
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Quick Preset Row -->
-      <div class="ceremony-presets-bar">
-        <span class="presets-label">⚡ Ceremony Presets:</span>
-        <div class="presets-pills-row">
-          <button type="button" class="btn-ceremony-preset active" id="presetCeremonyKudmayi" onclick="loadCeremonyPreset('kudmayi_mashup')">
-            <span>💖</span> Kudmayi ➔ Kanyadaan ➔ Tere Hawaale (3 Songs)
-          </button>
-          <button type="button" class="btn-ceremony-preset" id="presetCeremonyDinShagna" onclick="loadCeremonyPreset('din_shagna')">
-            <span>✨</span> Din Shagna Da ➔ Ranjha (2 Songs)
-          </button>
-          <button type="button" class="btn-ceremony-preset" id="presetCeremonyEmpty" onclick="loadCeremonyPreset('custom_empty')">
-            <span>📁</span> Custom 2-Song Sequence (Start Clean)
-          </button>
+      <!-- Mobile Touch Hint -->
+      <div class="timeline-instructions">
+        <span>💡 <strong>Plug & Play Tip:</strong> Pieces repeat seamlessly with zero click. Tap <strong>✂️ Split</strong> to break a piece in half • Tap <strong>🔁 Dup</strong> to repeat • Tap any glowing <strong>[ ⚡ Transition Seam ▾ ]</strong> between pieces to choose crossfade, drum roll, teaser loop, etc.!</span>
+      </div>
+
+      <!-- Mini Waveform Canvas Strip with Live Playhead -->
+      <div class="mini-waveform-box">
+        <div class="waveform-canvas-container">
+          <canvas id="waveformCanvas"></canvas>
+        </div>
+        <div class="mini-waveform-hud">
+          <div class="mini-hud-left">
+            <span class="waveform-live-dot"></span>
+            <span id="canvasHudLabel">Modular Arrangement & Beat Structure</span>
+          </div>
+          <div id="playheadTimeDisplay" class="mini-hud-time">0:00.0 / 02:45.0</div>
         </div>
       </div>
 
-      <!-- Sequential Track Chain Container -->
-      <div class="ceremony-track-chain" id="ceremonyTrackChain">
-        <!-- Rendered dynamically by renderCeremonyTrackCards() -->
-      </div>
-
-      <!-- Add Track Button -->
-      <div class="ceremony-add-track-wrapper">
-        <button type="button" class="btn-ceremony-add-track" onclick="addCeremonyTrack()">
-          <span>➕</span> Add Another Song to Sequence
+      <!-- Beginning Transition Pill (Intro Fade) -->
+      <div class="boundary-transition-wrapper">
+        <button type="button" class="btn-boundary-transition" id="btnIntroTransition" onclick="openIntroOutroModal('intro')" title="Beginning Transition: Fade into the first piece">
+          <span class="boundary-icon">🟢</span>
+          <span class="boundary-label">Beginning:</span>
+          <strong id="introTransitionLabel">2.0s Fade In</strong>
+          <span class="boundary-edit-icon">⚙️</span>
         </button>
       </div>
 
-      <!-- Crossfade Transitions & Audio Normalization (Beginning, Between Songs, End) -->
-      <div class="ceremony-mastering-card">
-        <div class="mastering-header">
-          <div class="mastering-header-left">
-            <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
-              <span>🎚️</span> Transitions & Audio Normalization
-            </h4>
-            <p style="font-size: 12.5px; color: var(--text-muted); margin: 3px 0 0;">
-              Fine-tune beginning, track-to-track, and ending crossfades for a smooth, emotional flow.
-            </p>
-          </div>
-          <span class="mastering-badge">EBU R128 Broadcast Standard</span>
-        </div>
-
-        <div class="ceremony-transitions-grid">
-          <!-- 1. Beginning Transition (Intro Crossfade) -->
-          <div class="ceremony-trans-card">
-            <div class="trans-card-header">
-              <label class="checkbox-container">
-                <input type="checkbox" id="ceremonyIntroCheck" checked onchange="updateCeremonySettings()">
-                <span class="checkmark"></span>
-                <strong>Beginning Transition</strong>
-              </label>
-              <span class="trans-pill-tag tag-intro">Intro Crossfade</span>
-            </div>
-            <div class="trans-card-body">
-              <div class="trans-input-row">
-                <div class="trans-input-field">
-                  <label for="ceremonyIntroDuration">Duration</label>
-                  <select id="ceremonyIntroDuration" onchange="updateCeremonySettings()">
-                    <option value="0.5">0.5s Quick Swell</option>
-                    <option value="1.0">1.0s Smooth In</option>
-                    <option value="2.0" selected>2.0s Gentle Rise (Recommended)</option>
-                    <option value="3.0">3.0s Cinematic Rise</option>
-                    <option value="4.0">4.0s Slow Ambient Swell</option>
-                  </select>
-                </div>
-                <div class="trans-input-field">
-                  <label for="ceremonyIntroCurve">Curve Style</label>
-                  <select id="ceremonyIntroCurve" onchange="updateCeremonySettings()">
-                    <option value="tri" selected>Triangular (Smooth)</option>
-                    <option value="qsin">Equal-Power (Studio)</option>
-                    <option value="log">Logarithmic (Soft)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 2. Between Songs (Track-to-Track Crossfade) -->
-          <div class="ceremony-trans-card">
-            <div class="trans-card-header">
-              <div class="trans-card-title-group">
-                <span class="trans-icon">🔁</span>
-                <strong>Between Songs Blend</strong>
-              </div>
-              <span class="trans-pill-tag tag-blend">Track-to-Track</span>
-            </div>
-            <div class="trans-card-body">
-              <div class="trans-input-row">
-                <div class="trans-input-field" style="flex: 2;">
-                  <label for="ceremonyCrossfadeSlider">
-                    Overlap: <strong id="ceremonyCrossfadeVal">3.0s</strong>
-                  </label>
-                  <input type="range" id="ceremonyCrossfadeSlider" min="1.0" max="6.0" step="0.5" value="3.0" oninput="updateCeremonyCrossfade(this.value)">
-                </div>
-                <div class="trans-input-field" style="flex: 1;">
-                  <label for="ceremonyBlendCurve">Curve</label>
-                  <select id="ceremonyBlendCurve" onchange="updateCeremonySettings()">
-                    <option value="tri" selected>Triangular</option>
-                    <option value="qsin">Equal-Power</option>
-                    <option value="hsin">Sine S-Curve</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 3. End Transition (Outro Crossfade) -->
-          <div class="ceremony-trans-card">
-            <div class="trans-card-header">
-              <label class="checkbox-container">
-                <input type="checkbox" id="ceremonyOutroCheck" checked onchange="updateCeremonySettings()">
-                <span class="checkmark"></span>
-                <strong>End Transition</strong>
-              </label>
-              <span class="trans-pill-tag tag-outro">Outro Crossfade</span>
-            </div>
-            <div class="trans-card-body">
-              <div class="trans-input-row">
-                <div class="trans-input-field">
-                  <label for="ceremonyOutroDuration">Duration</label>
-                  <select id="ceremonyOutroDuration" onchange="updateCeremonySettings()">
-                    <option value="1.0">1.0s Quick Fade</option>
-                    <option value="2.0">2.0s Standard Out</option>
-                    <option value="3.0" selected>3.0s Smooth Decay (Recommended)</option>
-                    <option value="4.0">4.0s Reverb Fade</option>
-                    <option value="5.0">5.0s Slow Ambient Fade</option>
-                  </select>
-                </div>
-                <div class="trans-input-field">
-                  <label for="ceremonyOutroCurve">Curve Style</label>
-                  <select id="ceremonyOutroCurve" onchange="updateCeremonySettings()">
-                    <option value="tri" selected>Triangular (Smooth)</option>
-                    <option value="qsin">Equal-Power (Studio)</option>
-                    <option value="log">Logarithmic (Soft)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Studio Loudness Normalization Bar -->
-        <div class="mastering-bottom-row">
-          <label class="checkbox-container">
-            <input type="checkbox" id="ceremonyNormalizeCheckbox" checked onchange="updateCeremonySettings()">
-            <span class="checkmark"></span>
-            <strong>EBU R128 Broadcast Loudness Normalization (-16 LUFS)</strong>
-          </label>
-          <span class="mastering-hint">Auto-balances track levels so quiet acoustic parts and loud festival drops transition evenly</span>
+      <!-- The Plug-and-Play Timeline Line (Interactive Chain of Blocks & Transition Seams) -->
+      <div class="timeline-drop-zone-wrapper" id="timelineDropWrapper">
+        <div class="timeline-line-track" id="timelineTrack" ondragover="handleTimelineDragOver(event)" ondragleave="handleTimelineDragLeave(event)" ondrop="handleTimelineDrop(event)">
+          <!-- Populated dynamically by renderTimelineLineUI() in app.js -->
         </div>
       </div>
 
-      <!-- Waveform Timeline Visualization -->
-      <div class="ceremony-timeline-card">
-        <div class="ceremony-timeline-header">
-          <div class="timeline-legend">
-            <span class="legend-chip legend-t1">Track 1</span>
-            <span class="legend-seam">⏳ 3s Blend</span>
-            <span class="legend-chip legend-t2">Track 2</span>
-            <span class="legend-seam">⏳ 3s Blend</span>
-            <span class="legend-chip legend-t3">Track 3</span>
-          </div>
-          <div class="ceremony-playhead-display" id="ceremonyPlayheadTimeDisplay">0:00 / 0:00</div>
+      <!-- Ending Transition Pill (Outro Fade) -->
+      <div class="boundary-transition-wrapper">
+        <button type="button" class="btn-boundary-transition" id="btnOutroTransition" onclick="openIntroOutroModal('outro')" title="Ending Transition: Fade out the final piece">
+          <span class="boundary-icon">🔴</span>
+          <span class="boundary-label">End:</span>
+          <strong id="outroTransitionLabel">3.0s Fade Out</strong>
+          <span class="boundary-edit-icon">⚙️</span>
+        </button>
+      </div>
+
+      <!-- Master Transport Bar (Mobile-Optimized Touch Zone) -->
+      <div class="studio-transport-bar">
+        <div class="transport-main-controls">
+          <button type="button" class="btn-transport btn-play-main" id="timelinePlayBtn" onclick="triggerPlayFullMix()">
+            <span>▶</span> Play Mix
+          </button>
+          <button type="button" class="btn-transport btn-replay-main" id="replayBtn" onclick="triggerReplay()">
+            <span>🔁</span> Replay (0:00)
+          </button>
+          <button type="button" class="btn-transport btn-stop-main" id="stopBtn" onclick="triggerStopPlayback()">
+            <span>⏹</span> Stop
+          </button>
+          <button type="button" class="btn-transport btn-cut-here" id="trimEndBtn" onclick="trimArrangementAtCurrentPosition()" title="Cut and end track at current position">
+            <span>✂️</span> Cut End Here
+          </button>
         </div>
-        <div class="ceremony-canvas-wrapper">
-          <canvas id="ceremonyTimelineCanvas" width="1150" height="90"></canvas>
+
+        <div class="transport-side-controls">
+          <button type="button" class="btn-transport btn-export-main" id="exportWavBtn" onclick="exportModularMix('mp3')">
+            <span>📱</span> Download MP3
+          </button>
+          <button type="button" class="btn-transport btn-cue-sheet" onclick="openCueSheetModal()" title="View rehearsal timestamps and 8-counts">
+            <span>📋</span> Cue Sheet
+          </button>
         </div>
       </div>
 
-      <!-- Ceremony Transport Bar -->
-      <div class="ceremony-transport-bar">
-        <div class="transport-left">
-          <button type="button" class="btn-ceremony-play" id="btnCeremonyPlay" onclick="toggleCeremonyPlayback()">
-            <span>▶</span> Play Ceremony Mashup
-          </button>
-          <button type="button" class="btn-ceremony-replay" onclick="replayCeremonyMashup()">
-            <span>🔁</span> Replay from 0:00
-          </button>
-        </div>
-        <div class="transport-right">
-          <button type="button" class="btn-ceremony-export btn-export-mp3" onclick="exportCeremonyMashup('mp3')">
-            <span>📱</span> Download MP3 (Universal & iPhone)
-          </button>
-          <button type="button" class="btn-ceremony-export btn-export-m4a" onclick="exportCeremonyMashup('m4a')">
-            <span>🍏</span> Download Apple M4A
-          </button>
-          <button type="button" class="btn-ceremony-export btn-export-wav" onclick="exportCeremonyMashup('wav')">
-            <span>🎵</span> Lossless WAV
-          </button>
-        </div>
+      <!-- Mastering & Broadcast Loudness Row -->
+      <div class="mastering-bottom-row" style="margin-top: 14px; padding: 12px 16px; background: rgba(0,0,0,0.25); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <label class="checkbox-container" style="margin: 0;">
+          <input type="checkbox" id="ceremonyNormalizeCheckbox" checked onchange="updateMasteringSettings()">
+          <span class="checkmark"></span>
+          <strong>EBU R128 Broadcast Loudness Normalization (-16 LUFS)</strong>
+        </label>
+        <span class="mastering-hint" style="color: var(--text-muted); font-size: 12px;">Auto-balances levels so quiet acoustic parts and loud festival drops transition evenly</span>
       </div>
 
       <!-- Power User: Generated Terminal / FFmpeg Script Drawer -->
-      <div class="ceremony-terminal-drawer">
+      <div class="ceremony-terminal-drawer" style="margin-top: 14px;">
         <div class="terminal-drawer-header" onclick="toggleCeremonyTerminalDrawer()">
           <div class="drawer-header-left">
             <span>💻</span>
-            <strong>View Generated Terminal / FFmpeg Command</strong>
-            <span class="terminal-subtext">(Run in terminal with yt-dlp & ffmpeg)</span>
+            <strong>View Terminal Command (yt-dlp + ffmpeg)</strong>
+            <span class="terminal-subtext">(Run offline on Mac / Linux / PC)</span>
           </div>
           <span class="drawer-toggle-arrow" id="ceremonyTerminalArrow">▾</span>
         </div>
@@ -444,271 +242,30 @@
     </section>
 
     <!-- ======================================================== -->
-    <!-- STEP 2: 🎶 YOUR SONG TIMELINE LINE (ARRANGER TRACK)      -->
-    <!-- ======================================================== -->
-    <section class="studio-card timeline-card" id="timelineSection">
-      <!-- Timeline Header & Presets -->
-      <div class="timeline-card-header">
-        <div class="timeline-title-meta">
-          <span class="step-badge">STEP 2</span>
-          <div class="title-with-pill">
-            <h2><span>🎶</span> Your Song Timeline Line</h2>
-            <span class="timeline-stats-badge" id="timelineStatsBadge">16 Pieces • 2:55.7</span>
-          </div>
-        </div>
-
-        <!-- Presets -->
-        <div class="timeline-presets-bar">
-          <span class="presets-label">Arrangement Presets:</span>
-          <div class="arranger-presets-group">
-            <button type="button" class="btn-cut-preset active" id="presetBlockRep1" onclick="resetBlocksToPreset('default_rep')">
-              ⭐ Choreo Match (Bar 1 Repeat)
-            </button>
-            <button type="button" class="btn-cut-preset" id="presetBlockRep2" onclick="resetBlocksToPreset('two_bar_rep')">
-              ⭐ 2-Bar Hook Repeat
-            </button>
-            <button type="button" class="btn-cut-preset" id="presetBlockStraight" onclick="resetBlocksToPreset('straight')">
-              ↺ Full Song (No Repeats)
-            </button>
-            <button type="button" class="btn-cut-preset btn-clear" onclick="clearTimeline()">
-              🗑️ Clear Line
-            </button>
-            <button type="button" class="btn-cut-preset btn-history" id="undoBtnHeader" onclick="triggerUndo()" title="Undo last change (Cmd+Z)" disabled>
-              ↩️ Undo
-            </button>
-            <button type="button" class="btn-cut-preset btn-history" id="redoBtnHeader" onclick="triggerRedo()" title="Redo change (Cmd+Shift+Z)" disabled>
-              ↪️ Redo
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Helper Hint -->
-      <div class="timeline-instructions">
-        <span>💡 <strong>How to arrange:</strong> Drag pieces horizontally to drop between any two blocks • Click <strong>✂️ Split</strong> to break into smaller bars • Click <strong>✂️ End Song Here</strong> to cut at paused spot • Press <strong>Cmd+Z</strong> to Undo anytime!</span>
-      </div>
-
-      <!-- Mini Waveform Canvas Strip with Live Playhead -->
-      <div class="mini-waveform-box">
-        <div class="waveform-canvas-container">
-          <canvas id="waveformCanvas"></canvas>
-        </div>
-        <div class="mini-waveform-hud">
-          <div class="mini-hud-left">
-            <span class="waveform-live-dot"></span>
-            <span>Arrangement Waveform & Beat Structure</span>
-          </div>
-          <div id="playheadTimeDisplay" class="mini-hud-time">0:00.0 / 2:55.7</div>
-        </div>
-      </div>
-
-      <!-- Horizontal Drag-and-Drop Line Track -->
-      <div class="timeline-drop-zone-wrapper" id="timelineDropWrapper">
-        <div class="timeline-line-track" id="timelineTrack" ondragover="handleTimelineDragOver(event)" ondragleave="handleTimelineDragLeave(event)" ondrop="handleTimelineDrop(event)">
-          <!-- Populated dynamically by renderTimelineLineUI() in app.js -->
-        </div>
-      </div>
-
-      <!-- ⚡ Dance-Off Transition Methods & Audition Lab -->
-      <div class="transition-methods-panel" id="transitionMethodsPanel">
-        <div class="transition-panel-header">
-          <div class="transition-title-group">
-            <span class="battle-badge">⚡ DANCE-OFF BATTLE TRANSITION</span>
-            <div class="transition-heading-row">
-              <h3>Song 1 ➔ Song 2 Transition Switch</h3>
-              <span class="active-method-tag" id="activeMethodTag">Active: Drum Roll & DJ Impact Drop</span>
-            </div>
-            <p>Pick how the music transitions when Team 1 hands off the floor to Team 2. Click <strong>Audition (5s)</strong> to test each style:</p>
-          </div>
-          <div class="transition-quick-audition">
-            <button type="button" class="btn-audition-active-transition" id="btnAuditionActive" onclick="triggerAuditionCurrentTransition()">
-              <span>🎧</span> Audition Transition (5s Preview)
-            </button>
-          </div>
-        </div>
-
-        <div class="transition-methods-grid" id="transitionMethodsGrid">
-          <!-- Method 1: Drum Roll Riser -->
-          <div class="transition-method-card active" id="card_method_drum_riser" data-type="drum_riser" onclick="selectTransitionMethod('drum_riser')">
-            <div class="method-card-badge">RECOMMENDED FOR BATTLE</div>
-            <div class="method-card-top">
-              <span class="method-card-icon">⚡</span>
-              <h4>Drum Roll & DJ Impact Drop</h4>
-            </div>
-            <p class="method-card-desc">4-beat accelerating snare riser into an explosive sub-bass drop when Team 2 enters. Maximum battle hype!</p>
-            <div class="method-card-footer">
-              <button type="button" class="btn-method-audition" onclick="event.stopPropagation(); auditionSpecificTransition('drum_riser')">
-                <span>▶</span> Audition (5s)
-              </button>
-              <span class="method-selected-indicator">✓ Selected</span>
-            </div>
-          </div>
-
-          <!-- Method 2: Vinyl Brake -->
-          <div class="transition-method-card" id="card_method_vinyl_brake" data-type="vinyl_brake" onclick="selectTransitionMethod('vinyl_brake')">
-            <div class="method-card-badge">CLASSIC HIP-HOP</div>
-            <div class="method-card-top">
-              <span class="method-card-icon">🛑</span>
-              <h4>Vinyl Brake / Tape Stop</h4>
-            </div>
-            <p class="method-card-desc">Song 1 spins down to a sudden turntable stop, brief dramatic pause, then Song 2 slams in on the downbeat.</p>
-            <div class="method-card-footer">
-              <button type="button" class="btn-method-audition" onclick="event.stopPropagation(); auditionSpecificTransition('vinyl_brake')">
-                <span>▶</span> Audition (5s)
-              </button>
-              <span class="method-selected-indicator">✓ Selected</span>
-            </div>
-          </div>
-
-          <!-- Method 3: Vocal Echo Out -->
-          <div class="transition-method-card" id="card_method_echo_out" data-type="echo_out" onclick="selectTransitionMethod('echo_out')">
-            <div class="method-card-badge">SPATIAL DISSOLVE</div>
-            <div class="method-card-top">
-              <span class="method-card-icon">🌊</span>
-              <h4>Echo Out & Reverb Wash</h4>
-            </div>
-            <p class="method-card-desc">Vocal "Tauba Tauba" echoes out in rhythm and floats into the background while Team 2's beat takes over.</p>
-            <div class="method-card-footer">
-              <button type="button" class="btn-method-audition" onclick="event.stopPropagation(); auditionSpecificTransition('echo_out')">
-                <span>▶</span> Audition (5s)
-              </button>
-              <span class="method-selected-indicator">✓ Selected</span>
-            </div>
-          </div>
-
-          <!-- Method 4: Bass Swap -->
-          <div class="transition-method-card" id="card_method_bass_swap" data-type="bass_swap" onclick="selectTransitionMethod('bass_swap')">
-            <div class="method-card-badge">SMOOTH CLUB BLEND</div>
-            <div class="method-card-top">
-              <span class="method-card-icon">🔊</span>
-              <h4>Frequency Filter / Bass Swap</h4>
-            </div>
-            <p class="method-card-desc">High-pass EQ filter sweep on Song 1 while Song 2's punchy bass and drums blend in with an EQ crossover.</p>
-            <div class="method-card-footer">
-              <button type="button" class="btn-method-audition" onclick="event.stopPropagation(); auditionSpecificTransition('bass_swap')">
-                <span>▶</span> Audition (5s)
-              </button>
-              <span class="method-selected-indicator">✓ Selected</span>
-            </div>
-          </div>
-
-          <!-- Method 5: Quick Punch Cut -->
-          <div class="transition-method-card" id="card_method_quick_cut" data-type="quick_cut" onclick="selectTransitionMethod('quick_cut')">
-            <div class="method-card-badge">INSTANT DROP</div>
-            <div class="method-card-top">
-              <span class="method-card-icon">✂️</span>
-              <h4>Sudden Punch Cut</h4>
-            </div>
-            <p class="method-card-desc">Instant switch directly on the beat with zero delay. Sudden, aggressive team takeover on downbeat 1.</p>
-            <div class="method-card-footer">
-              <button type="button" class="btn-method-audition" onclick="event.stopPropagation(); auditionSpecificTransition('quick_cut')">
-                <span>▶</span> Audition (5s)
-              </button>
-              <span class="method-selected-indicator">✓ Selected</span>
-            </div>
-          </div>
-
-          <!-- Method 6: Rising Teaser Loop (Clip 2 Hook Repeat) -->
-          <div class="transition-method-card" id="card_method_teaser_loop" data-type="teaser_loop" onclick="selectTransitionMethod('teaser_loop')">
-            <div class="method-card-badge" style="color: #38bdf8;">REPEAT TEASER • ANTICIPATION</div>
-            <div class="method-card-top">
-              <span class="method-card-icon">🔁</span>
-              <h4>Rising Teaser Loop (Clip 2 Hook)</h4>
-            </div>
-            <p class="method-card-desc">Clip 2's signature hook loops quietly over Song 1 and gradually rises in volume while Song 1 fades down, building anticipation before Team 2 drops!</p>
-            <div class="method-card-footer">
-              <button type="button" class="btn-method-audition" onclick="event.stopPropagation(); auditionSpecificTransition('teaser_loop')">
-                <span>▶</span> Audition (6s)
-              </button>
-              <span class="method-selected-indicator">✓ Selected</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Big Obvious Transport Bar -->
-      <div class="studio-transport-bar">
-        <div class="transport-main-controls">
-          <button type="button" class="btn-transport btn-play-main" id="timelinePlayBtn" onclick="triggerPlayFullMix()">
-            <span>▶</span> Play Full Mix
-          </button>
-          <button type="button" class="btn-transport btn-replay-main" id="replayBtn" onclick="triggerReplay()">
-            <span>🔁</span> Replay from 0:00
-          </button>
-          <button type="button" class="btn-transport btn-audition-trans-transport" id="auditionTransitionBtn" onclick="triggerAuditionCurrentTransition()" title="Audition only the transition between Song 1 and Song 2">
-            <span>⚡</span> Audition Transition
-          </button>
-          <button type="button" class="btn-transport btn-stop-main" id="stopBtn" onclick="triggerStopPlayback()">
-            <span>⏹</span> Stop
-          </button>
-          <button type="button" class="btn-transport btn-cut-here" id="trimEndBtn" onclick="trimArrangementAtCurrentPosition()" title="Cut and end the track right at the current paused spot (trims everything after it)">
-            <span>✂️</span> End Song Here
-          </button>
-          <button type="button" class="btn-transport btn-history-main" id="undoBtn" onclick="triggerUndo()" title="Undo last change (Cmd+Z)" disabled>
-            <span>↩️</span> Undo
-          </button>
-          <button type="button" class="btn-transport btn-history-main" id="redoBtn" onclick="triggerRedo()" title="Redo change (Cmd+Shift+Z)" disabled>
-            <span>↪️</span> Redo
-          </button>
-        </div>
-
-        <div class="transport-side-controls">
-          <div class="export-format-picker-wrapper">
-            <span class="export-format-label">FORMAT:</span>
-            <div class="export-format-pills" id="exportFormatPills">
-              <button type="button" class="btn-format-pill active" id="pillFormatIPhone" data-format="iphone" onclick="selectExportFormat('iphone')" title="Optimized for iPhone, Apple Music, AirDrop, iMessage & WhatsApp">
-                <span>📱</span> iPhone (M4A/MP3)
-              </button>
-              <button type="button" class="btn-format-pill" id="pillFormatMp3" data-format="mp3" onclick="selectExportFormat('mp3')" title="Universal MP3 256kbps for all phones and DJ software">
-                <span>🎧</span> MP3
-              </button>
-              <button type="button" class="btn-format-pill" id="pillFormatWav" data-format="wav" onclick="selectExportFormat('wav')" title="Uncompressed 16-bit 44.1kHz PCM Studio Master">
-                <span>🎛️</span> WAV
-              </button>
-            </div>
-          </div>
-
-          <div class="export-actions-row">
-            <button type="button" class="btn-transport btn-export-main" id="exportWavBtn" onclick="triggerExportSelectedFormat()">
-              <span id="exportBtnIcon">📱</span> <span id="exportBtnLabel">Download for iPhone</span>
-            </button>
-            <button type="button" class="btn-transport btn-share-mobile" id="shareIphoneBtn" onclick="triggerIPhoneShare()" title="AirDrop, Save to iPhone Files, or send to bridal party via iMessage/WhatsApp">
-              <span>📲</span> AirDrop / Share
-            </button>
-            <button type="button" class="btn-transport btn-cue-sheet" onclick="openCueSheetModal()">
-              <span>📋</span> Dance Cue Sheet
-            </button>
-          </div>
-          <div class="iphone-compat-note">
-            <span class="compat-icon">✓</span> 100% iPhone Compatible (Apple Music, iOS Files, AirDrop, iMessage & WhatsApp)
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ======================================================== -->
     <!-- STEP 3: 🎼 AUTO-DETECTED SONG PARTS PALETTE              -->
     <!-- ======================================================== -->
-    <section class="studio-card palette-card" id="paletteSection">
-      <div class="palette-card-header">
-        <div class="palette-title-meta">
+    <details class="studio-card palette-card" id="paletteSection" open>
+      <summary class="palette-card-header" style="cursor: pointer; list-style: none;">
+        <div class="palette-title-meta" style="flex: 1;">
           <span class="step-badge step-2">STEP 3</span>
           <div>
-            <h2><span>🎼</span> Auto-Detected Song Parts Palette</h2>
-            <p>Pick any musical section below and <strong>drag & drop it onto the line above</strong>, or click <strong>"+ Add to Line"</strong> to insert it.</p>
+            <h2 style="display: flex; align-items: center; gap: 8px;">
+              <span>🎼</span> Song Parts Palette (Chorus, Verse, Bars & Cuts)
+            </h2>
+            <p>Tap <strong>"+ Add to Line"</strong> on any section below to insert it into your sequence, or <strong>"✂️ Split into Bars"</strong> to break it down further.</p>
           </div>
         </div>
-        <button type="button" class="btn-add-slice" onclick="openAddSliceModal()">
+        <button type="button" class="btn-add-slice" onclick="openAddSliceModal(); event.stopPropagation();">
           <span>➕</span> Add Custom Slice
         </button>
-      </div>
+      </summary>
 
       <!-- Filter Tabs for Multi-Song Medleys -->
-      <div class="palette-filter-row" id="paletteFilterRow" style="display: none;">
+      <div class="palette-filter-row" id="paletteFilterRow" style="margin-top: 14px;">
         <span style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Filter Parts:</span>
-        <button type="button" class="palette-filter-btn active" id="filterAllBtn" onclick="setPaletteFilter('all')">All Song Parts</button>
-        <button type="button" class="palette-filter-btn" id="filterTrackABtn" onclick="setPaletteFilter('A')">🟣 Track 1 Parts</button>
-        <button type="button" class="palette-filter-btn filter-track-b" id="filterTrackBBtn" onclick="setPaletteFilter('B')">🟢 Track 2 Parts</button>
+        <div class="filter-pills-list" id="paletteFilterPillsList">
+          <button type="button" class="palette-filter-btn active" id="filterAllBtn" onclick="setPaletteFilter('all')">All Songs</button>
+        </div>
       </div>
 
       <!-- Broad Sections vs Detailed Bars View Toggle -->
@@ -722,7 +279,7 @@
           </button>
         </div>
         <div style="font-size: 11.5px; color: var(--text-muted);">
-          💡 Tip: Click <strong>"✂️ Split into Bars"</strong> on any section below to drill into smaller pieces, or <strong>"🔗 Merge"</strong> to combine them!
+          💡 Tip: Click <strong>"✂️ Split into Bars"</strong> on any section below to drill into smaller pieces!
         </div>
       </div>
 
@@ -730,118 +287,161 @@
       <div class="palette-grid" id="paletteGridContainer">
         <!-- Populated dynamically by renderPaletteUI() in app.js -->
       </div>
-    </section>
-
-    <!-- ======================================================== -->
-    <!-- COLLAPSIBLE ADVANCED DJ SETTINGS                         -->
-    <!-- ======================================================== -->
-    <details class="advanced-drawer" id="advancedDrawer">
-      <summary class="drawer-summary">
-        <div class="summary-left">
-          <span class="summary-icon">⚙️</span>
-          <div>
-            <strong>Advanced DJ Transition Controls & Harmonic Key Analysis</strong>
-            <span class="summary-sub">Fine-tune DJ crossfade curves, downbeat alignment & audio quality</span>
-          </div>
-        </div>
-        <span class="drawer-chevron">▼</span>
-      </summary>
-
-      <div class="drawer-content">
-        <!-- DJ Controls & Quality Mode -->
-        <div class="mix-controls-bar">
-          <div class="control-item">
-            <label for="transitionTypeSelect">Transition Style</label>
-            <select id="transitionTypeSelect" onchange="updateTransitionSettings()">
-              <option value="drum_riser">⚡ Drum Roll & DJ Impact Drop (Recommended)</option>
-              <option value="teaser_loop">🔁 Rising Teaser Loop (Clip 2 Hook Repeat)</option>
-              <option value="vinyl_brake">🛑 Vinyl Brake / Tape Stop</option>
-              <option value="echo_out">🌊 Echo Out & Reverb Wash</option>
-              <option value="bass_swap">🔊 Frequency Filter / Bass Swap</option>
-              <option value="quick_cut">✂️ Sudden Punch Cut</option>
-              <option value="choreo_splice">🎯 Downbeat Phase-Lock Splice</option>
-              <option value="equal_power">🌊 Smooth Equal-Power Crossfade</option>
-            </select>
-          </div>
-
-          <div class="control-item">
-            <label for="crossfadeDurationInput">Crossfade Duration: <strong id="crossfadeDurationVal">0.35s</strong></label>
-            <input type="range" id="crossfadeDurationInput" min="0.1" max="6.0" step="0.05" value="0.35" oninput="updateCrossfadeSlider(this.value)">
-          </div>
-
-          <div class="control-item">
-            <label>Harmonic Harmony</label>
-            <div id="harmonicAdviceText" style="font-size: 12px; color: var(--text-muted);">
-              Both tracks are 107 BPM in 10A / B Minor (100% Phase-Lock Compatible)
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <div class="quality-toggle-group">
-            <span class="quality-label">Audio Quality:</span>
-            <button type="button" class="btn-quality active" id="qualityStudioBtn" onclick="setQualityMode('studio')">
-              <span>🌟</span> Studio Master Clean Mix
-            </button>
-            <button type="button" class="btn-quality" id="qualityMicBtn" onclick="setQualityMode('mic')">
-              <span>📹</span> Performance Mic Audio
-            </button>
-          </div>
-        </div>
-
-        <!-- Preserved DOM IDs for Backwards Compatibility -->
-        <div style="display: none;">
-          <button id="loadUserKalaChashmaBtn"></button>
-          <button id="loadChoreoDemoBtn"></button>
-          <button id="loadMedleyDemoBtn"></button>
-          <button id="playFullBtn"></button>
-          <button id="auditionLoopBtn"></button>
-          <button id="auditionBtn"></button>
-          <span id="cutBarDisplay"></span>
-          <button id="loop1BarBtn"></button>
-          <button id="loop2BeatBtn"></button>
-          <button id="loop2BarBtn"></button>
-          <button id="loop4BarBtn"></button>
-          <button id="loopNoneBtn"></button>
-          <input type="range" id="customCutSlider" value="41.00">
-          <input type="number" id="customCutInput" value="41.00">
-          <span id="sliderTimeDisplay">41.00s</span>
-          <button id="presetEndBtn"></button>
-          <button id="presetDefaultBtn"></button>
-          <button id="presetHookBtn"></button>
-          <div id="sequenceBar">
-            <span id="seqTitle1"></span><span id="seqTime1"></span>
-            <span id="seqTitle2"></span><span id="seqTime2"></span>
-            <span id="seqTitle3"></span><span id="seqTime3"></span>
-            <span id="seqTitle4"></span><span id="seqTime4"></span>
-          </div>
-          <div id="cutImpactCard">
-            <span id="impactChoreoDuration"></span>
-            <span id="impactStudioSplice"></span>
-            <span id="impactAddedDuration"></span>
-            <span id="impactTotalDuration"></span>
-          </div>
-          <div id="candidatesGrid"></div>
-          <div class="deck-input-tabs">
-            <button class="deck-input-tab" onclick="switchDeckInputTab('A', 'link')"></button>
-            <button class="deck-input-tab" onclick="switchDeckInputTab('A', 'file')"></button>
-          </div>
-          <div id="deckInputLinkA"></div><div id="deckInputFileA"></div>
-          <div id="deckInputLinkB"></div><div id="deckInputFileB"></div>
-          <div id="metaBadgeA"></div><div id="metaBadgeB"></div>
-        </div>
-      </div>
     </details>
   </div>
 
-  <!-- High-Resolution Native Audio Player -->
-  <audio id="masterAudioPlayer" preload="auto" src="/Kala_Chashma_Performance_Extended_Mix.m4a"></audio>
-  <audio id="officialAudioPlayer" preload="auto" src="/kala_chashma_official.m4a"></audio>
-  <audio id="deckAAudioPlayer" preload="auto" src="/tauba_tauba_movie1.m4a"></audio>
-  <audio id="deckBAudioPlayer" preload="auto" src="/tauba_tauba_movie2.m4a"></audio>
+  <!-- ======================================================== -->
+  <!-- MODALS & DRAWERS                                         -->
+  <!-- ======================================================== -->
 
-  <!-- Rehearsal Cue Sheet Modal -->
-  <div class="modal-overlay" id="cueSheetModal">
+  <!-- 1. Interactive Transition Seam Modal / Bottom Sheet -->
+  <div class="modal-overlay" id="transitionSeamModal" style="display: none;" onclick="if(event.target === this) closeTransitionSeamModal()">
+    <div class="modal-content transition-seam-modal-content">
+      <div class="modal-header">
+        <div class="modal-header-title-group">
+          <span class="modal-badge-pulse">⚡</span>
+          <div>
+            <h3 style="margin: 0; font-size: 18px;">Customize Transition Seam</h3>
+            <p style="margin: 2px 0 0; font-size: 12px; color: var(--text-muted);" id="transitionModalSubtext">
+              Between Piece #1 and Piece #2
+            </p>
+          </div>
+        </div>
+        <button class="btn-close" onclick="closeTransitionSeamModal()">&times;</button>
+      </div>
+
+      <!-- Transition Style Selector Grid -->
+      <div class="transition-modal-body">
+        <label class="control-label" style="font-size: 12.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: block;">
+          Select Transition Style:
+        </label>
+        <div class="transition-styles-modal-grid">
+          <!-- 1. Crossfade -->
+          <div class="trans-style-option active" id="modalOpt_crossfade" onclick="selectModalTransitionType('crossfade')">
+            <div class="trans-style-header">
+              <span class="trans-style-icon">🌊</span>
+              <strong>Smooth Crossfade</strong>
+            </div>
+            <p>Classic studio blend where piece 1 fades down while piece 2 rises.</p>
+          </div>
+
+          <!-- 2. Drum Roll Riser -->
+          <div class="trans-style-option" id="modalOpt_drum_riser" onclick="selectModalTransitionType('drum_riser')">
+            <div class="trans-style-header">
+              <span class="trans-style-icon">⚡</span>
+              <strong>Drum Roll & DJ Impact Riser</strong>
+            </div>
+            <p>Accelerating 16th-note snare riser into a sub-bass drop impact. High energy!</p>
+          </div>
+
+          <!-- 3. Rising Teaser Loop -->
+          <div class="trans-style-option" id="modalOpt_teaser_loop" onclick="selectModalTransitionType('teaser_loop')">
+            <div class="trans-style-header">
+              <span class="trans-style-icon">🔁</span>
+              <strong>Rising Teaser Loop</strong>
+            </div>
+            <p>Repeats next clip's hook quietly, rising 25% ➔ 70% ➔ 100% drop while song 1 fades.</p>
+          </div>
+
+          <!-- 4. Vinyl Brake -->
+          <div class="trans-style-option" id="modalOpt_vinyl_brake" onclick="selectModalTransitionType('vinyl_brake')">
+            <div class="trans-style-header">
+              <span class="trans-style-icon">🛑</span>
+              <strong>Vinyl Brake / Tape Stop</strong>
+            </div>
+            <p>Turntable motor stop with needle drop into the next downbeat.</p>
+          </div>
+
+          <!-- 5. Echo Out -->
+          <div class="trans-style-option" id="modalOpt_echo_out" onclick="selectModalTransitionType('echo_out')">
+            <div class="trans-style-header">
+              <span class="trans-style-icon">🌊</span>
+              <strong>Echo Out & Reverb Wash</strong>
+            </div>
+            <p>Rhythmic delay taps float into the background as the next piece takes over.</p>
+          </div>
+
+          <!-- 6. Bass Swap -->
+          <div class="trans-style-option" id="modalOpt_bass_swap" onclick="selectModalTransitionType('bass_swap')">
+            <div class="trans-style-header">
+              <span class="trans-style-icon">🔊</span>
+              <strong>Frequency Filter / Bass Swap</strong>
+            </div>
+            <p>High-pass filter sweep cuts piece 1's bass before piece 2's kick hits.</p>
+          </div>
+
+          <!-- 7. Direct Cut -->
+          <div class="trans-style-option" id="modalOpt_seamless" onclick="selectModalTransitionType('seamless')">
+            <div class="trans-style-header">
+              <span class="trans-style-icon">✂️</span>
+              <strong>Seamless Cut (0s)</strong>
+            </div>
+            <p>Instant direct splice with 8ms anti-click smoothing for duplicate bars & tight edits.</p>
+          </div>
+        </div>
+
+        <!-- Duration & Curve Controls (Visible for Crossfade & Teaser Loop) -->
+        <div id="modalDurationRow" class="modal-duration-row" style="margin-top: 16px; background: rgba(0,0,0,0.3); padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label for="modalCrossfadeDuration" style="font-size: 13px; font-weight: 700; color: #fff;">
+              Transition Overlap: <strong id="modalDurationValue" style="color: #38bdf8;">3.0s</strong>
+            </label>
+            <span style="font-size: 11px; color: var(--text-muted);">Adjust blend length</span>
+          </div>
+          <input type="range" id="modalCrossfadeDuration" min="0.5" max="6.0" step="0.5" value="3.0" style="width: 100%;" oninput="updateModalDurationDisplay(this.value)">
+        </div>
+
+        <!-- Real-time Audition Button & Actions -->
+        <div class="modal-actions-row" style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <button type="button" class="btn-audition-active-transition" id="btnAuditionModalSeam" onclick="auditionCurrentModalSeam()">
+            <span>🎧</span> Audition Seam (4s Preview)
+          </button>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn-secondary" onclick="closeTransitionSeamModal()">Cancel</button>
+            <button type="button" class="btn-primary" onclick="saveCurrentModalSeam()">Apply Transition</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Intro / Outro Crossfade Modal -->
+  <div class="modal-overlay" id="introOutroModal" style="display: none;" onclick="if(event.target === this) closeIntroOutroModal()">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 id="introOutroModalTitle">Beginning Transition</h3>
+        <button class="btn-close" onclick="closeIntroOutroModal()">&times;</button>
+      </div>
+      <div style="padding: 10px 0;">
+        <label class="checkbox-container" style="margin-bottom: 14px;">
+          <input type="checkbox" id="introOutroEnabledCheck" checked>
+          <span class="checkmark"></span>
+          <strong id="introOutroEnabledLabel">Enable Beginning Fade In</strong>
+        </label>
+        <div class="control-item" style="margin-bottom: 14px;">
+          <label for="introOutroDurationSelect">Fade Duration</label>
+          <select id="introOutroDurationSelect" style="width: 100%; padding: 8px 12px; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: #fff; border-radius: 6px;">
+            <option value="0.5">0.5s Quick Swell</option>
+            <option value="1.0">1.0s Smooth In</option>
+            <option value="2.0" selected>2.0s Gentle Rise (Recommended)</option>
+            <option value="3.0">3.0s Cinematic Rise</option>
+            <option value="4.0">4.0s Slow Ambient Swell</option>
+            <option value="5.0">5.0s Extended Atmospheric Fade</option>
+          </select>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
+          Ensures the mix enters or exits gracefully without sudden audio cutoffs.
+        </p>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+        <button type="button" class="btn-secondary" onclick="closeIntroOutroModal()">Cancel</button>
+        <button type="button" class="btn-primary" onclick="saveIntroOutroModal()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Dance Cue Sheet Modal -->
+  <div class="modal-overlay" id="cueSheetModal" style="display: none;" onclick="if(event.target === this) closeCueSheetModal()">
     <div class="modal-content">
       <div class="modal-header">
         <h3>📋 Wedding Performance Cue Sheet</h3>
@@ -853,15 +453,15 @@
       <div class="cue-box" id="cueSheetContent">
         Loading cue sheet...
       </div>
-      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
         <button class="btn-secondary" onclick="copyCueSheetToClipboard()">Copy to Clipboard</button>
         <button class="btn-secondary" onclick="closeCueSheetModal()">Done</button>
       </div>
     </div>
   </div>
 
-  <!-- Add Custom Slice Modal -->
-  <div class="modal-overlay" id="addSliceModal" style="display: none;">
+  <!-- 4. Add Custom Slice Modal -->
+  <div class="modal-overlay" id="addSliceModal" style="display: none;" onclick="if(event.target === this) closeAddSliceModal()">
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-header">
         <h3>➕ Add Custom Music Slice</h3>
@@ -871,6 +471,12 @@
         Define a musical slice by start & end timestamps, choose a section label, and insert it into your sequence.
       </p>
       <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="control-item">
+          <label for="sliceSongSelect">Song Source</label>
+          <select id="sliceSongSelect" style="width: 100%; box-sizing: border-box; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 12px; border-radius: 6px;">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
         <div class="control-item">
           <label for="sliceNameInput">Piece Name / Description</label>
           <input type="text" id="sliceNameInput" placeholder="e.g. Extra Intro Brass Hook" style="width: 100%; box-sizing: border-box; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 12px; border-radius: 6px;">
@@ -909,6 +515,65 @@
   <div id="statusNotification">
     <span id="toastIcon">✨</span>
     <span id="toastMessage">Ready</span>
+  </div>
+
+  <!-- Hidden Native Audio Elements & Backward Compatibility DOM IDs -->
+  <audio id="masterAudioPlayer" preload="auto" src="/Kala_Chashma_Performance_Extended_Mix.m4a"></audio>
+  <audio id="officialAudioPlayer" preload="auto" src="/kala_chashma_official.m4a"></audio>
+  <audio id="deckAAudioPlayer" preload="auto" src="/tauba_tauba_movie1.m4a"></audio>
+  <audio id="deckBAudioPlayer" preload="auto" src="/tauba_tauba_movie2.m4a"></audio>
+
+  <div style="display: none;" aria-hidden="true">
+    <canvas id="ceremonyTimelineCanvas"></canvas>
+    <div id="ceremonyTrackChain"></div>
+    <button id="playFullBtn"></button>
+    <button id="auditionTransitionBtn"></button>
+    <button id="btnAuditionActive"></button>
+    <button id="loadUserKalaChashmaBtn"></button>
+    <button id="loadChoreoDemoBtn"></button>
+    <button id="loadMedleyDemoBtn"></button>
+    <button id="auditionLoopBtn"></button>
+    <button id="auditionBtn"></button>
+    <span id="cutBarDisplay"></span>
+    <button id="loop1BarBtn"></button>
+    <button id="loop2BeatBtn"></button>
+    <button id="loop2BarBtn"></button>
+    <button id="loop4BarBtn"></button>
+    <button id="loopNoneBtn"></button>
+    <input type="range" id="customCutSlider" value="41.00">
+    <input type="number" id="customCutInput" value="41.00">
+    <span id="sliderTimeDisplay">41.00s</span>
+    <button id="presetEndBtn"></button>
+    <button id="presetDefaultBtn"></button>
+    <button id="presetHookBtn"></button>
+    <div id="sequenceBar">
+      <span id="seqTitle1"></span><span id="seqTime1"></span>
+      <span id="seqTitle2"></span><span id="seqTime2"></span>
+      <span id="seqTitle3"></span><span id="seqTime3"></span>
+      <span id="seqTitle4"></span><span id="seqTime4"></span>
+    </div>
+    <div id="cutImpactCard">
+      <span id="impactChoreoDuration"></span>
+      <span id="impactStudioSplice"></span>
+      <span id="impactAddedDuration"></span>
+      <span id="impactTotalDuration"></span>
+    </div>
+    <div id="candidatesGrid"></div>
+    <div class="deck-input-tabs">
+      <button class="deck-input-tab" onclick="switchDeckInputTab('A', 'link')"></button>
+      <button class="deck-input-tab" onclick="switchDeckInputTab('A', 'file')"></button>
+    </div>
+    <div id="deckInputLinkA"></div><div id="deckInputFileA"></div>
+    <div id="deckInputLinkB"></div><div id="deckInputFileB"></div>
+    <div id="metaBadgeA"></div><div id="metaBadgeB"></div>
+    <select id="songSelectA"><option value="kala_chashma"></option></select>
+    <select id="songSelectB"><option value="kala_chashma_official"></option></select>
+    <input type="file" id="fileInputA">
+    <input type="file" id="fileInputB">
+    <input type="text" id="trackInputUrlA">
+    <input type="text" id="trackInputUrlB">
+    <div id="ceremonyTotalStats"></div>
+    <div id="ceremonyPlayheadTimeDisplay"></div>
   </div>
 
   <!-- Scripts -->

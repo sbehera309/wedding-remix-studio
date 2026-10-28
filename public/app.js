@@ -124,6 +124,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initWaveformCanvas();
   // Auto-initialize Kala Chashma performance mix so playback is ready immediately on load
   initKalaChashmaDefaultState();
+  renderSongLibraryUI();
   selectExportFormat(appState.exportFormat || 'iphone');
 });
 
@@ -2914,6 +2915,427 @@ function renderPaletteUI() {
   }
 }
 
+// ========================================================
+// SECTION 1: MODULAR LOADED SONGS LIBRARY CONTROLLER
+// Supports 2+ songs, whole clip additions, and parts splitting
+// ========================================================
+
+function getInitialSongLibrary() {
+  return [
+    {
+      id: 'song_kala_chashma',
+      title: 'Kala Chashma (Amar Arshi / Badshah)',
+      artist: 'Amar Arshi / Badshah',
+      bpm: 107,
+      key: 'B Minor',
+      durationSec: 173.45,
+      startTimeSec: 0.041,
+      endTimeSec: 40.415,
+      sourceType: 'demo',
+      youtubeUrl: 'https://youtu.be/k4yXQkG2s1E',
+      audioUrl: '/kala_chashma_official.m4a',
+      fileName: 'kala_chashma_official.m4a',
+      color: '#a855f7',
+      buffer: null
+    },
+    {
+      id: 'song_tauba_tauba',
+      title: 'Tauba Tauba (Karan Aujla • Movie 1)',
+      artist: 'Karan Aujla',
+      bpm: 107,
+      key: 'B Minor',
+      durationSec: 32.90,
+      startTimeSec: 0.0,
+      endTimeSec: 22.43,
+      sourceType: 'demo',
+      youtubeUrl: 'https://youtu.be/LK7-_dgAVQE',
+      audioUrl: '/tauba_tauba_movie1.m4a',
+      fileName: 'tauba_tauba_movie1.m4a',
+      color: '#06b6d4',
+      buffer: null
+    }
+  ];
+}
+
+function renderSongLibraryUI() {
+  const container = document.getElementById('songLibraryCards');
+  if (!container) return;
+
+  if (!appState.songLibrary || appState.songLibrary.length === 0) {
+    appState.songLibrary = getInitialSongLibrary();
+  }
+
+  const badge = document.getElementById('librarySongsCountBadge');
+  if (badge) {
+    badge.innerText = `${appState.songLibrary.length} Songs Loaded`;
+  }
+
+  const songs = appState.songLibrary;
+  let html = '';
+
+  for (let i = 0; i < songs.length; i++) {
+    const s = songs[i];
+    const durDisplay = s.durationSec ? `${s.durationSec.toFixed(1)}s` : '--s';
+    const clipDur = Math.max(0.1, (s.endTimeSec || s.durationSec) - (s.startTimeSec || 0));
+    const isPlayingThis = (appState.activeSongPreviewIdx === i);
+
+    html += `
+      <div class="song-library-card" id="songCard_${i}" style="border-left: 4px solid ${s.color};">
+        <div class="ceremony-track-header">
+          <div class="track-header-left">
+            <span class="track-number-badge" style="background: ${s.color}22; color: ${s.color}; border: 1px solid ${s.color}55;">
+              Song #${i + 1}
+            </span>
+            <input type="text" class="track-title-input" value="${escapeCeremonyHtml(s.title)}"
+              placeholder="Song Name..."
+              onchange="updateSongLibraryTitle(${i}, this.value)">
+          </div>
+          <div class="track-header-actions">
+            <button type="button" class="btn-track-preview ${isPlayingThis ? 'active-playing' : ''}"
+              onclick="previewSongLibraryClip(${i})" title="Listen to this song selection">
+              <span>${isPlayingThis ? '⏹ Stop' : '▶ Preview'}</span>
+            </button>
+            ${songs.length > 1 ? `
+              <button type="button" class="btn-track-remove" onclick="removeSongFromLibrary(${i})" title="Remove Song">
+                <span>✕</span>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Segmented Source Tabs -->
+        <div class="ceremony-source-tabs">
+          <button type="button" class="ceremony-source-tab ${s.sourceType === 'demo' ? 'active' : ''}"
+            onclick="setSongLibrarySourceType(${i}, 'demo')">
+            <span>🎵</span> Demo
+          </button>
+          <button type="button" class="ceremony-source-tab ${s.sourceType === 'file' ? 'active' : ''}"
+            onclick="setSongLibrarySourceType(${i}, 'file')">
+            <span>📁</span> Upload File
+          </button>
+          <button type="button" class="ceremony-source-tab ${s.sourceType === 'youtube' ? 'active' : ''}"
+            onclick="setSongLibrarySourceType(${i}, 'youtube')">
+            <span>🔴</span> YouTube
+          </button>
+        </div>
+
+        <!-- Source Content -->
+        <div class="ceremony-source-content">
+          ${s.sourceType === 'demo' ? `
+            <div class="ceremony-demo-banner">
+              <span class="demo-icon">🌟</span>
+              <div class="demo-info">
+                <strong>Studio Master Demo Loaded</strong>
+                <p>Pristine studio audio • ${durDisplay} • ${s.bpm || 107} BPM • Key: ${s.key || 'B Minor'}</p>
+              </div>
+            </div>
+          ` : s.sourceType === 'file' ? `
+            <div class="ceremony-file-dropzone" 
+                 ondragover="handleCeremonyDragOver(event)"
+                 ondrop="handleSongLibraryDrop(event, ${i})">
+              <span class="dropzone-icon">📁</span>
+              <p class="dropzone-text">
+                ${s.fileName ? `<strong>✅ Loaded:</strong> ${escapeCeremonyHtml(s.fileName)}` : 'Drag & drop MP3 / WAV / M4A / Video here, or'}
+              </p>
+              <label class="btn-ceremony-browse">
+                Browse Files
+                <input type="file" accept="audio/*,video/*" style="display:none;" onchange="handleSongLibraryFileInput(this, ${i})">
+              </label>
+            </div>
+          ` : `
+            <div class="ceremony-youtube-row">
+              <div class="youtube-input-wrap">
+                <span class="yt-prefix-icon">🔗</span>
+                <input type="url" class="ceremony-yt-input"
+                  placeholder="Paste YouTube Link (e.g. https://youtu.be/...)"
+                  value="${escapeCeremonyHtml(s.youtubeUrl || '')}"
+                  onchange="updateSongLibraryYoutubeUrl(${i}, this.value)">
+              </div>
+              <button type="button" class="btn-ceremony-yt-fetch" onclick="fetchSongLibraryYouTube(${i})">
+                <span>⬇ Fetch</span>
+              </button>
+            </div>
+          `}
+        </div>
+
+        <!-- Start & End Trim Inputs -->
+        <div class="ceremony-trim-row">
+          <div class="trim-field">
+            <label class="trim-label">
+              <span>⏱</span> Start Trim:
+            </label>
+            <input type="text" class="trim-time-input" 
+              value="${appState.engine.formatTime(s.startTimeSec || 0)}" 
+              placeholder="00:00:00"
+              onchange="updateSongLibraryTrim(${i}, 'start', this.value)">
+          </div>
+          <div class="trim-arrow">➔</div>
+          <div class="trim-field">
+            <label class="trim-label">
+              <span>⏱</span> End Trim:
+            </label>
+            <input type="text" class="trim-time-input" 
+              value="${appState.engine.formatTime(s.endTimeSec || s.durationSec || 30)}" 
+              placeholder="00:00:30"
+              onchange="updateSongLibraryTrim(${i}, 'end', this.value)">
+          </div>
+          <div class="trim-duration-badge" id="songClipDurBadge_${i}">
+            ${clipDur.toFixed(1)}s clip
+          </div>
+        </div>
+
+        <!-- Modular Studio Actions -->
+        <div class="song-card-actions-row">
+          <button type="button" class="btn-add-to-timeline" onclick="addSongClipToTimeline(${i})" title="Add this whole clip as a block in the sequencer timeline">
+            <span>➕ Add to Timeline Line</span>
+          </button>
+          <button type="button" class="btn-view-parts" onclick="openSongPartsPalette(${i})" title="Open modular parts palette to split this song into intro, verse, drop, and bars">
+            <span>✂️ View & Split Parts</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+}
+
+function setSongLibrarySourceType(idx, type) {
+  if (!appState.songLibrary || !appState.songLibrary[idx]) return;
+  appState.songLibrary[idx].sourceType = type;
+  renderSongLibraryUI();
+}
+
+function updateSongLibraryTitle(idx, val) {
+  if (!appState.songLibrary || !appState.songLibrary[idx]) return;
+  appState.songLibrary[idx].title = val;
+}
+
+function updateSongLibraryYoutubeUrl(idx, val) {
+  if (!appState.songLibrary || !appState.songLibrary[idx]) return;
+  appState.songLibrary[idx].youtubeUrl = val;
+}
+
+function updateSongLibraryTrim(idx, field, strVal) {
+  if (!appState.songLibrary || !appState.songLibrary[idx]) return;
+  const s = appState.songLibrary[idx];
+  const sec = parseTimeStringToSeconds(strVal);
+  if (field === 'start') {
+    s.startTimeSec = Math.max(0, sec);
+  } else {
+    s.endTimeSec = Math.max((s.startTimeSec || 0) + 0.1, sec);
+  }
+  const badge = document.getElementById(`songClipDurBadge_${idx}`);
+  if (badge) {
+    const dur = Math.max(0.1, (s.endTimeSec || s.durationSec) - (s.startTimeSec || 0));
+    badge.innerText = `${dur.toFixed(1)}s clip`;
+  }
+}
+
+function addSongClipToTimeline(idx) {
+  if (!appState.songLibrary || !appState.songLibrary[idx]) return;
+  const song = appState.songLibrary[idx];
+  const start = song.startTimeSec !== undefined ? song.startTimeSec : 0;
+  const end = song.endTimeSec || song.durationSec || (start + 30);
+  const dur = Math.max(0.1, end - start);
+
+  if (!appState.arrangementBlocks) appState.arrangementBlocks = [];
+  saveUndoState(`Add ${song.title} to Timeline`);
+
+  const blockBuffer = song.buffer || (song.id.includes('kala') && appState.trackA ? appState.trackA.buffer : null);
+
+  appState.arrangementBlocks.push({
+    id: `${song.id}_clip_${Date.now()}`,
+    name: `${song.title} (Clip)`,
+    desc: `${dur.toFixed(1)}s selection (${appState.engine.formatTime(start)} - ${appState.engine.formatTime(end)})`,
+    tag: 'CLIP',
+    tagColor: song.color || '#10b981',
+    startTime: start,
+    endTime: end,
+    songName: song.title,
+    sourceTrack: 'A',
+    buffer: blockBuffer,
+    isDuplicated: false,
+    transitionAfter: { type: 'crossfade', duration: 3.0 }
+  });
+
+  appState.userHasCustomizedBlocks = true;
+  renderTimelineLineUI();
+  drawWaveformTimeline();
+  showToast(`➕ Added "${song.title}" clip (${dur.toFixed(1)}s) to Timeline Line!`);
+}
+
+function openSongPartsPalette(idx) {
+  if (!appState.songLibrary || !appState.songLibrary[idx]) return;
+  const song = appState.songLibrary[idx];
+  const paletteEl = document.getElementById('paletteSection');
+  if (paletteEl) {
+    paletteEl.scrollIntoView({ behavior: 'smooth' });
+  }
+  showToast(`✂️ Viewing detected parts for "${song.title}" below.`);
+}
+
+function addNewSongToLibrary() {
+  if (!appState.songLibrary) appState.songLibrary = getInitialSongLibrary();
+  const num = appState.songLibrary.length + 1;
+  const colors = ['#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'];
+  appState.songLibrary.push({
+    id: `custom_song_${Date.now()}`,
+    title: `Song ${num}`,
+    artist: 'Custom Artist',
+    bpm: 107,
+    key: 'B Minor',
+    durationSec: 60.0,
+    startTimeSec: 0.0,
+    endTimeSec: 30.0,
+    sourceType: 'file',
+    audioUrl: '',
+    color: colors[(num - 1) % colors.length],
+    buffer: null
+  });
+  renderSongLibraryUI();
+  showToast(`➕ Added Song #${num} card. Upload a file, paste YouTube, or pick demo.`);
+}
+
+function removeSongFromLibrary(idx) {
+  if (!appState.songLibrary || appState.songLibrary.length <= 1) return;
+  appState.songLibrary.splice(idx, 1);
+  renderSongLibraryUI();
+  showToast("Song removed from library.");
+}
+
+async function previewSongLibraryClip(idx) {
+  if (!appState.songLibrary || !appState.songLibrary[idx]) return;
+  const s = appState.songLibrary[idx];
+
+  if (appState.activeSongPreviewIdx === idx) {
+    stopSongLibraryClip();
+    renderSongLibraryUI();
+    return;
+  }
+
+  stopSongLibraryClip();
+  appState.activeSongPreviewIdx = idx;
+  renderSongLibraryUI();
+
+  try {
+    let buf = s.buffer;
+    if (!buf && s.audioUrl) {
+      buf = await appState.engine.loadAudio(s.audioUrl);
+      s.buffer = buf;
+      s.durationSec = buf.duration;
+    }
+    if (!buf) {
+      showToast("Audio buffer not loaded for preview yet.");
+      stopSongLibraryClip();
+      renderSongLibraryUI();
+      return;
+    }
+
+    const start = s.startTimeSec || 0;
+    const end = s.endTimeSec || buf.duration;
+    const dur = Math.max(0.1, end - start);
+
+    await appState.engine.ensureContext();
+    const src = appState.engine.ctx.createBufferSource();
+    src.buffer = buf;
+    const gain = appState.engine.ctx.createGain();
+    gain.gain.value = 0.9;
+    src.connect(gain);
+    gain.connect(appState.engine.ctx.destination);
+
+    src.start(0, start, dur);
+    appState.songLibraryPreviewSource = src;
+
+    src.onended = () => {
+      stopSongLibraryClip();
+      renderSongLibraryUI();
+    };
+  } catch (err) {
+    console.warn("Preview error:", err);
+    stopSongLibraryClip();
+    renderSongLibraryUI();
+  }
+}
+
+function stopSongLibraryClip() {
+  if (appState.songLibraryPreviewSource) {
+    try { appState.songLibraryPreviewSource.stop(); } catch (e) {}
+    appState.songLibraryPreviewSource = null;
+  }
+  appState.activeSongPreviewIdx = null;
+}
+
+function handleSongLibraryDrop(event, idx) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+    processSongLibraryFile(event.dataTransfer.files[0], idx);
+  }
+}
+
+function handleSongLibraryFileInput(input, idx) {
+  if (input && input.files && input.files[0]) {
+    processSongLibraryFile(input.files[0], idx);
+  }
+}
+
+async function processSongLibraryFile(file, idx) {
+  if (!appState.songLibrary || !appState.songLibrary[idx]) return;
+  const s = appState.songLibrary[idx];
+  s.fileName = file.name;
+  s.title = file.name.replace(/\.[^/.]+$/, "");
+  showToast(`Loading audio from "${file.name}"...`);
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    await appState.engine.ensureContext();
+    const audioBuffer = await appState.engine.ctx.decodeAudioData(arrayBuffer);
+    s.buffer = audioBuffer;
+    s.durationSec = audioBuffer.duration;
+    s.startTimeSec = 0.0;
+    s.endTimeSec = audioBuffer.duration;
+    renderSongLibraryUI();
+    showToast(`✅ Loaded "${file.name}" (${audioBuffer.duration.toFixed(1)}s)`);
+  } catch (err) {
+    console.error("Decode error:", err);
+    showToast("⚠️ Could not decode audio file: " + err.message);
+  }
+}
+
+async function fetchSongLibraryYouTube(idx) {
+  if (!appState.songLibrary || !appState.songLibrary[idx]) return;
+  const s = appState.songLibrary[idx];
+  if (!s.youtubeUrl) {
+    showToast("Please enter a valid YouTube link.");
+    return;
+  }
+
+  showToast("Fetching audio from YouTube...");
+  try {
+    const res = await fetch('/api/fetch-audio', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: s.youtubeUrl, deck: `Library_${idx + 1}` })
+    });
+    const data = await res.json();
+    if (data.success && data.audioUrl) {
+      s.audioUrl = data.audioUrl;
+      const buf = await appState.engine.loadAudio(data.audioUrl);
+      s.buffer = buf;
+      s.durationSec = buf.duration;
+      s.startTimeSec = 0;
+      s.endTimeSec = buf.duration;
+      renderSongLibraryUI();
+      showToast("✅ YouTube audio loaded successfully!");
+    } else {
+      showToast(data.message || data.error || "Could not fetch YouTube audio.");
+    }
+  } catch (err) {
+    showToast("Server request failed: " + err.message);
+  }
+}
+
 // Render the Sequencer Timeline Line
 function renderTimelineLineUI() {
   const track = document.getElementById('timelineTrack');
@@ -2980,35 +3402,37 @@ function renderTimelineLineUI() {
           ${appState.engine.formatTime(blk.startTime)} - ${appState.engine.formatTime(blk.endTime)}
         </div>
         <div class="timeline-item-actions">
-          <button type="button" class="timeline-item-btn solo-btn" onclick="event.stopPropagation(); soloBlock(${idx})" title="Listen to just this part">
+          <button type="button" class="timeline-item-btn solo-btn" onclick="event.stopPropagation(); soloBlock(${idx})" title="Listen to just this piece">
             <span>🔊 Solo</span>
           </button>
-          <button type="button" class="timeline-item-btn play-here-btn" onclick="event.stopPropagation(); playArrangementFromBlock(${idx})" title="Play timeline starting from this piece">
-            <span>▶ Play</span>
-          </button>
-          <button type="button" class="timeline-item-btn dup" onclick="event.stopPropagation(); duplicateBlock(${idx})" title="Duplicate/repeat this part on the line">
+          <button type="button" class="timeline-item-btn dup" onclick="event.stopPropagation(); duplicateBlock(${idx})" title="Duplicate/repeat this part with smooth 16ms loop crossfade">
             <span>🔁 Dup</span>
           </button>
-          ${canSplit ? `
-            <button type="button" class="timeline-item-btn split" onclick="event.stopPropagation(); splitBlock(${idx})" title="Split into smaller bars">
-              <span>✂️ Split</span>
+          <button type="button" class="timeline-item-btn split" onclick="event.stopPropagation(); splitBlock(${idx})" title="Split this piece in half">
+            <span>✂️ Split</span>
+          </button>
+          <button type="button" class="timeline-item-btn" onclick="event.stopPropagation(); nudgeBlockEnd(${idx}, -0.025)" title="Trim 25ms off end to remove stray vocal/word bleed">
+            <span>◀ -25ms</span>
+          </button>
+          <button type="button" class="timeline-item-btn" onclick="event.stopPropagation(); nudgeBlockEnd(${idx}, 0.025)" title="Extend end by 25ms">
+            <span>+25ms ▶</span>
+          </button>
+          ${idx > 0 ? `
+            <button type="button" class="timeline-item-btn" onclick="event.stopPropagation(); moveBlockLeft(${idx})" title="Move piece earlier in mix">
+              <span>◀</span>
             </button>
           ` : ''}
-          ${canMerge ? `
-            <button type="button" class="timeline-item-btn merge" onclick="event.stopPropagation(); mergeBlockWithNext(${idx})" title="Merge with next piece">
-              <span>🔗 Merge</span>
+          ${idx < blocks.length - 1 ? `
+            <button type="button" class="timeline-item-btn" onclick="event.stopPropagation(); moveBlockRight(${idx})" title="Move piece later in mix">
+              <span>▶</span>
             </button>
           ` : ''}
-          <button type="button" class="timeline-item-btn del" onclick="event.stopPropagation(); deleteBlock(${idx})" title="Cut out this piece">
+          <button type="button" class="timeline-item-btn del" onclick="event.stopPropagation(); deleteBlock(${idx})" title="Remove this piece">
             <span>✕</span>
           </button>
         </div>
       </div>
-      ${idx < blocks.length - 1 ? (
-        (blk.sourceTrack === 'A' && blocks[idx + 1].sourceTrack === 'B')
-          ? `<span class="timeline-item-connector battle-connector" onclick="triggerAuditionCurrentTransition()" title="⚡ Dance-Off Battle Transition! Click to audition handoff switch">⚡ BATTLE HANDOFF ➔</span>`
-          : '<span class="timeline-connector">➔</span>'
-      ) : ''}
+      ${idx < blocks.length - 1 ? renderTransitionSeamButtonHTML(idx) : ''}
     `;
   }).join('');
 
@@ -3025,6 +3449,282 @@ function updateTimelineStatsBadge(count, totalDur) {
   const impactTotal = document.getElementById('impactTotalDuration');
   if (impactTotal) {
     impactTotal.innerText = `${appState.engine.formatTime(totalDur)} (${totalDur.toFixed(1)}s)`;
+  }
+}
+
+function renderTransitionSeamButtonHTML(idx) {
+  const blk = appState.arrangementBlocks[idx];
+  const trans = blk.transitionAfter || { type: 'crossfade', duration: 3.0 };
+  let label = '3.0s Crossfade';
+  let icon = '🌊';
+  if (trans.type === 'drum_riser') {
+    label = 'Drum Roll Riser';
+    icon = '⚡';
+  } else if (trans.type === 'teaser_loop') {
+    label = 'Rising Teaser Loop';
+    icon = '🔁';
+  } else if (trans.type === 'vinyl_brake') {
+    label = 'Vinyl Brake';
+    icon = '🛑';
+  } else if (trans.type === 'echo_out') {
+    label = 'Echo Out';
+    icon = '🌊';
+  } else if (trans.type === 'bass_swap') {
+    label = 'Bass Swap';
+    icon = '🔊';
+  } else if (trans.type === 'seamless' || trans.type === 'quick_cut') {
+    label = 'Seamless Cut';
+    icon = '✂️';
+  } else {
+    label = `${Number(trans.duration || 3.0).toFixed(1)}s Crossfade`;
+    icon = '🌊';
+  }
+
+  return `
+    <button type="button" class="transition-seam-connector-btn" onclick="event.stopPropagation(); openTransitionSeamModal(${idx})" title="Click to customize transition between #${idx + 1} and #${idx + 2}">
+      <span>${icon}</span>
+      <span>${label}</span>
+      <span style="font-size: 10px; opacity: 0.8;">▾</span>
+    </button>
+  `;
+}
+
+function nudgeBlockEnd(idx, deltaSec) {
+  if (!appState.arrangementBlocks || !appState.arrangementBlocks[idx]) return;
+  stopArrangementPlayback();
+  const blk = appState.arrangementBlocks[idx];
+  const oldEnd = blk.endTime;
+  const newEnd = Math.max(blk.startTime + 0.1, Number((oldEnd + deltaSec).toFixed(3)));
+  saveUndoState(`Nudge End ${deltaSec > 0 ? '+' : ''}${(deltaSec * 1000).toFixed(0)}ms`);
+
+  blk.endTime = newEnd;
+  appState.userHasCustomizedBlocks = true;
+
+  renderTimelineLineUI();
+  drawWaveformTimeline();
+  showToast(`✂️ Trimmed piece end to ${newEnd.toFixed(2)}s (${deltaSec > 0 ? '+' : ''}${(deltaSec * 1000).toFixed(0)}ms)!`);
+}
+
+function moveBlockLeft(idx) {
+  if (idx <= 0 || !appState.arrangementBlocks || !appState.arrangementBlocks[idx]) return;
+  stopArrangementPlayback();
+  saveUndoState(`Move Left`);
+  appState.userHasCustomizedBlocks = true;
+  const item = appState.arrangementBlocks.splice(idx, 1)[0];
+  appState.arrangementBlocks.splice(idx - 1, 0, item);
+  renderTimelineLineUI();
+  drawWaveformTimeline();
+}
+
+function moveBlockRight(idx) {
+  if (!appState.arrangementBlocks || idx >= appState.arrangementBlocks.length - 1) return;
+  stopArrangementPlayback();
+  saveUndoState(`Move Right`);
+  appState.userHasCustomizedBlocks = true;
+  const item = appState.arrangementBlocks.splice(idx, 1)[0];
+  appState.arrangementBlocks.splice(idx + 1, 0, item);
+  renderTimelineLineUI();
+  drawWaveformTimeline();
+}
+
+let currentEditingSeamIndex = null;
+let currentModalTransitionType = 'crossfade';
+
+function openTransitionSeamModal(seamIdx) {
+  currentEditingSeamIndex = seamIdx;
+  const blk = appState.arrangementBlocks[seamIdx];
+  const nextBlk = appState.arrangementBlocks[seamIdx + 1];
+  if (!blk || !nextBlk) return;
+
+  const modal = document.getElementById('transitionSeamModal');
+  const subtext = document.getElementById('transitionModalSubtext');
+  if (subtext) {
+    subtext.innerText = `Between #${seamIdx + 1} (${blk.name}) and #${seamIdx + 2} (${nextBlk.name})`;
+  }
+
+  const trans = blk.transitionAfter || { type: 'crossfade', duration: 3.0 };
+  currentModalTransitionType = trans.type || 'crossfade';
+
+  document.querySelectorAll('.trans-style-option').forEach(opt => opt.classList.remove('active'));
+  const activeOpt = document.getElementById(`modalOpt_${currentModalTransitionType}`);
+  if (activeOpt) activeOpt.classList.add('active');
+
+  const durSlider = document.getElementById('modalCrossfadeDuration');
+  const durVal = document.getElementById('modalDurationValue');
+  const durRow = document.getElementById('modalDurationRow');
+
+  const dur = Number(trans.duration !== undefined ? trans.duration : 3.0);
+  if (durSlider) durSlider.value = dur;
+  if (durVal) durVal.innerText = `${dur.toFixed(1)}s`;
+
+  if (durRow) {
+    durRow.style.display = (currentModalTransitionType === 'crossfade' || currentModalTransitionType === 'teaser_loop') ? 'block' : 'none';
+  }
+
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeTransitionSeamModal() {
+  const modal = document.getElementById('transitionSeamModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function selectModalTransitionType(type) {
+  currentModalTransitionType = type;
+  document.querySelectorAll('.trans-style-option').forEach(opt => opt.classList.remove('active'));
+  const activeOpt = document.getElementById(`modalOpt_${type}`);
+  if (activeOpt) activeOpt.classList.add('active');
+
+  const durRow = document.getElementById('modalDurationRow');
+  if (durRow) {
+    durRow.style.display = (type === 'crossfade' || type === 'teaser_loop') ? 'block' : 'none';
+  }
+}
+
+function updateModalDurationDisplay(val) {
+  const durVal = document.getElementById('modalDurationValue');
+  if (durVal) durVal.innerText = `${Number(val).toFixed(1)}s`;
+}
+
+function saveCurrentModalSeam() {
+  if (currentEditingSeamIndex === null || !appState.arrangementBlocks || !appState.arrangementBlocks[currentEditingSeamIndex]) {
+    closeTransitionSeamModal();
+    return;
+  }
+
+  const blk = appState.arrangementBlocks[currentEditingSeamIndex];
+  const durSlider = document.getElementById('modalCrossfadeDuration');
+  const dur = durSlider ? Number(durSlider.value) : 3.0;
+
+  blk.transitionAfter = {
+    type: currentModalTransitionType,
+    duration: (currentModalTransitionType === 'crossfade' || currentModalTransitionType === 'teaser_loop') ? dur : (currentModalTransitionType === 'drum_riser' ? 1.5 : 0),
+    curve: 'tri'
+  };
+
+  appState.userHasCustomizedBlocks = true;
+  closeTransitionSeamModal();
+  renderTimelineLineUI();
+  drawWaveformTimeline();
+  updateCeremonyCommandOutput();
+  showToast(`⚡ Transition updated for Seam #${currentEditingSeamIndex + 1}!`);
+}
+
+async function auditionCurrentModalSeam() {
+  if (currentEditingSeamIndex === null || !appState.arrangementBlocks) return;
+  const blk1 = appState.arrangementBlocks[currentEditingSeamIndex];
+  const blk2 = appState.arrangementBlocks[currentEditingSeamIndex + 1];
+  if (!blk1 || !blk2) return;
+
+  await ensureBlockBuffer(blk1);
+  await ensureBlockBuffer(blk2);
+
+  const durSlider = document.getElementById('modalCrossfadeDuration');
+  const dur = durSlider ? Number(durSlider.value) : 3.0;
+
+  showToast(`🎧 Auditioning "${currentModalTransitionType}" seam transition...`);
+  if (appState.engine && appState.engine.auditionModularSeam) {
+    await appState.engine.auditionModularSeam(blk1, blk2, {
+      type: currentModalTransitionType,
+      duration: dur,
+      preRoll: 3.5,
+      postRoll: 3.5
+    });
+  }
+}
+
+let currentIntroOutroTarget = 'intro';
+
+function openIntroOutroModal(target) {
+  currentIntroOutroTarget = target;
+  const modal = document.getElementById('introOutroModal');
+  const title = document.getElementById('introOutroModalTitle');
+  const check = document.getElementById('introOutroEnabledCheck');
+  const label = document.getElementById('introOutroEnabledLabel');
+  const sel = document.getElementById('introOutroDurationSelect');
+
+  const conf = target === 'intro' ? appState.introTransition : appState.outroTransition;
+
+  if (title) title.innerText = target === 'intro' ? 'Beginning Transition (Intro Crossfade)' : 'Ending Transition (Outro Crossfade)';
+  if (label) label.innerText = target === 'intro' ? 'Enable Beginning Fade In' : 'Enable Ending Fade Out';
+  if (check) check.checked = conf ? conf.enabled : true;
+  if (sel) sel.value = String((conf && conf.duration) || (target === 'intro' ? 2.0 : 3.0));
+
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeIntroOutroModal() {
+  const modal = document.getElementById('introOutroModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function saveIntroOutroModal() {
+  const check = document.getElementById('introOutroEnabledCheck');
+  const sel = document.getElementById('introOutroDurationSelect');
+
+  const enabled = check ? check.checked : true;
+  const dur = sel ? Number(sel.value) : 2.0;
+
+  if (currentIntroOutroTarget === 'intro') {
+    appState.introTransition = { enabled, duration: dur, curve: 'tri' };
+    const introLabel = document.getElementById('introTransitionLabel');
+    if (introLabel) introLabel.innerText = enabled ? `${dur.toFixed(1)}s Fade In` : 'Disabled';
+  } else {
+    appState.outroTransition = { enabled, duration: dur, curve: 'tri' };
+    const outroLabel = document.getElementById('outroTransitionLabel');
+    if (outroLabel) outroLabel.innerText = enabled ? `${dur.toFixed(1)}s Fade Out` : 'Disabled';
+  }
+
+  closeIntroOutroModal();
+  updateCeremonyCommandOutput();
+  drawWaveformTimeline();
+  showToast(`⚙️ Updated ${currentIntroOutroTarget === 'intro' ? 'Beginning' : 'Ending'} transition!`);
+}
+
+async function exportModularMix(format = 'mp3') {
+  const blocks = appState.arrangementBlocks || [];
+  if (blocks.length === 0) {
+    showToast("⚠️ Timeline is empty! Add songs or parts to your timeline first.");
+    return;
+  }
+
+  showToast("⏳ Rendering master mix with studio crossfades & loudness normalization...");
+
+  try {
+    for (let blk of blocks) {
+      await ensureBlockBuffer(blk);
+    }
+
+    const normCheck = document.getElementById('ceremonyNormalizeCheckbox');
+    const normalize = normCheck ? normCheck.checked : true;
+
+    const res = await appState.engine.renderModularMix(blocks, {
+      introTransition: appState.introTransition,
+      outroTransition: appState.outroTransition,
+      normalizeLoudness: normalize
+    });
+
+    appState.renderedMashup = res;
+
+    const blob = (format === 'mp3' && res.mp3Blob) ? res.mp3Blob : res.wavBlob;
+    const ext = (format === 'mp3' && res.mp3Blob) ? 'mp3' : 'wav';
+    const filename = `wedding_remix_mix_${Date.now()}.${ext}`;
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 2000);
+
+    showToast(`🎉 Mix downloaded successfully (${ext.toUpperCase()} • ${appState.engine.formatTime(res.totalDuration)})!`);
+  } catch (err) {
+    console.error("Export error:", err);
+    showToast(`⚠️ Export error: ${err.message || err}`);
   }
 }
 
@@ -3111,6 +3811,7 @@ function mergeBlockWithNext(idx) {
 
 // Alias for backwards compatibility
 function renderArrangementBlocksUI() {
+  renderSongLibraryUI();
   renderTimelineLineUI();
   renderPaletteUI();
 }
