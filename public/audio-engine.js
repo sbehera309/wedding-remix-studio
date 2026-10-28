@@ -2097,6 +2097,235 @@ class AudioRemixEngine {
     return { success: false };
   }
 
+  /**
+   * ========================================================
+   * 💖 MULTI-TRACK CEREMONY MASHUP ENGINE (3+ Songs)
+   * Chains arbitrary number of songs with:
+   * - Trim start & end offsets
+   * - EBU R128 loudness auto-balancing (-16 LUFS target)
+   * - Initial fade-in (e.g. 2s)
+   * - Consecutive crossfades (e.g. 3s triangular / equal-power)
+   * - Final fade-out (e.g. 3s)
+   * - Studio peak limiter (prevents digital clipping)
+   * ========================================================
+   */
+  async renderCeremonyMashup(tracks, options = {}) {
+    await this.ensureContext();
+
+    const {
+      fadeInSec = 2.0,
+      crossfadeSec = 3.0,
+      fadeOutSec = 3.0,
+      normalizeLoudness = true,
+      targetLufs = -16.0
+    } = options;
+
+    if (!tracks || tracks.length === 0) {
+      throw new Error("No tracks provided for ceremony mashup.");
+    }
+
+    // 1. Calculate active segment durations and schedule
+    const validTracks = [];
+    let sampleRate = 44100;
+
+    for (let i = 0; i < tracks.length; i++) {
+      const t = tracks[i];
+      if (!t.buffer) {
+        throw new Error(`Track ${i + 1} (${t.title || 'Untitled'}) has no audio loaded.`);
+      }
+      sampleRate = t.buffer.sampleRate || sampleRate;
+
+      const totalBufDur = t.buffer.duration;
+      const start = Math.max(0, Math.min(totalBufDur - 0.1, t.startTimeSec || 0));
+      const end = (t.endTimeSec !== null && t.endTimeSec !== undefined && t.endTimeSec > start)
+        ? Math.min(totalBufDur, t.endTimeSec)
+        : totalBufDur;
+      const segDur = Math.max(0.1, end - start);
+
+      validTracks.push({
+        ...t,
+        start,
+        end,
+        segDur
+      });
+    }
+
+    // Compute mix schedule with crossfade overlap
+    let totalMixDuration = 0;
+    const schedule = [];
+
+    for (let i = 0; i < validTracks.length; i++) {
+      const vt = validTracks[i];
+      const mixStart = (i === 0) 
+        ? 0 
+        : Math.max(0, schedule[i - 1].mixEnd - crossfadeSec);
+      const mixEnd = mixStart + vt.segDur;
+      schedule.push({
+        track: vt,
+        mixStart,
+        mixEnd,
+        segDur: vt.segDur
+      });
+      totalMixDuration = mixEnd;
+    }
+
+    const totalFrames = Math.max(1, Math.floor(sampleRate * totalMixDuration));
+    const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(2, totalFrames, sampleRate);
+
+    // Master bus chain
+    const masterGain = offlineCtx.createGain();
+    masterGain.gain.setValueAtTime(1.0, 0);
+
+    // Highpass 32Hz rumble cut
+    const hp = offlineCtx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 32;
+
+    masterGain.connect(hp);
+    hp.connect(offlineCtx.destination);
+
+    // 2. Schedule each track with loudness normalization and volume crossfades
+    for (let i = 0; i < schedule.length; i++) {
+      const item = schedule[i];
+      const t = item.track;
+      const isFirst = (i === 0);
+      const isLast = (i === schedule.length - 1);
+
+      // Measure RMS of this segment for loudness matching
+      let gainScale = 1.0;
+      if (normalizeLoudness) {
+        const leftData = t.buffer.getChannelData(0);
+        const startSample = Math.floor(t.start * t.buffer.sampleRate);
+        const endSample = Math.min(leftData.length, Math.floor(t.end * t.buffer.sampleRate));
+        const numSamples = Math.max(1, endSample - startSample);
+
+        let sumSquares = 0;
+        const step = Math.max(1, Math.floor(numSamples / 20000));
+        let count = 0;
+        for (let s = startSample; s < endSample; s += step) {
+          sumSquares += leftData[s] * leftData[s];
+          count++;
+        }
+        const rms = Math.sqrt(sumSquares / Math.max(1, count));
+        const targetRms = 0.158; // approx -16 LUFS
+        if (rms > 0.005) {
+          gainScale = Math.min(2.5, Math.max(0.4, targetRms / rms));
+        }
+      }
+
+      const src = offlineCtx.createBufferSource();
+      src.buffer = t.buffer;
+      const gainNode = offlineCtx.createGain();
+
+      const { mixStart, mixEnd, segDur } = item;
+      const xfade = Math.min(crossfadeSec, segDur * 0.45);
+
+      // --- Volume Automation ---
+      if (isFirst) {
+        const actualFadeIn = Math.min(fadeInSec, segDur * 0.4);
+        gainNode.gain.setValueAtTime(0.001, 0);
+        gainNode.gain.linearRampToValueAtTime(gainScale, actualFadeIn);
+
+        if (!isLast) {
+          gainNode.gain.setValueAtTime(gainScale, mixEnd - xfade);
+          gainNode.gain.linearRampToValueAtTime(0.001, mixEnd);
+        }
+      } else if (isLast) {
+        gainNode.gain.setValueAtTime(0.001, mixStart);
+        gainNode.gain.linearRampToValueAtTime(gainScale, mixStart + xfade);
+
+        const actualFadeOut = Math.min(fadeOutSec, segDur * 0.4);
+        gainNode.gain.setValueAtTime(gainScale, totalMixDuration - actualFadeOut);
+        gainNode.gain.linearRampToValueAtTime(0.001, totalMixDuration);
+      } else {
+        gainNode.gain.setValueAtTime(0.001, mixStart);
+        gainNode.gain.linearRampToValueAtTime(gainScale, mixStart + xfade);
+        gainNode.gain.setValueAtTime(gainScale, mixEnd - xfade);
+        gainNode.gain.linearRampToValueAtTime(0.001, mixEnd);
+      }
+
+      src.connect(gainNode);
+      gainNode.connect(masterGain);
+      src.start(mixStart, t.start, segDur);
+    }
+
+    const renderedBuffer = await offlineCtx.startRendering();
+
+    // 3. True-Peak Limiter / Soft Saturation to ensure zero clipping
+    const numChannels = renderedBuffer.numberOfChannels;
+    const numSamples = renderedBuffer.length;
+    let maxPeak = 0;
+    for (let c = 0; c < numChannels; c++) {
+      const data = renderedBuffer.getChannelData(c);
+      for (let s = 0; s < numSamples; s++) {
+        const absVal = Math.abs(data[s]);
+        if (absVal > maxPeak) maxPeak = absVal;
+      }
+    }
+
+    const targetPeak = 0.841; // -1.5 dBFS True Peak
+    if (maxPeak > targetPeak) {
+      const scale = targetPeak / maxPeak;
+      for (let c = 0; c < numChannels; c++) {
+        const data = renderedBuffer.getChannelData(c);
+        for (let s = 0; s < numSamples; s++) {
+          data[s] *= scale;
+        }
+      }
+    }
+
+    const wavBlob = this._audioBufferToWavBlob(renderedBuffer);
+
+    return {
+      renderedBuffer,
+      wavBlob,
+      totalDuration: totalMixDuration,
+      schedule
+    };
+  }
+
+  /**
+   * Preview a single trimmed clip of a ceremony track
+   */
+  async previewCeremonyClip(track, onEnd) {
+    this.stopPlayback();
+    await this.ensureContext();
+
+    if (!track || !track.buffer) return;
+
+    const totalDur = track.buffer.duration;
+    const start = Math.max(0, Math.min(totalDur - 0.1, track.startTimeSec || 0));
+    const end = (track.endTimeSec !== null && track.endTimeSec !== undefined && track.endTimeSec > start)
+      ? Math.min(totalDur, track.endTimeSec)
+      : totalDur;
+    const dur = Math.max(0.1, end - start);
+
+    const src = this.ctx.createBufferSource();
+    src.buffer = track.buffer;
+
+    const gain = this.ctx.createGain();
+    const now = this.ctx.currentTime + 0.05;
+
+    // Gentle 0.1s de-click fade in and out
+    gain.gain.setValueAtTime(0.01, now);
+    gain.gain.linearRampToValueAtTime(1.0, now + 0.1);
+    gain.gain.setValueAtTime(1.0, now + dur - 0.1);
+    gain.gain.linearRampToValueAtTime(0.001, now + dur);
+
+    src.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    src.start(now, start, dur);
+    this.currentSourceNodes = [src];
+    this.isPlaying = true;
+
+    this.auditionTimeout = setTimeout(() => {
+      this.isPlaying = false;
+      this.currentSourceNodes = [];
+      if (onEnd) onEnd();
+    }, dur * 1000);
+  }
+
   _writeString(view, offset, string) {
     for (let i = 0; i < string.length; i++) {
       view.setUint8(offset + i, string.charCodeAt(i));

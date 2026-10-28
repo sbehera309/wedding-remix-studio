@@ -32,11 +32,13 @@ const MIME_TYPES = {
   '.mp4': 'video/mp4'
 };
 
-// Check if yt-dlp is available on system
+// Check if yt-dlp is available on system or local virtualenv
 function checkYtDlpAvailable() {
+  const venvYt = path.join(__dirname, '.venv', 'bin', 'yt-dlp');
+  if (fs.existsSync(venvYt)) return Promise.resolve(venvYt);
   return new Promise((resolve) => {
     exec('which yt-dlp', (err, stdout) => {
-      resolve(!err && stdout.trim().length > 0);
+      resolve(!err && stdout.trim().length > 0 ? stdout.trim() : false);
     });
   });
 }
@@ -45,7 +47,7 @@ function checkYtDlpAvailable() {
 function checkFfmpegAvailable() {
   return new Promise((resolve) => {
     exec('which ffmpeg', (err, stdout) => {
-      resolve(!err && stdout.trim().length > 0);
+      resolve(!err && stdout.trim().length > 0 ? stdout.trim() : false);
     });
   });
 }
@@ -69,7 +71,7 @@ const server = http.createServer(async (req, res) => {
 
   // 1. Status Check
   if (pathname === '/api/status' && req.method === 'GET') {
-    const hasYtDlp = await checkYtDlpAvailable();
+    const ytBinary = await checkYtDlpAvailable();
     const hasFfmpeg = await checkFfmpegAvailable();
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -77,10 +79,10 @@ const server = http.createServer(async (req, res) => {
       status: 'online',
       nodeVersion: process.version,
       tools: {
-        ytDlp: hasYtDlp,
+        ytDlp: !!ytBinary,
         ffmpeg: hasFfmpeg
       },
-      message: hasYtDlp 
+      message: ytBinary 
         ? "YouTube audio fetch engine ready." 
         : "Direct URL fetch requires yt-dlp. File upload and audio synthesis are ready."
     }));
@@ -103,25 +105,24 @@ const server = http.createServer(async (req, res) => {
           return;
         }
 
-        const hasYtDlp = await checkYtDlpAvailable();
-        if (!hasYtDlp) {
-          // yt-dlp not found on system
+        const ytBinary = await checkYtDlpAvailable();
+        if (!ytBinary) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
             success: false,
             fallbackNeeded: true,
             reason: 'yt-dlp_not_installed',
             title: `Track from ${targetUrl.slice(0, 30)}...`,
-            message: "yt-dlp is not installed on this machine. To enable URL downloads, run: brew install yt-dlp ffmpeg. In the meantime, use drag-and-drop or the built-in demo tracks."
+            message: "yt-dlp is not installed on this machine. To enable URL downloads, run: brew install yt-dlp. In the meantime, use drag-and-drop or the built-in demo tracks."
           }));
           return;
         }
 
-        // If yt-dlp is available, invoke yt-dlp to download audio
+        // Invoke yt-dlp to download highest quality audio stream without needing external ffmpeg
         const fileId = `track_${deck}_${Date.now()}`;
         const outputTemplate = path.join(CACHE_DIR, `${fileId}.%(ext)s`);
 
-        exec(`yt-dlp -x --audio-format mp3 -o "${outputTemplate}" "${targetUrl}"`, (err, stdout, stderr) => {
+        exec(`"${ytBinary}" -f "bestaudio[ext=m4a]/bestaudio" -o "${outputTemplate}" "${targetUrl}"`, (err, stdout, stderr) => {
           if (err) {
             console.error('yt-dlp error:', stderr);
             res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -132,18 +133,43 @@ const server = http.createServer(async (req, res) => {
             return;
           }
 
-          // Locate generated file
-          const mp3Path = path.join(CACHE_DIR, `${fileId}.mp3`);
-          if (fs.existsSync(mp3Path)) {
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
-              success: true,
-              title: `Downloaded Track (${deck})`,
-              audioUrl: `/cache/${fileId}.mp3`
-            }));
+          // Locate generated file (.m4a, .webm, or .mp3)
+          const possibleExts = ['.m4a', '.webm', '.opus', '.mp3'];
+          let foundFile = null;
+          for (const ext of possibleExts) {
+            const p = path.join(CACHE_DIR, `${fileId}${ext}`);
+            if (fs.existsSync(p)) {
+              foundFile = p;
+              break;
+            }
+          }
+
+          if (foundFile) {
+            const ext = path.extname(foundFile);
+            const cleanM4a = path.join(CACHE_DIR, `${fileId}_clean.m4a`);
+
+            // If it's an m4a, run afconvert to ensure standard container
+            if (ext === '.m4a') {
+              exec(`/usr/bin/afconvert -f mp4f -d aac "${foundFile}" "${cleanM4a}"`, (cErr) => {
+                const finalFile = (!cErr && fs.existsSync(cleanM4a)) ? cleanM4a : foundFile;
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                  success: true,
+                  title: `Downloaded Track (${deck})`,
+                  audioUrl: `/cache/${path.basename(finalFile)}`
+                }));
+              });
+            } else {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({
+                success: true,
+                title: `Downloaded Track (${deck})`,
+                audioUrl: `/cache/${path.basename(foundFile)}`
+              }));
+            }
           } else {
             res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, error: 'Downloaded file not found' }));
+            res.end(JSON.stringify({ success: false, error: 'Downloaded file not found in cache' }));
           }
         });
       } catch (err) {

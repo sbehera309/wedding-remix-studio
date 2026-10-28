@@ -31,7 +31,71 @@ const appState = {
   isPlaying: false,
   playbackPosition: 0,
   playheadAnimationId: null,
-  exportFormat: 'iphone'
+  exportFormat: 'iphone',
+  // Multi-Track Ceremony Mashup State
+  ceremonyMashupInitialized: false,
+  ceremonyMashup: {
+    tracks: [
+      {
+        id: 't1',
+        title: 'Kudmayi Mashup',
+        sourceType: 'demo',
+        youtubeUrl: 'https://youtu.be/28Wx2K9nJBw',
+        audioUrl: '/kudmayi_mashup.m4a',
+        fileName: '',
+        buffer: null,
+        startTimeStr: '00:00:40',
+        endTimeStr: 'End',
+        startTimeSec: 40.0,
+        endTimeSec: null,
+        durationSec: null,
+        color: '#ec4899',
+        status: 'ready'
+      },
+      {
+        id: 't2',
+        title: 'Kanyadaan Song',
+        sourceType: 'demo',
+        youtubeUrl: 'https://youtu.be/3op9jf3K-u0',
+        audioUrl: '/kanyadaan_song.m4a',
+        fileName: '',
+        buffer: null,
+        startTimeStr: '00:00:04',
+        endTimeStr: '00:01:00',
+        startTimeSec: 4.0,
+        endTimeSec: 60.0,
+        durationSec: 56.0,
+        color: '#06b6d4',
+        status: 'ready'
+      },
+      {
+        id: 't3',
+        title: 'Tere Hawaale',
+        sourceType: 'demo',
+        youtubeUrl: 'https://youtu.be/KUpwupYj_tY',
+        audioUrl: '/tere_hawaale.m4a',
+        fileName: '',
+        buffer: null,
+        startTimeStr: '00:00:50',
+        endTimeStr: '00:02:13',
+        startTimeSec: 50.0,
+        endTimeSec: 133.0,
+        durationSec: 83.0,
+        color: '#10b981',
+        status: 'ready'
+      }
+    ],
+    fadeInSec: 2.0,
+    crossfadeSec: 3.0,
+    fadeOutSec: 3.0,
+    normalizeLoudness: true,
+    isPlaying: false,
+    playbackPosition: 0,
+    activeSourceNode: null,
+    playheadAnimId: null,
+    activePreviewIdx: null,
+    renderedMashup: null
+  }
 };
 
 // Global Autoplay Unlocker: Unconditionally wake AudioContext on very first user interaction
@@ -70,13 +134,51 @@ function setupEventListeners() {
   // Window resize redrawing
   window.addEventListener('resize', () => {
     drawWaveformTimeline();
+    if (typeof drawCeremonyTimeline === 'function') {
+      drawCeremonyTimeline();
+    }
   });
 }
 
 function switchRemixMode(mode) {
   appState.currentMode = mode;
-  document.getElementById('modeChoreoTab').classList.toggle('active', mode === 'choreo');
-  document.getElementById('modeMedleyTab').classList.toggle('active', mode === 'medley');
+  document.getElementById('modeChoreoTab')?.classList.toggle('active', mode === 'choreo');
+  document.getElementById('modeMedleyTab')?.classList.toggle('active', mode === 'medley');
+  document.getElementById('modeCeremonyTab')?.classList.toggle('active', mode === 'ceremony');
+
+  // Stop any ongoing playback across modes
+  if (appState.isPlaying && typeof toggleFullPlayback === 'function') {
+    toggleFullPlayback();
+  }
+  if (appState.ceremonyMashup && appState.ceremonyMashup.isPlaying && typeof stopCeremonyPlayback === 'function') {
+    stopCeremonyPlayback();
+  }
+
+  const decksRow = document.querySelector('.song-decks-row');
+  const timelineSec = document.getElementById('timelineSection');
+  const paletteSec = document.getElementById('paletteSection') || document.querySelector('.palette-card');
+  const advDrawer = document.getElementById('advancedDrawer');
+  const ceremonySec = document.getElementById('ceremonyMashupSection');
+
+  if (mode === 'ceremony') {
+    if (decksRow) decksRow.style.display = 'none';
+    if (timelineSec) timelineSec.style.display = 'none';
+    if (paletteSec) paletteSec.style.display = 'none';
+    if (advDrawer) advDrawer.style.display = 'none';
+    if (ceremonySec) ceremonySec.style.display = 'block';
+
+    if (typeof initCeremonyMashupUI === 'function') {
+      initCeremonyMashupUI();
+    }
+    return;
+  }
+
+  // Restore non-ceremony sections for choreo / medley
+  if (decksRow) decksRow.style.display = 'grid';
+  if (timelineSec) timelineSec.style.display = 'block';
+  if (paletteSec) paletteSec.style.display = 'block';
+  if (advDrawer) advDrawer.style.display = 'block';
+  if (ceremonySec) ceremonySec.style.display = 'none';
 
   if (mode === 'choreo') {
     document.getElementById('deckTitleA').innerText = "Performance / Choreo Edit";
@@ -2074,6 +2176,11 @@ async function selectMixStarter(starterId) {
     renderArrangementBlocksUI();
     drawWaveformTimeline();
     showToast("🔥 Loaded Kala Chashma Choreo Extension (Bar 1 Repeat + Outro Extension)!");
+
+  } else if (starterId === 'kudmayi_ceremony') {
+    switchRemixMode('ceremony');
+    await loadCeremonyPreset('kudmayi_mashup');
+    showToast("💖 Kudmayi ➔ Kanyadaan ➔ Tere Hawaale Ceremony Mashup loaded!");
 
   } else if (starterId === 'tauba_dance_off') {
     switchRemixMode('medley');
@@ -4995,3 +5102,1108 @@ function showToast(message) {
     toast.style.display = 'none';
   }, 4000);
 }
+
+/* ======================================================== */
+/* 💖 MULTI-TRACK CEREMONY MASHUP CONTROLLER (3+ Songs)     */
+/* ======================================================== */
+
+function escapeCeremonyHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function parseTimeSec(str) {
+  if (str === null || str === undefined) return 0;
+  const s = String(str).trim();
+  if (s.toLowerCase() === 'end') return null;
+  if (s === '') return 0;
+  const parts = s.split(':').map(p => parseFloat(p.trim()));
+  if (parts.some(isNaN)) return 0;
+  if (parts.length === 3) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  } else if (parts.length === 2) {
+    return parts[0] * 60 + parts[1];
+  } else if (parts.length === 1) {
+    return parts[0];
+  }
+  return 0;
+}
+
+function formatTimeSec(sec) {
+  if (sec === null || sec === undefined || isNaN(sec)) return 'End';
+  const total = Math.max(0, Math.floor(sec));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+function formatTimeWithMs(sec) {
+  if (sec === null || sec === undefined || isNaN(sec)) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  const ms = Math.floor((sec % 1) * 10);
+  return `${m}:${s < 10 ? '0' : ''}${s}.${ms}`;
+}
+
+function triggerDownloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
+function triggerDownloadDirectUrl(url, filename) {
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+  }, 1000);
+}
+
+function initCeremonyMashupUI() {
+  if (!appState.ceremonyMashupInitialized) {
+    appState.ceremonyMashupInitialized = true;
+    loadCeremonyPreset('kudmayi_mashup');
+  } else {
+    renderCeremonyTrackCards();
+    updateCeremonyStats();
+    drawCeremonyTimeline();
+    updateCeremonyCommandOutput();
+  }
+}
+
+async function loadCeremonyPreset(presetId) {
+  document.querySelectorAll('.btn-ceremony-preset').forEach(b => b.classList.remove('active'));
+
+  if (presetId === 'kudmayi_mashup') {
+    document.getElementById('presetCeremonyKudmayi')?.classList.add('active');
+    appState.ceremonyMashup.tracks = [
+      {
+        id: 't1',
+        title: 'Kudmayi Mashup',
+        sourceType: 'demo',
+        youtubeUrl: 'https://youtu.be/28Wx2K9nJBw',
+        audioUrl: '/kudmayi_mashup.m4a',
+        fileName: '',
+        buffer: null,
+        startTimeStr: '00:00:40',
+        endTimeStr: 'End',
+        startTimeSec: 40.0,
+        endTimeSec: null,
+        durationSec: null,
+        color: '#ec4899',
+        status: 'ready'
+      },
+      {
+        id: 't2',
+        title: 'Kanyadaan Song',
+        sourceType: 'demo',
+        youtubeUrl: 'https://youtu.be/3op9jf3K-u0',
+        audioUrl: '/kanyadaan_song.m4a',
+        fileName: '',
+        buffer: null,
+        startTimeStr: '00:00:04',
+        endTimeStr: '00:01:00',
+        startTimeSec: 4.0,
+        endTimeSec: 60.0,
+        durationSec: 56.0,
+        color: '#06b6d4',
+        status: 'ready'
+      },
+      {
+        id: 't3',
+        title: 'Tere Hawaale',
+        sourceType: 'demo',
+        youtubeUrl: 'https://youtu.be/KUpwupYj_tY',
+        audioUrl: '/tere_hawaale.m4a',
+        fileName: '',
+        buffer: null,
+        startTimeStr: '00:00:50',
+        endTimeStr: '00:02:13',
+        startTimeSec: 50.0,
+        endTimeSec: 133.0,
+        durationSec: 83.0,
+        color: '#10b981',
+        status: 'ready'
+      }
+    ];
+    appState.ceremonyMashup.fadeInSec = 2.0;
+    appState.ceremonyMashup.crossfadeSec = 3.0;
+    appState.ceremonyMashup.fadeOutSec = 3.0;
+    appState.ceremonyMashup.normalizeLoudness = true;
+
+  } else if (presetId === 'din_shagna') {
+    document.getElementById('presetCeremonyDinShagna')?.classList.add('active');
+    appState.ceremonyMashup.tracks = [
+      {
+        id: 't1',
+        title: 'Din Shagna Da (Jasleen Royal)',
+        sourceType: 'youtube',
+        youtubeUrl: 'https://youtu.be/V7LwfY42YTU',
+        audioUrl: '',
+        fileName: '',
+        buffer: null,
+        startTimeStr: '00:00:00',
+        endTimeStr: '00:01:15',
+        startTimeSec: 0.0,
+        endTimeSec: 75.0,
+        durationSec: 75.0,
+        color: '#ec4899',
+        status: 'ready'
+      },
+      {
+        id: 't2',
+        title: 'Ranjha (Sid & Kiara Version)',
+        sourceType: 'youtube',
+        youtubeUrl: 'https://youtu.be/EDw9pQeR_eQ',
+        audioUrl: '',
+        fileName: '',
+        buffer: null,
+        startTimeStr: '00:00:15',
+        endTimeStr: '00:01:25',
+        startTimeSec: 15.0,
+        endTimeSec: 85.0,
+        durationSec: 70.0,
+        color: '#06b6d4',
+        status: 'ready'
+      },
+      {
+        id: 't3',
+        title: 'Peer Vi Tu (Bridal Walk)',
+        sourceType: 'youtube',
+        youtubeUrl: 'https://youtu.be/zD1L5oK_tU0',
+        audioUrl: '',
+        fileName: '',
+        buffer: null,
+        startTimeStr: '00:00:30',
+        endTimeStr: '00:01:45',
+        startTimeSec: 30.0,
+        endTimeSec: 105.0,
+        durationSec: 75.0,
+        color: '#10b981',
+        status: 'ready'
+      }
+    ];
+  } else if (presetId === 'custom_empty') {
+    document.getElementById('presetCeremonyEmpty')?.classList.add('active');
+    appState.ceremonyMashup.tracks = [
+      {
+        id: 't1',
+        title: 'Opening Song (Track 1)',
+        sourceType: 'file',
+        youtubeUrl: '',
+        audioUrl: '',
+        fileName: '',
+        buffer: null,
+        startTimeStr: '00:00:00',
+        endTimeStr: '00:01:00',
+        startTimeSec: 0.0,
+        endTimeSec: 60.0,
+        durationSec: 60.0,
+        color: '#ec4899',
+        status: 'ready'
+      },
+      {
+        id: 't2',
+        title: 'Middle Song (Track 2)',
+        sourceType: 'file',
+        youtubeUrl: '',
+        audioUrl: '',
+        fileName: '',
+        buffer: null,
+        startTimeStr: '00:00:00',
+        endTimeStr: '00:01:00',
+        startTimeSec: 0.0,
+        endTimeSec: 60.0,
+        durationSec: 60.0,
+        color: '#06b6d4',
+        status: 'ready'
+      },
+      {
+        id: 't3',
+        title: 'Finale Song (Track 3)',
+        sourceType: 'file',
+        youtubeUrl: '',
+        audioUrl: '',
+        fileName: '',
+        buffer: null,
+        startTimeStr: '00:00:00',
+        endTimeStr: '00:01:00',
+        startTimeSec: 0.0,
+        endTimeSec: 60.0,
+        durationSec: 60.0,
+        color: '#10b981',
+        status: 'ready'
+      }
+    ];
+  }
+
+  const fadeSel = document.getElementById('ceremonyFadeInSelect');
+  if (fadeSel) fadeSel.value = String(appState.ceremonyMashup.fadeInSec);
+  const fadeOutSel = document.getElementById('ceremonyFadeOutSelect');
+  if (fadeOutSel) fadeOutSel.value = String(appState.ceremonyMashup.fadeOutSec);
+  const crossSlider = document.getElementById('ceremonyCrossfadeSlider');
+  if (crossSlider) crossSlider.value = appState.ceremonyMashup.crossfadeSec;
+  const crossVal = document.getElementById('ceremonyCrossfadeVal');
+  if (crossVal) crossVal.innerText = `${appState.ceremonyMashup.crossfadeSec.toFixed(1)}s`;
+  const normBox = document.getElementById('ceremonyNormalizeCheckbox');
+  if (normBox) normBox.checked = appState.ceremonyMashup.normalizeLoudness;
+
+  renderCeremonyTrackCards();
+  recalculateTrackDurations();
+  updateCeremonyStats();
+  drawCeremonyTimeline();
+  updateCeremonyCommandOutput();
+
+  if (presetId === 'kudmayi_mashup') {
+    for (const t of appState.ceremonyMashup.tracks) {
+      loadCeremonyTrackBuffer(t);
+    }
+  }
+}
+
+async function loadCeremonyTrackBuffer(track) {
+  if (track.buffer) return track.buffer;
+  track.status = 'loading';
+  renderCeremonyTrackCards();
+
+  try {
+    let arrayBuffer = null;
+    if (track.sourceType === 'demo' && track.audioUrl) {
+      const resp = await fetch(track.audioUrl);
+      if (!resp.ok) throw new Error(`Could not fetch ${track.audioUrl}`);
+      arrayBuffer = await resp.arrayBuffer();
+    } else if (track.sourceType === 'youtube' && track.youtubeUrl) {
+      const url = track.youtubeUrl;
+      let cachedUrl = null;
+      if (url.includes('28Wx2K9nJBw')) cachedUrl = '/kudmayi_mashup.m4a';
+      else if (url.includes('3op9jf3K-u0')) cachedUrl = '/kanyadaan_song.m4a';
+      else if (url.includes('KUpwupYj_tY')) cachedUrl = '/tere_hawaale.m4a';
+
+      if (cachedUrl) {
+        try {
+          const resp = await fetch(cachedUrl);
+          if (resp.ok) arrayBuffer = await resp.arrayBuffer();
+        } catch (e) {}
+      }
+
+      if (!arrayBuffer) {
+        const resp = await fetch(`/api/download-audio?url=${encodeURIComponent(url)}`);
+        const data = await resp.json();
+        if (data && data.audioUrl) {
+          const aResp = await fetch(data.audioUrl);
+          arrayBuffer = await aResp.arrayBuffer();
+        } else {
+          throw new Error(data.error || "Could not fetch YouTube audio");
+        }
+      }
+    }
+
+    if (arrayBuffer) {
+      await appState.engine.ensureContext();
+      track.buffer = await appState.engine.ctx.decodeAudioData(arrayBuffer.slice(0));
+      track.status = 'ready';
+      recalculateTrackDurations();
+      updateCeremonyStats();
+      drawCeremonyTimeline();
+      updateCeremonyCommandOutput();
+    }
+  } catch (err) {
+    console.warn("Could not load track buffer:", err);
+    track.status = 'error';
+    showToast(`⚠️ Could not load audio for ${track.title}`);
+  }
+
+  renderCeremonyTrackCards();
+  return track.buffer;
+}
+
+function recalculateTrackDurations() {
+  const cm = appState.ceremonyMashup;
+  let totalDuration = 0;
+
+  for (let i = 0; i < cm.tracks.length; i++) {
+    const t = cm.tracks[i];
+    const bufDur = t.buffer ? t.buffer.duration : null;
+
+    t.startTimeSec = parseTimeSec(t.startTimeStr);
+    const parsedEnd = parseTimeSec(t.endTimeStr);
+
+    if (parsedEnd === null) {
+      t.endTimeSec = bufDur ? bufDur : null;
+    } else {
+      t.endTimeSec = bufDur ? Math.min(bufDur, parsedEnd) : parsedEnd;
+    }
+
+    if (t.endTimeSec !== null) {
+      t.durationSec = Math.max(0, t.endTimeSec - t.startTimeSec);
+    } else {
+      t.durationSec = Math.max(0, (parsedEnd || 60) - t.startTimeSec);
+    }
+
+    const segDur = t.durationSec || 60;
+    if (i === 0) {
+      totalDuration = segDur;
+    } else {
+      totalDuration += Math.max(0, segDur - cm.crossfadeSec);
+    }
+  }
+
+  cm.totalDuration = totalDuration;
+  return totalDuration;
+}
+
+function updateCeremonyStats() {
+  const cm = appState.ceremonyMashup;
+  const total = recalculateTrackDurations();
+  const badge = document.getElementById('ceremonyTotalStats');
+  if (badge) {
+    const m = Math.floor(total / 60);
+    const s = Math.floor(total % 60);
+    badge.innerText = `${cm.tracks.length} Songs • ~${m}m ${s < 10 ? '0' : ''}${s}s Total Mix`;
+  }
+}
+
+function renderCeremonyTrackCards() {
+  const container = document.getElementById('ceremonyTrackChain');
+  if (!container) return;
+
+  const tracks = appState.ceremonyMashup.tracks;
+  let html = '';
+
+  for (let i = 0; i < tracks.length; i++) {
+    const t = tracks[i];
+    const isReady = !!t.buffer;
+    const durDisplay = t.durationSec ? `${t.durationSec.toFixed(0)}s duration` : '--s';
+    const isPlayingThisClip = (appState.ceremonyMashup.activePreviewIdx === i);
+
+    html += `
+      <div class="ceremony-track-card" id="ceremonyCard_${i}" style="border-left: 4px solid ${t.color};">
+        <div class="ceremony-track-header">
+          <div class="track-header-left">
+            <span class="track-number-badge" style="background: ${t.color}22; color: ${t.color}; border: 1px solid ${t.color}55;">
+              Track ${i + 1}
+            </span>
+            <input type="text" class="track-title-input" value="${escapeCeremonyHtml(t.title)}"
+              placeholder="Song Name..."
+              onchange="updateCeremonyTrackTitle(${i}, this.value)">
+          </div>
+          <div class="track-header-actions">
+            <button type="button" class="btn-track-preview ${isPlayingThisClip ? 'active-playing' : ''}"
+              onclick="previewCeremonyTrackClip(${i})" title="Listen to this trimmed clip">
+              <span>${isPlayingThisClip ? '⏹ Stop' : '▶ Preview Clip'}</span>
+            </button>
+            ${tracks.length > 2 ? `
+              <button type="button" class="btn-track-remove" onclick="removeCeremonyTrack(${i})" title="Remove Track">
+                <span>✕</span>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Segmented Source Tabs -->
+        <div class="ceremony-source-tabs">
+          <button type="button" class="ceremony-source-tab ${t.sourceType === 'demo' ? 'active' : ''}"
+            onclick="setCeremonySourceType(${i}, 'demo')">
+            <span>🎵</span> Starter Demo
+          </button>
+          <button type="button" class="ceremony-source-tab ${t.sourceType === 'file' ? 'active' : ''}"
+            onclick="setCeremonySourceType(${i}, 'file')">
+            <span>📁</span> Upload File (Vercel-Safe)
+          </button>
+          <button type="button" class="ceremony-source-tab ${t.sourceType === 'youtube' ? 'active' : ''}"
+            onclick="setCeremonySourceType(${i}, 'youtube')">
+            <span>🔗</span> YouTube Link
+          </button>
+        </div>
+
+        <!-- Source Content Pane -->
+        <div class="ceremony-source-pane">
+          ${t.sourceType === 'demo' ? `
+            <div style="font-size: 13px; color: var(--text-muted); background: rgba(0,0,0,0.25); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+              <span>🌟 High-Fidelity Studio Audio Source: <strong>${escapeCeremonyHtml(t.title)}</strong></span>
+              <span class="metric-pill" style="color: ${isReady ? 'var(--accent-emerald)' : 'var(--text-muted)'};">
+                ${isReady ? 'Loaded ✓' : 'Click Preview to load'}
+              </span>
+            </div>
+          ` : ''}
+
+          ${t.sourceType === 'file' ? `
+            <div class="ceremony-dropzone" id="ceremonyDropzone_${i}"
+              onclick="document.getElementById('ceremonyFileInput_${i}').click()"
+              ondragover="handleCeremonyDragOver(event)"
+              ondrop="handleCeremonyDrop(event, ${i})">
+              <input type="file" id="ceremonyFileInput_${i}" accept="audio/*,video/*" style="display: none;"
+                onchange="handleCeremonyFileInput(this, ${i})">
+              <span>📁</span>
+              ${t.fileName ? `
+                <strong>${escapeCeremonyHtml(t.fileName)}</strong> (Loaded ✓)
+              ` : `
+                <strong>Drop audio or video file here</strong> or click to browse (.mp3, .wav, .m4a, .mp4)
+              `}
+            </div>
+          ` : ''}
+
+          ${t.sourceType === 'youtube' ? `
+            <div class="ceremony-url-box">
+              <input type="text" class="ceremony-url-input" id="ceremonyUrlInput_${i}"
+                placeholder="Paste YouTube link (e.g. https://youtu.be/...)"
+                value="${escapeCeremonyHtml(t.youtubeUrl || '')}"
+                onchange="updateCeremonyYoutubeUrl(${i}, this.value)">
+              <button type="button" class="btn-ceremony-fetch" onclick="fetchCeremonyYouTubeTrack(${i})">
+                ${t.status === 'loading' ? '⏳ Loading...' : 'Load Audio'}
+              </button>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Trimming Row -->
+        <div class="ceremony-trim-row">
+          <div class="trim-field">
+            <span class="trim-label">✂️ Start Time:</span>
+            <input type="text" class="ceremony-time-input" value="${escapeCeremonyHtml(t.startTimeStr)}"
+              placeholder="00:00:40"
+              onchange="updateCeremonyTrackTrim(${i}, 'start', this.value)">
+          </div>
+          <div class="trim-field">
+            <span class="trim-label">✂️ End Time:</span>
+            <input type="text" class="ceremony-time-input" value="${escapeCeremonyHtml(t.endTimeStr)}"
+              placeholder="00:01:00 or End"
+              onchange="updateCeremonyTrackTrim(${i}, 'end', this.value)">
+          </div>
+          <span class="ceremony-duration-chip" id="ceremonyDurChip_${i}">
+            ⏱️ ${durDisplay}
+          </span>
+        </div>
+      </div>
+    `;
+
+    if (i < tracks.length - 1) {
+      html += `
+        <div class="ceremony-seam-connector">
+          <div class="seam-line"></div>
+          <div class="seam-badge">
+            ⏳ ${appState.ceremonyMashup.crossfadeSec.toFixed(1)}s Crossfade Blend
+          </div>
+          <div class="seam-line"></div>
+        </div>
+      `;
+    }
+  }
+
+  container.innerHTML = html;
+}
+
+function setCeremonySourceType(idx, type) {
+  const track = appState.ceremonyMashup.tracks[idx];
+  if (!track) return;
+  track.sourceType = type;
+  renderCeremonyTrackCards();
+  updateCeremonyCommandOutput();
+}
+
+function updateCeremonyTrackTitle(idx, value) {
+  const track = appState.ceremonyMashup.tracks[idx];
+  if (track) {
+    track.title = value.trim() || `Song ${idx + 1}`;
+    drawCeremonyTimeline();
+    updateCeremonyCommandOutput();
+  }
+}
+
+function updateCeremonyYoutubeUrl(idx, value) {
+  const track = appState.ceremonyMashup.tracks[idx];
+  if (track) {
+    track.youtubeUrl = value.trim();
+    track.buffer = null;
+    updateCeremonyCommandOutput();
+  }
+}
+
+async function fetchCeremonyYouTubeTrack(idx) {
+  const track = appState.ceremonyMashup.tracks[idx];
+  if (!track || !track.youtubeUrl) {
+    showToast("⚠️ Please enter a valid YouTube URL first.");
+    return;
+  }
+  showToast(`⏳ Loading audio from YouTube for Track ${idx + 1}...`);
+  await loadCeremonyTrackBuffer(track);
+}
+
+function handleCeremonyDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'copy';
+}
+
+async function handleCeremonyDrop(event, idx) {
+  event.preventDefault();
+  const file = event.dataTransfer.files && event.dataTransfer.files[0];
+  if (file) {
+    await processCeremonyLocalFile(file, idx);
+  }
+}
+
+async function handleCeremonyFileInput(fileInput, idx) {
+  const file = fileInput.files && fileInput.files[0];
+  if (file) {
+    await processCeremonyLocalFile(file, idx);
+  }
+}
+
+async function processCeremonyLocalFile(file, idx) {
+  const track = appState.ceremonyMashup.tracks[idx];
+  if (!track) return;
+
+  track.status = 'loading';
+  track.fileName = file.name;
+  if (!track.title || track.title.startsWith('Song ') || track.title.startsWith('Opening Song') || track.title.startsWith('Middle Song') || track.title.startsWith('Finale Song')) {
+    track.title = file.name.replace(/\.[^/.]+$/, "");
+  }
+  renderCeremonyTrackCards();
+  showToast(`📁 Decoding "${file.name}" locally in browser (Vercel-safe)...`);
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    await appState.engine.ensureContext();
+    track.buffer = await appState.engine.ctx.decodeAudioData(arrayBuffer);
+    track.status = 'ready';
+    track.sourceType = 'file';
+    recalculateTrackDurations();
+    updateCeremonyStats();
+    drawCeremonyTimeline();
+    updateCeremonyCommandOutput();
+    showToast(`✅ "${file.name}" loaded (${formatTimeSec(track.buffer.duration)})!`);
+  } catch (err) {
+    console.error("Error decoding local audio file:", err);
+    track.status = 'error';
+    showToast(`⚠️ Could not decode audio: ${err.message || err}`);
+  }
+
+  renderCeremonyTrackCards();
+}
+
+function updateCeremonyTrackTrim(idx, field, value) {
+  const track = appState.ceremonyMashup.tracks[idx];
+  if (!track) return;
+
+  if (field === 'start') {
+    track.startTimeStr = value.trim() || '00:00:00';
+  } else if (field === 'end') {
+    track.endTimeStr = value.trim() || 'End';
+  }
+
+  recalculateTrackDurations();
+  renderCeremonyTrackCards();
+  updateCeremonyStats();
+  drawCeremonyTimeline();
+  updateCeremonyCommandOutput();
+}
+
+const CEREMONY_PALETTE = ['#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#3b82f6'];
+
+function addCeremonyTrack() {
+  const tracks = appState.ceremonyMashup.tracks;
+  const num = tracks.length + 1;
+  const color = CEREMONY_PALETTE[(num - 1) % CEREMONY_PALETTE.length];
+
+  tracks.push({
+    id: `track_${Date.now()}`,
+    title: `Song ${num}`,
+    sourceType: 'file',
+    youtubeUrl: '',
+    audioUrl: '',
+    fileName: '',
+    buffer: null,
+    startTimeStr: '00:00:00',
+    endTimeStr: '00:01:00',
+    startTimeSec: 0.0,
+    endTimeSec: 60.0,
+    durationSec: 60.0,
+    color,
+    status: 'ready'
+  });
+
+  recalculateTrackDurations();
+  renderCeremonyTrackCards();
+  updateCeremonyStats();
+  drawCeremonyTimeline();
+  updateCeremonyCommandOutput();
+  showToast(`➕ Added Track ${num} to Ceremony Sequence`);
+}
+
+function removeCeremonyTrack(idx) {
+  const tracks = appState.ceremonyMashup.tracks;
+  if (tracks.length <= 2) {
+    showToast("⚠️ Sequence must contain at least 2 tracks.");
+    return;
+  }
+  const removed = tracks.splice(idx, 1);
+  recalculateTrackDurations();
+  renderCeremonyTrackCards();
+  updateCeremonyStats();
+  drawCeremonyTimeline();
+  updateCeremonyCommandOutput();
+  showToast(`Removed "${removed[0].title}" from sequence`);
+}
+
+async function previewCeremonyTrackClip(idx) {
+  const cm = appState.ceremonyMashup;
+  const track = cm.tracks[idx];
+  if (!track) return;
+
+  if (cm.activePreviewIdx === idx) {
+    stopCeremonyTrackClip();
+    return;
+  }
+
+  stopCeremonyTrackClip();
+  if (cm.isPlaying) {
+    stopCeremonyPlayback();
+  }
+
+  if (!track.buffer) {
+    showToast(`⏳ Loading audio for Track ${idx + 1}...`);
+    await loadCeremonyTrackBuffer(track);
+  }
+
+  if (!track.buffer) return;
+
+  cm.activePreviewIdx = idx;
+  renderCeremonyTrackCards();
+
+  await appState.engine.previewCeremonyClip(track, () => {
+    cm.activePreviewIdx = null;
+    renderCeremonyTrackCards();
+  });
+}
+
+function stopCeremonyTrackClip() {
+  const cm = appState.ceremonyMashup;
+  appState.engine.stopPlayback();
+  cm.activePreviewIdx = null;
+  renderCeremonyTrackCards();
+}
+
+function updateCeremonySettings() {
+  const cm = appState.ceremonyMashup;
+  const fadeSel = document.getElementById('ceremonyFadeInSelect');
+  if (fadeSel) cm.fadeInSec = parseFloat(fadeSel.value) || 0;
+
+  const fadeOutSel = document.getElementById('ceremonyFadeOutSelect');
+  if (fadeOutSel) cm.fadeOutSec = parseFloat(fadeOutSel.value) || 0;
+
+  const normBox = document.getElementById('ceremonyNormalizeCheckbox');
+  if (normBox) cm.normalizeLoudness = normBox.checked;
+
+  drawCeremonyTimeline();
+  updateCeremonyCommandOutput();
+}
+
+function updateCeremonyCrossfade(val) {
+  const cm = appState.ceremonyMashup;
+  cm.crossfadeSec = parseFloat(val) || 3.0;
+  const disp = document.getElementById('ceremonyCrossfadeVal');
+  if (disp) disp.innerText = `${cm.crossfadeSec.toFixed(1)}s`;
+
+  recalculateTrackDurations();
+  updateCeremonyStats();
+  renderCeremonyTrackCards();
+  drawCeremonyTimeline();
+  updateCeremonyCommandOutput();
+}
+
+function drawCeremonyTimeline(currentPosition = null) {
+  const canvas = document.getElementById('ceremonyTimelineCanvas');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth || 1150;
+  const height = 90;
+
+  if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+  }
+
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, width, height);
+
+  // Background
+  ctx.fillStyle = '#0f1322';
+  ctx.fillRect(0, 0, width, height);
+
+  const cm = appState.ceremonyMashup;
+  const tracks = cm.tracks;
+  const totalDur = recalculateTrackDurations();
+
+  if (totalDur <= 0 || tracks.length === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '13px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Add tracks and set times to see multi-song crossfade preview', width / 2, height / 2 + 5);
+    ctx.restore();
+    return;
+  }
+
+  // Draw segments
+  let currentStart = 0;
+  for (let i = 0; i < tracks.length; i++) {
+    const t = tracks[i];
+    const segDur = t.durationSec || 60;
+    const segStart = currentStart;
+    const segEnd = segStart + segDur;
+
+    const x1 = (segStart / totalDur) * width;
+    const x2 = (segEnd / totalDur) * width;
+    const segW = Math.max(2, x2 - x1);
+
+    // Track block background
+    const grad = ctx.createLinearGradient(x1, 0, x2, 0);
+    grad.addColorStop(0, `${t.color}cc`);
+    grad.addColorStop(1, `${t.color}88`);
+    ctx.fillStyle = grad;
+
+    const blockY = 16;
+    const blockH = height - 32;
+    ctx.beginPath();
+    ctx.roundRect(x1, blockY, segW, blockH, 8);
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = `${t.color}ff`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Stylized audio energy waves inside block
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    const waveStep = 7;
+    for (let wx = x1 + 8; wx < x2 - 8; wx += waveStep) {
+      const rel = (wx - x1) / segW;
+      const barH = (Math.sin(rel * 14 + i) * 0.4 + 0.5) * (blockH * 0.65);
+      const by = blockY + (blockH - barH) / 2;
+      ctx.fillRect(wx, by, 3, barH);
+    }
+
+    // Label: Song title & duration
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'left';
+    const textX = Math.max(x1 + 10, Math.min(x2 - 120, x1 + 10));
+    ctx.fillText(`${t.title || `Track ${i + 1}`} (${segDur.toFixed(0)}s)`, textX, blockY + 18);
+
+    // Initial fade in indicator
+    if (i === 0 && cm.fadeInSec > 0) {
+      const fadeW = Math.min(segW * 0.5, (cm.fadeInSec / totalDur) * width);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.beginPath();
+      ctx.moveTo(x1, blockY);
+      ctx.lineTo(x1 + fadeW, blockY);
+      ctx.lineTo(x1, blockY + blockH);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Final fade out indicator
+    if (i === tracks.length - 1 && cm.fadeOutSec > 0) {
+      const fadeW = Math.min(segW * 0.5, (cm.fadeOutSec / totalDur) * width);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.beginPath();
+      ctx.moveTo(x2, blockY);
+      ctx.lineTo(x2 - fadeW, blockY + blockH);
+      ctx.lineTo(x2, blockY + blockH);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    currentStart = segEnd - cm.crossfadeSec;
+  }
+
+  // Playhead line
+  const pos = (currentPosition !== null) ? currentPosition : (cm.playbackPosition || 0);
+  const playheadX = (pos / totalDur) * width;
+
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(playheadX, 0);
+  ctx.lineTo(playheadX, height);
+  ctx.stroke();
+
+  // Playhead diamond
+  ctx.fillStyle = '#ec4899';
+  ctx.beginPath();
+  ctx.moveTo(playheadX, 0);
+  ctx.lineTo(playheadX + 5, 8);
+  ctx.lineTo(playheadX, 16);
+  ctx.lineTo(playheadX - 5, 8);
+  ctx.closePath();
+  ctx.fill();
+
+  const timeDisp = document.getElementById('ceremonyPlayheadTimeDisplay');
+  if (timeDisp) {
+    timeDisp.innerText = `${formatTimeWithMs(pos)} / ${formatTimeWithMs(totalDur)}`;
+  }
+
+  ctx.restore();
+}
+
+async function toggleCeremonyPlayback() {
+  const cm = appState.ceremonyMashup;
+  await appState.engine.ensureContext();
+
+  if (cm.isPlaying) {
+    stopCeremonyPlayback();
+    return;
+  }
+
+  const playBtn = document.getElementById('btnCeremonyPlay');
+  if (playBtn) playBtn.innerHTML = '<span>⏳</span> Rendering Mix...';
+
+  try {
+    for (let i = 0; i < cm.tracks.length; i++) {
+      if (!cm.tracks[i].buffer) {
+        showToast(`Loading audio for Track ${i + 1}...`);
+        await loadCeremonyTrackBuffer(cm.tracks[i]);
+      }
+    }
+
+    showToast("💖 Rendering multi-track ceremony sequence with -16 LUFS loudness balance...");
+    const renderResult = await appState.engine.renderCeremonyMashup(cm.tracks, {
+      fadeInSec: cm.fadeInSec,
+      crossfadeSec: cm.crossfadeSec,
+      fadeOutSec: cm.fadeOutSec,
+      normalizeLoudness: cm.normalizeLoudness
+    });
+
+    cm.renderedMashup = renderResult;
+
+    const ctx = appState.engine.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = renderResult.renderedBuffer;
+    src.connect(ctx.destination);
+
+    const startPos = cm.playbackPosition || 0;
+    const now = ctx.currentTime;
+    src.start(0, startPos);
+
+    cm.activeSourceNode = src;
+    cm.playbackStartCtxTime = now - startPos;
+    cm.isPlaying = true;
+
+    if (playBtn) playBtn.innerHTML = '<span>⏸</span> Pause Ceremony Mashup';
+
+    src.onended = () => {
+      if (cm.isPlaying && ctx.currentTime - cm.playbackStartCtxTime >= renderResult.totalDuration - 0.1) {
+        stopCeremonyPlayback();
+        cm.playbackPosition = 0;
+        drawCeremonyTimeline();
+      }
+    };
+
+    const animate = () => {
+      if (!cm.isPlaying) return;
+      const currentPos = ctx.currentTime - cm.playbackStartCtxTime;
+      cm.playbackPosition = Math.min(renderResult.totalDuration, Math.max(0, currentPos));
+      drawCeremonyTimeline(cm.playbackPosition);
+      cm.playheadAnimId = requestAnimationFrame(animate);
+    };
+    cm.playheadAnimId = requestAnimationFrame(animate);
+
+  } catch (err) {
+    console.error("Playback error:", err);
+    showToast(`⚠️ Playback error: ${err.message || err}`);
+    if (playBtn) playBtn.innerHTML = '<span>▶</span> Play Ceremony Mashup';
+  }
+}
+
+function stopCeremonyPlayback() {
+  const cm = appState.ceremonyMashup;
+  if (cm.activeSourceNode) {
+    try { cm.activeSourceNode.stop(); } catch (e) {}
+    cm.activeSourceNode = null;
+  }
+  if (cm.playheadAnimId) {
+    cancelAnimationFrame(cm.playheadAnimId);
+    cm.playheadAnimId = null;
+  }
+  cm.isPlaying = false;
+  const playBtn = document.getElementById('btnCeremonyPlay');
+  if (playBtn) playBtn.innerHTML = '<span>▶</span> Play Ceremony Mashup';
+}
+
+function replayCeremonyMashup() {
+  stopCeremonyPlayback();
+  appState.ceremonyMashup.playbackPosition = 0;
+  toggleCeremonyPlayback();
+}
+
+async function exportCeremonyMashup(format) {
+  const cm = appState.ceremonyMashup;
+  await appState.engine.ensureContext();
+
+  showToast(`⏳ Preparing ceremony mashup for export (${format.toUpperCase()})...`);
+
+  for (let i = 0; i < cm.tracks.length; i++) {
+    if (!cm.tracks[i].buffer) {
+      showToast(`Loading audio for Track ${i + 1}...`);
+      await loadCeremonyTrackBuffer(cm.tracks[i]);
+    }
+  }
+
+  const renderResult = await appState.engine.renderCeremonyMashup(cm.tracks, {
+    fadeInSec: cm.fadeInSec,
+    crossfadeSec: cm.crossfadeSec,
+    fadeOutSec: cm.fadeOutSec,
+    normalizeLoudness: cm.normalizeLoudness
+  });
+
+  cm.renderedMashup = renderResult;
+
+  if (format === 'mp3') {
+    showToast("📱 Encoding 256kbps high-quality MP3 (Universal & iPhone compatible)...");
+    const mp3Blob = await appState.engine.audioBufferToMp3Blob(renderResult.renderedBuffer, 256);
+    triggerDownloadBlob(mp3Blob, 'final_wedding_mix.mp3');
+    showToast("🎉 final_wedding_mix.mp3 downloaded successfully!");
+
+  } else if (format === 'm4a') {
+    showToast("🍏 Encoding Apple M4A master...");
+    const serverResult = await appState.engine.convertWavToM4aOnServer(renderResult.wavBlob);
+    if (serverResult && serverResult.success && serverResult.audioUrl) {
+      triggerDownloadDirectUrl(serverResult.audioUrl, 'final_wedding_mix.m4a');
+      showToast("🎉 final_wedding_mix.m4a downloaded successfully!");
+    } else {
+      showToast("📱 Server afconvert unavailable, exporting iPhone-compatible 320kbps MP3 instead...");
+      const mp3Blob = await appState.engine.audioBufferToMp3Blob(renderResult.renderedBuffer, 320);
+      triggerDownloadBlob(mp3Blob, 'final_wedding_mix.mp3');
+    }
+
+  } else if (format === 'wav') {
+    triggerDownloadBlob(renderResult.wavBlob, 'final_wedding_mix.wav');
+    showToast("🎵 final_wedding_mix.wav downloaded successfully!");
+  }
+}
+
+function generateCeremonyBashScript() {
+  const cm = appState.ceremonyMashup;
+  const tracks = cm.tracks;
+
+  let script = `# 1. Install tools via Homebrew (if needed)\n`;
+  script += `brew install yt-dlp ffmpeg\n\n`;
+
+  for (let i = 0; i < tracks.length; i++) {
+    const t = tracks[i];
+    const num = i + 1;
+    const startStr = t.startTimeStr || '00:00:00';
+    const endStr = t.endTimeStr || 'End';
+
+    if (t.sourceType === 'youtube' && t.youtubeUrl) {
+      let trimArg = `-ss ${startStr}`;
+      if (endStr.toLowerCase() !== 'end' && endStr !== '') {
+        trimArg += ` -to ${endStr}`;
+      }
+      const durLabel = t.durationSec ? ` -> ${Math.round(t.durationSec)}s duration` : '';
+      script += `# ${num + 1}. Download and trim Track ${num}: ${t.title} (${startStr} to ${endStr}${durLabel})\n`;
+      script += `yt-dlp -x --audio-format mp3 --postprocessor-args "ffmpeg:${trimArg}" -o "part${num}.mp3" "${t.youtubeUrl}"\n\n`;
+    } else {
+      const srcFile = t.fileName || `song${num}.mp3`;
+      let trimArg = `-ss ${startStr}`;
+      if (endStr.toLowerCase() !== 'end' && endStr !== '') {
+        trimArg += ` -to ${endStr}`;
+      }
+      script += `# ${num + 1}. Trim Track ${num}: ${t.title} (from "${srcFile}")\n`;
+      script += `ffmpeg ${trimArg} -i "${srcFile}" -c:a libmp3lame -q:a 2 "part${num}.mp3"\n\n`;
+    }
+  }
+
+  const finalStepNum = tracks.length + 2;
+  script += `# ${finalStepNum}. Normalize audio levels, crossfade all ${tracks.length} tracks (${cm.crossfadeSec}s overlap), and fade out at the end\n`;
+  let inputArgs = '';
+  for (let i = 0; i < tracks.length; i++) {
+    inputArgs += `-i part${i + 1}.mp3 `;
+  }
+
+  script += `ffmpeg ${inputArgs.trim()} -filter_complex \\\n"`;
+
+  for (let i = 0; i < tracks.length; i++) {
+    const isFirst = (i === 0);
+    const isLast = (i === tracks.length - 1);
+    let filter = `[${i}:a]loudnorm=I=-16:TP=-1.5:LRA=11`;
+    if (isFirst && cm.fadeInSec > 0) {
+      filter += `,afade=t=in:st=0:d=${cm.fadeInSec}`;
+    }
+    if (isLast && cm.fadeOutSec > 0) {
+      const dur = tracks[i].durationSec || 80;
+      const fadeStart = Math.max(0, Math.floor(dur - cm.fadeOutSec));
+      filter += `,afade=t=out:st=${fadeStart}:d=${cm.fadeOutSec}`;
+    }
+    script += `${filter}[a${i}]; \\\n `;
+  }
+
+  if (tracks.length === 2) {
+    script += `[a0][a1]acrossfade=d=${cm.crossfadeSec}:c1=tri:c2=tri" \\\n`;
+  } else {
+    script += `[a0][a1]acrossfade=d=${cm.crossfadeSec}:c1=tri:c2=tri[ab]; \\\n `;
+    let prevTag = 'ab';
+    for (let i = 2; i < tracks.length; i++) {
+      const isFinal = (i === tracks.length - 1);
+      if (isFinal) {
+        script += `[${prevTag}][a${i}]acrossfade=d=${cm.crossfadeSec}:c1=tri:c2=tri" \\\n`;
+      } else {
+        const nextTag = `ab${i}`;
+        script += `[${prevTag}][a${i}]acrossfade=d=${cm.crossfadeSec}:c1=tri:c2=tri[${nextTag}]; \\\n `;
+        prevTag = nextTag;
+      }
+    }
+  }
+
+  script += `-c:a libmp3lame -q:a 2 final_wedding_mix.mp3\n`;
+
+  return script;
+}
+
+function updateCeremonyCommandOutput() {
+  const codeEl = document.getElementById('ceremonyCommandOutput');
+  if (codeEl) {
+    codeEl.innerHTML = `<code>${escapeCeremonyHtml(generateCeremonyBashScript())}</code>`;
+  }
+}
+
+function toggleCeremonyTerminalDrawer() {
+  const body = document.getElementById('ceremonyTerminalBody');
+  const arrow = document.getElementById('ceremonyTerminalArrow');
+  if (!body) return;
+  const isHidden = (body.style.display === 'none');
+  body.style.display = isHidden ? 'block' : 'none';
+  if (arrow) arrow.innerText = isHidden ? '▴' : '▾';
+  if (isHidden) {
+    updateCeremonyCommandOutput();
+  }
+}
+
+function copyCeremonyCommand() {
+  const script = generateCeremonyBashScript();
+  navigator.clipboard.writeText(script).then(() => {
+    showToast("📋 Bash command copied to clipboard!");
+  }).catch(() => {
+    showToast("Command selected - press Cmd+C to copy.");
+  });
+}
+

@@ -67,6 +67,13 @@
             <p>Mix two different songs together with an 8-bar beat-matched DJ transition (Entrance ➔ High-Energy Party).</p>
           </div>
         </div>
+        <div id="modeCeremonyTab" class="project-type-btn" onclick="switchRemixMode('ceremony')">
+          <div class="project-type-icon">💖</div>
+          <div class="project-type-text">
+            <strong>Multi-Song Ceremony Mashup (3+ Songs)</strong>
+            <p>Chain 3+ songs with studio crossfades for Bridal Entry, Kanyadaan & Pheras via YouTube or Audio Files.</p>
+          </div>
+        </div>
       </div>
 
       <!-- 1-Click Popular Starter Mixes -->
@@ -75,6 +82,9 @@
         <div class="starters-pills-row">
           <button type="button" class="btn-mix-starter active" id="starter_kala_chashma_choreo" onclick="selectMixStarter('kala_chashma_choreo')">
             <span>🔥</span> Kala Chashma Choreo Extension
+          </button>
+          <button type="button" class="btn-mix-starter btn-starter-ceremony" id="starter_kudmayi_ceremony" onclick="selectMixStarter('kudmayi_ceremony')" title="Kudmayi ➔ Kanyadaan ➔ Tere Hawaale Ceremony Mashup">
+            <span>💖</span> Kudmayi ➔ Kanyadaan ➔ Tere Hawaale (Ceremony Mashup)
           </button>
           <button type="button" class="btn-mix-starter btn-starter-battle" id="starter_tauba_dance_off" onclick="selectMixStarter('tauba_dance_off')" title="Tauba Tauba (Movie 1) ➔ Tauba Tauba (Movie 2) Dance Battle">
             <span>⚡</span> Tauba Tauba ➔ Tauba Tauba (Dance-Off)
@@ -189,6 +199,162 @@
               <strong>Drop full official song (.mp3/.wav/.mp4)</strong>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- 💖 STEP 1 & 2: MULTI-TRACK CEREMONY MASHUP STUDIO        -->
+    <!-- ======================================================== -->
+    <section class="studio-card ceremony-mashup-card" id="ceremonyMashupSection" style="display: none;">
+      <!-- Header -->
+      <div class="timeline-title-meta" style="margin-bottom: 18px;">
+        <span class="step-badge" style="background: linear-gradient(135deg, #ec4899, #f43f5e);">CEREMONY MASHUP</span>
+        <div style="flex: 1; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h2 style="font-size: 20px; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
+              <span>💖</span> Multi-Song Ceremony Sequence (3+ Songs)
+            </h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 3px 0 0;">
+              Mix Kudmayi, Kanyadaan, Tere Hawaale or any songs. Seamlessly trimmed, loudness-balanced (-16 LUFS), and crossfaded.
+            </p>
+          </div>
+          <div class="ceremony-stats-badge">
+            <span class="status-pulse-dot" style="background: #ec4899;"></span>
+            <span id="ceremonyTotalStats">3 Songs • ~4m 12s Total Mix</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Preset Row -->
+      <div class="ceremony-presets-bar">
+        <span class="presets-label">⚡ Ceremony Presets:</span>
+        <div class="presets-pills-row">
+          <button type="button" class="btn-ceremony-preset active" id="presetCeremonyKudmayi" onclick="loadCeremonyPreset('kudmayi_mashup')">
+            <span>💖</span> Kudmayi ➔ Kanyadaan ➔ Tere Hawaale (Bridal Entry)
+          </button>
+          <button type="button" class="btn-ceremony-preset" id="presetCeremonyDinShagna" onclick="loadCeremonyPreset('din_shagna')">
+            <span>✨</span> Din Shagna Da ➔ Ranjha ➔ Peer Vi Tu
+          </button>
+          <button type="button" class="btn-ceremony-preset" id="presetCeremonyEmpty" onclick="loadCeremonyPreset('custom_empty')">
+            <span>📁</span> Custom New Sequence (Start Empty)
+          </button>
+        </div>
+      </div>
+
+      <!-- Sequential Track Chain Container -->
+      <div class="ceremony-track-chain" id="ceremonyTrackChain">
+        <!-- Rendered dynamically by renderCeremonyTrackCards() -->
+      </div>
+
+      <!-- Add Track Button -->
+      <div class="ceremony-add-track-wrapper">
+        <button type="button" class="btn-ceremony-add-track" onclick="addCeremonyTrack()">
+          <span>➕</span> Add Another Song to Sequence
+        </button>
+      </div>
+
+      <!-- Global Mastering & Crossfade Controls -->
+      <div class="ceremony-mastering-card">
+        <div class="mastering-header">
+          <h4>🎛️ Crossfade & Studio Audio Normalization</h4>
+          <span class="mastering-badge">EBU R128 Broadcast Standard</span>
+        </div>
+        <div class="mastering-grid">
+          <div class="mastering-item">
+            <label for="ceremonyFadeInSelect">Fade-In (Track 1 Start)</label>
+            <select id="ceremonyFadeInSelect" onchange="updateCeremonySettings()">
+              <option value="0">None (Instant Cut)</option>
+              <option value="1.0">1.0s Smooth In</option>
+              <option value="2.0" selected>2.0s Gentle Swell (Recommended)</option>
+              <option value="3.0">3.0s Cinematic Rise</option>
+            </select>
+          </div>
+          <div class="mastering-item">
+            <label for="ceremonyCrossfadeSlider">
+              Crossfade Overlap Between Songs: <strong id="ceremonyCrossfadeVal">3.0s</strong>
+            </label>
+            <input type="range" id="ceremonyCrossfadeSlider" min="1.0" max="6.0" step="0.5" value="3.0" oninput="updateCeremonyCrossfade(this.value)">
+            <span class="control-hint">Triangular crossfade (acrossfade tri:tri)</span>
+          </div>
+          <div class="mastering-item">
+            <label for="ceremonyFadeOutSelect">Fade-Out (Final Track End)</label>
+            <select id="ceremonyFadeOutSelect" onchange="updateCeremonySettings()">
+              <option value="0">None (Instant Cut)</option>
+              <option value="2.0">2.0s Standard Out</option>
+              <option value="3.0" selected>3.0s Smooth Decay (Recommended)</option>
+              <option value="5.0">5.0s Slow Ambient Fade</option>
+            </select>
+          </div>
+          <div class="mastering-item mastering-checkbox-item">
+            <label class="checkbox-container">
+              <input type="checkbox" id="ceremonyNormalizeCheckbox" checked onchange="updateCeremonySettings()">
+              <span class="checkmark"></span>
+              <strong>EBU R128 Loudness Auto-Match (-16 LUFS)</strong>
+            </label>
+            <span class="control-hint">Ensures songs match perfectly in volume without quiet/loud jumps</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Waveform Timeline Visualization -->
+      <div class="ceremony-timeline-card">
+        <div class="ceremony-timeline-header">
+          <div class="timeline-legend">
+            <span class="legend-chip legend-t1">Track 1</span>
+            <span class="legend-seam">⏳ 3s Blend</span>
+            <span class="legend-chip legend-t2">Track 2</span>
+            <span class="legend-seam">⏳ 3s Blend</span>
+            <span class="legend-chip legend-t3">Track 3</span>
+          </div>
+          <div class="ceremony-playhead-display" id="ceremonyPlayheadTimeDisplay">0:00 / 0:00</div>
+        </div>
+        <div class="ceremony-canvas-wrapper">
+          <canvas id="ceremonyTimelineCanvas" width="1150" height="90"></canvas>
+        </div>
+      </div>
+
+      <!-- Ceremony Transport Bar -->
+      <div class="ceremony-transport-bar">
+        <div class="transport-left">
+          <button type="button" class="btn-ceremony-play" id="btnCeremonyPlay" onclick="toggleCeremonyPlayback()">
+            <span>▶</span> Play Ceremony Mashup
+          </button>
+          <button type="button" class="btn-ceremony-replay" onclick="replayCeremonyMashup()">
+            <span>🔁</span> Replay from 0:00
+          </button>
+        </div>
+        <div class="transport-right">
+          <button type="button" class="btn-ceremony-export btn-export-mp3" onclick="exportCeremonyMashup('mp3')">
+            <span>📱</span> Download MP3 (Universal & iPhone)
+          </button>
+          <button type="button" class="btn-ceremony-export btn-export-m4a" onclick="exportCeremonyMashup('m4a')">
+            <span>🍏</span> Download Apple M4A
+          </button>
+          <button type="button" class="btn-ceremony-export btn-export-wav" onclick="exportCeremonyMashup('wav')">
+            <span>🎵</span> Lossless WAV
+          </button>
+        </div>
+      </div>
+
+      <!-- Power User: Generated Terminal / FFmpeg Script Drawer -->
+      <div class="ceremony-terminal-drawer">
+        <div class="terminal-drawer-header" onclick="toggleCeremonyTerminalDrawer()">
+          <div class="drawer-header-left">
+            <span>💻</span>
+            <strong>View Generated Terminal / FFmpeg Command</strong>
+            <span class="terminal-subtext">(Run in terminal with yt-dlp & ffmpeg)</span>
+          </div>
+          <span class="drawer-toggle-arrow" id="ceremonyTerminalArrow">▾</span>
+        </div>
+        <div class="terminal-drawer-body" id="ceremonyTerminalBody" style="display: none;">
+          <div class="code-box-header">
+            <span>Bash / Terminal Script</span>
+            <button type="button" class="btn-copy-code" onclick="copyCeremonyCommand()">
+              <span>📋</span> Copy Command
+            </button>
+          </div>
+          <pre class="terminal-code-block" id="ceremonyCommandOutput"><code>...</code></pre>
         </div>
       </div>
     </section>
