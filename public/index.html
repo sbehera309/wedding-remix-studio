@@ -70,8 +70,8 @@
         <div id="modeCeremonyTab" class="project-type-btn" onclick="switchRemixMode('ceremony')">
           <div class="project-type-icon">💖</div>
           <div class="project-type-text">
-            <strong>Multi-Song Ceremony Mashup (3+ Songs)</strong>
-            <p>Chain 3+ songs with studio crossfades for Bridal Entry, Kanyadaan & Pheras via YouTube or Audio Files.</p>
+            <strong>Multi-Song Ceremony Mashup (2+ Songs)</strong>
+            <p>Chain 2+ songs with studio crossfades for Bridal Entry, Kanyadaan & Pheras via YouTube or Audio Files.</p>
           </div>
         </div>
       </div>
@@ -83,8 +83,11 @@
           <button type="button" class="btn-mix-starter active" id="starter_kala_chashma_choreo" onclick="selectMixStarter('kala_chashma_choreo')">
             <span>🔥</span> Kala Chashma Choreo Extension
           </button>
-          <button type="button" class="btn-mix-starter btn-starter-ceremony" id="starter_kudmayi_ceremony" onclick="selectMixStarter('kudmayi_ceremony')" title="Kudmayi ➔ Kanyadaan ➔ Tere Hawaale Ceremony Mashup">
-            <span>💖</span> Kudmayi ➔ Kanyadaan ➔ Tere Hawaale (Ceremony Mashup)
+          <button type="button" class="btn-mix-starter btn-starter-ceremony" id="starter_kudmayi_ceremony" onclick="selectMixStarter('kudmayi_ceremony')" title="Kudmayi ➔ Kanyadaan ➔ Tere Hawaale Ceremony Mashup (3 Songs)">
+            <span>💖</span> Kudmayi ➔ Kanyadaan ➔ Tere Hawaale (3 Songs)
+          </button>
+          <button type="button" class="btn-mix-starter btn-starter-ceremony" id="starter_din_shagna_ceremony" onclick="selectMixStarter('din_shagna_ceremony')" title="Din Shagna Da ➔ Ranjha (2-Song Bridal Entry)">
+            <span>✨</span> Din Shagna Da ➔ Ranjha (2 Songs)
           </button>
           <button type="button" class="btn-mix-starter btn-starter-battle" id="starter_tauba_dance_off" onclick="selectMixStarter('tauba_dance_off')" title="Tauba Tauba (Movie 1) ➔ Tauba Tauba (Movie 2) Dance Battle">
             <span>⚡</span> Tauba Tauba ➔ Tauba Tauba (Dance-Off)
@@ -213,10 +216,10 @@
         <div style="flex: 1; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <div>
             <h2 style="font-size: 20px; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
-              <span>💖</span> Multi-Song Ceremony Sequence (3+ Songs)
+              <span>💖</span> Multi-Song Ceremony Sequence (2+ Songs)
             </h2>
             <p style="font-size: 13px; color: var(--text-muted); margin: 3px 0 0;">
-              Mix Kudmayi, Kanyadaan, Tere Hawaale or any songs. Seamlessly trimmed, loudness-balanced (-16 LUFS), and crossfaded.
+              Mix 2 or more songs together with smooth beginning, middle, and end crossfades. Loudness-balanced (-16 LUFS).
             </p>
           </div>
           <div class="ceremony-stats-badge">
@@ -231,13 +234,13 @@
         <span class="presets-label">⚡ Ceremony Presets:</span>
         <div class="presets-pills-row">
           <button type="button" class="btn-ceremony-preset active" id="presetCeremonyKudmayi" onclick="loadCeremonyPreset('kudmayi_mashup')">
-            <span>💖</span> Kudmayi ➔ Kanyadaan ➔ Tere Hawaale (Bridal Entry)
+            <span>💖</span> Kudmayi ➔ Kanyadaan ➔ Tere Hawaale (3 Songs)
           </button>
           <button type="button" class="btn-ceremony-preset" id="presetCeremonyDinShagna" onclick="loadCeremonyPreset('din_shagna')">
-            <span>✨</span> Din Shagna Da ➔ Ranjha ➔ Peer Vi Tu
+            <span>✨</span> Din Shagna Da ➔ Ranjha (2 Songs)
           </button>
           <button type="button" class="btn-ceremony-preset" id="presetCeremonyEmpty" onclick="loadCeremonyPreset('custom_empty')">
-            <span>📁</span> Custom New Sequence (Start Empty)
+            <span>📁</span> Custom 2-Song Sequence (Start Clean)
           </button>
         </div>
       </div>
@@ -254,46 +257,127 @@
         </button>
       </div>
 
-      <!-- Global Mastering & Crossfade Controls -->
+      <!-- Crossfade Transitions & Audio Normalization (Beginning, Between Songs, End) -->
       <div class="ceremony-mastering-card">
         <div class="mastering-header">
-          <h4>🎛️ Crossfade & Studio Audio Normalization</h4>
+          <div class="mastering-header-left">
+            <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+              <span>🎚️</span> Transitions & Audio Normalization
+            </h4>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin: 3px 0 0;">
+              Fine-tune beginning, track-to-track, and ending crossfades for a smooth, emotional flow.
+            </p>
+          </div>
           <span class="mastering-badge">EBU R128 Broadcast Standard</span>
         </div>
-        <div class="mastering-grid">
-          <div class="mastering-item">
-            <label for="ceremonyFadeInSelect">Fade-In (Track 1 Start)</label>
-            <select id="ceremonyFadeInSelect" onchange="updateCeremonySettings()">
-              <option value="0">None (Instant Cut)</option>
-              <option value="1.0">1.0s Smooth In</option>
-              <option value="2.0" selected>2.0s Gentle Swell (Recommended)</option>
-              <option value="3.0">3.0s Cinematic Rise</option>
-            </select>
+
+        <div class="ceremony-transitions-grid">
+          <!-- 1. Beginning Transition (Intro Crossfade) -->
+          <div class="ceremony-trans-card">
+            <div class="trans-card-header">
+              <label class="checkbox-container">
+                <input type="checkbox" id="ceremonyIntroCheck" checked onchange="updateCeremonySettings()">
+                <span class="checkmark"></span>
+                <strong>Beginning Transition</strong>
+              </label>
+              <span class="trans-pill-tag tag-intro">Intro Crossfade</span>
+            </div>
+            <div class="trans-card-body">
+              <div class="trans-input-row">
+                <div class="trans-input-field">
+                  <label for="ceremonyIntroDuration">Duration</label>
+                  <select id="ceremonyIntroDuration" onchange="updateCeremonySettings()">
+                    <option value="0.5">0.5s Quick Swell</option>
+                    <option value="1.0">1.0s Smooth In</option>
+                    <option value="2.0" selected>2.0s Gentle Rise (Recommended)</option>
+                    <option value="3.0">3.0s Cinematic Rise</option>
+                    <option value="4.0">4.0s Slow Ambient Swell</option>
+                  </select>
+                </div>
+                <div class="trans-input-field">
+                  <label for="ceremonyIntroCurve">Curve Style</label>
+                  <select id="ceremonyIntroCurve" onchange="updateCeremonySettings()">
+                    <option value="tri" selected>Triangular (Smooth)</option>
+                    <option value="qsin">Equal-Power (Studio)</option>
+                    <option value="log">Logarithmic (Soft)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="mastering-item">
-            <label for="ceremonyCrossfadeSlider">
-              Crossfade Overlap Between Songs: <strong id="ceremonyCrossfadeVal">3.0s</strong>
-            </label>
-            <input type="range" id="ceremonyCrossfadeSlider" min="1.0" max="6.0" step="0.5" value="3.0" oninput="updateCeremonyCrossfade(this.value)">
-            <span class="control-hint">Triangular crossfade (acrossfade tri:tri)</span>
+
+          <!-- 2. Between Songs (Track-to-Track Crossfade) -->
+          <div class="ceremony-trans-card">
+            <div class="trans-card-header">
+              <div class="trans-card-title-group">
+                <span class="trans-icon">🔁</span>
+                <strong>Between Songs Blend</strong>
+              </div>
+              <span class="trans-pill-tag tag-blend">Track-to-Track</span>
+            </div>
+            <div class="trans-card-body">
+              <div class="trans-input-row">
+                <div class="trans-input-field" style="flex: 2;">
+                  <label for="ceremonyCrossfadeSlider">
+                    Overlap: <strong id="ceremonyCrossfadeVal">3.0s</strong>
+                  </label>
+                  <input type="range" id="ceremonyCrossfadeSlider" min="1.0" max="6.0" step="0.5" value="3.0" oninput="updateCeremonyCrossfade(this.value)">
+                </div>
+                <div class="trans-input-field" style="flex: 1;">
+                  <label for="ceremonyBlendCurve">Curve</label>
+                  <select id="ceremonyBlendCurve" onchange="updateCeremonySettings()">
+                    <option value="tri" selected>Triangular</option>
+                    <option value="qsin">Equal-Power</option>
+                    <option value="hsin">Sine S-Curve</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="mastering-item">
-            <label for="ceremonyFadeOutSelect">Fade-Out (Final Track End)</label>
-            <select id="ceremonyFadeOutSelect" onchange="updateCeremonySettings()">
-              <option value="0">None (Instant Cut)</option>
-              <option value="2.0">2.0s Standard Out</option>
-              <option value="3.0" selected>3.0s Smooth Decay (Recommended)</option>
-              <option value="5.0">5.0s Slow Ambient Fade</option>
-            </select>
+
+          <!-- 3. End Transition (Outro Crossfade) -->
+          <div class="ceremony-trans-card">
+            <div class="trans-card-header">
+              <label class="checkbox-container">
+                <input type="checkbox" id="ceremonyOutroCheck" checked onchange="updateCeremonySettings()">
+                <span class="checkmark"></span>
+                <strong>End Transition</strong>
+              </label>
+              <span class="trans-pill-tag tag-outro">Outro Crossfade</span>
+            </div>
+            <div class="trans-card-body">
+              <div class="trans-input-row">
+                <div class="trans-input-field">
+                  <label for="ceremonyOutroDuration">Duration</label>
+                  <select id="ceremonyOutroDuration" onchange="updateCeremonySettings()">
+                    <option value="1.0">1.0s Quick Fade</option>
+                    <option value="2.0">2.0s Standard Out</option>
+                    <option value="3.0" selected>3.0s Smooth Decay (Recommended)</option>
+                    <option value="4.0">4.0s Reverb Fade</option>
+                    <option value="5.0">5.0s Slow Ambient Fade</option>
+                  </select>
+                </div>
+                <div class="trans-input-field">
+                  <label for="ceremonyOutroCurve">Curve Style</label>
+                  <select id="ceremonyOutroCurve" onchange="updateCeremonySettings()">
+                    <option value="tri" selected>Triangular (Smooth)</option>
+                    <option value="qsin">Equal-Power (Studio)</option>
+                    <option value="log">Logarithmic (Soft)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="mastering-item mastering-checkbox-item">
-            <label class="checkbox-container">
-              <input type="checkbox" id="ceremonyNormalizeCheckbox" checked onchange="updateCeremonySettings()">
-              <span class="checkmark"></span>
-              <strong>EBU R128 Loudness Auto-Match (-16 LUFS)</strong>
-            </label>
-            <span class="control-hint">Ensures songs match perfectly in volume without quiet/loud jumps</span>
-          </div>
+        </div>
+
+        <!-- Studio Loudness Normalization Bar -->
+        <div class="mastering-bottom-row">
+          <label class="checkbox-container">
+            <input type="checkbox" id="ceremonyNormalizeCheckbox" checked onchange="updateCeremonySettings()">
+            <span class="checkmark"></span>
+            <strong>EBU R128 Broadcast Loudness Normalization (-16 LUFS)</strong>
+          </label>
+          <span class="mastering-hint">Auto-balances track levels so quiet acoustic parts and loud festival drops transition evenly</span>
         </div>
       </div>
 

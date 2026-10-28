@@ -85,8 +85,15 @@ const appState = {
         status: 'ready'
       }
     ],
-    fadeInSec: 2.0,
+    introCrossfade: true,
+    introFadeSec: 2.0,
+    introCurve: 'tri',
     crossfadeSec: 3.0,
+    crossfadeCurve: 'tri',
+    outroCrossfade: true,
+    outroFadeSec: 3.0,
+    outroCurve: 'tri',
+    fadeInSec: 2.0,
     fadeOutSec: 3.0,
     normalizeLoudness: true,
     isPlaying: false,
@@ -2181,6 +2188,11 @@ async function selectMixStarter(starterId) {
     switchRemixMode('ceremony');
     await loadCeremonyPreset('kudmayi_mashup');
     showToast("💖 Kudmayi ➔ Kanyadaan ➔ Tere Hawaale Ceremony Mashup loaded!");
+
+  } else if (starterId === 'din_shagna_ceremony') {
+    switchRemixMode('ceremony');
+    await loadCeremonyPreset('din_shagna');
+    showToast("✨ Din Shagna Da ➔ Ranjha (2 Songs) loaded!");
 
   } else if (starterId === 'tauba_dance_off') {
     switchRemixMode('medley');
@@ -5177,6 +5189,7 @@ function triggerDownloadDirectUrl(url, filename) {
 }
 
 function initCeremonyMashupUI() {
+  setupCeremonyCanvasInteractions();
   if (!appState.ceremonyMashupInitialized) {
     appState.ceremonyMashupInitialized = true;
     loadCeremonyPreset('kudmayi_mashup');
@@ -5185,6 +5198,40 @@ function initCeremonyMashupUI() {
     updateCeremonyStats();
     drawCeremonyTimeline();
     updateCeremonyCommandOutput();
+  }
+}
+
+function setupCeremonyCanvasInteractions() {
+  const canvas = document.getElementById('ceremonyTimelineCanvas');
+  if (!canvas || canvas.dataset.hasSeekListener) return;
+  canvas.dataset.hasSeekListener = 'true';
+
+  const onSeek = (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clickX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const totalDur = recalculateTrackDurations();
+    if (totalDur <= 0) return;
+    const newPos = (clickX / rect.width) * totalDur;
+    seekCeremonyPosition(newPos);
+  };
+
+  canvas.addEventListener('click', onSeek);
+  canvas.addEventListener('touchstart', onSeek, { passive: false });
+  canvas.addEventListener('touchmove', onSeek, { passive: false });
+}
+
+function seekCeremonyPosition(newPos) {
+  const cm = appState.ceremonyMashup;
+  const totalDur = recalculateTrackDurations();
+  cm.playbackPosition = Math.max(0, Math.min(totalDur, newPos));
+
+  if (cm.isPlaying && cm.renderedMashup) {
+    stopCeremonyPlayback();
+    toggleCeremonyPlayback();
+  } else {
+    drawCeremonyTimeline(cm.playbackPosition);
   }
 }
 
@@ -5243,9 +5290,14 @@ async function loadCeremonyPreset(presetId) {
         status: 'ready'
       }
     ];
-    appState.ceremonyMashup.fadeInSec = 2.0;
+    appState.ceremonyMashup.introCrossfade = true;
+    appState.ceremonyMashup.introFadeSec = 2.0;
+    appState.ceremonyMashup.introCurve = 'tri';
     appState.ceremonyMashup.crossfadeSec = 3.0;
-    appState.ceremonyMashup.fadeOutSec = 3.0;
+    appState.ceremonyMashup.crossfadeCurve = 'tri';
+    appState.ceremonyMashup.outroCrossfade = true;
+    appState.ceremonyMashup.outroFadeSec = 3.0;
+    appState.ceremonyMashup.outroCurve = 'tri';
     appState.ceremonyMashup.normalizeLoudness = true;
 
   } else if (presetId === 'din_shagna') {
@@ -5282,30 +5334,24 @@ async function loadCeremonyPreset(presetId) {
         durationSec: 70.0,
         color: '#06b6d4',
         status: 'ready'
-      },
-      {
-        id: 't3',
-        title: 'Peer Vi Tu (Bridal Walk)',
-        sourceType: 'youtube',
-        youtubeUrl: 'https://youtu.be/zD1L5oK_tU0',
-        audioUrl: '',
-        fileName: '',
-        buffer: null,
-        startTimeStr: '00:00:30',
-        endTimeStr: '00:01:45',
-        startTimeSec: 30.0,
-        endTimeSec: 105.0,
-        durationSec: 75.0,
-        color: '#10b981',
-        status: 'ready'
       }
     ];
+    appState.ceremonyMashup.introCrossfade = true;
+    appState.ceremonyMashup.introFadeSec = 2.0;
+    appState.ceremonyMashup.introCurve = 'tri';
+    appState.ceremonyMashup.crossfadeSec = 3.0;
+    appState.ceremonyMashup.crossfadeCurve = 'tri';
+    appState.ceremonyMashup.outroCrossfade = true;
+    appState.ceremonyMashup.outroFadeSec = 3.0;
+    appState.ceremonyMashup.outroCurve = 'tri';
+    appState.ceremonyMashup.normalizeLoudness = true;
+
   } else if (presetId === 'custom_empty') {
     document.getElementById('presetCeremonyEmpty')?.classList.add('active');
     appState.ceremonyMashup.tracks = [
       {
         id: 't1',
-        title: 'Opening Song (Track 1)',
+        title: 'Song 1 (Opening / Entrance)',
         sourceType: 'file',
         youtubeUrl: '',
         audioUrl: '',
@@ -5321,7 +5367,7 @@ async function loadCeremonyPreset(presetId) {
       },
       {
         id: 't2',
-        title: 'Middle Song (Track 2)',
+        title: 'Song 2 (Family / Pheras)',
         sourceType: 'file',
         youtubeUrl: '',
         audioUrl: '',
@@ -5334,36 +5380,34 @@ async function loadCeremonyPreset(presetId) {
         durationSec: 60.0,
         color: '#06b6d4',
         status: 'ready'
-      },
-      {
-        id: 't3',
-        title: 'Finale Song (Track 3)',
-        sourceType: 'file',
-        youtubeUrl: '',
-        audioUrl: '',
-        fileName: '',
-        buffer: null,
-        startTimeStr: '00:00:00',
-        endTimeStr: '00:01:00',
-        startTimeSec: 0.0,
-        endTimeSec: 60.0,
-        durationSec: 60.0,
-        color: '#10b981',
-        status: 'ready'
       }
     ];
   }
 
-  const fadeSel = document.getElementById('ceremonyFadeInSelect');
-  if (fadeSel) fadeSel.value = String(appState.ceremonyMashup.fadeInSec);
-  const fadeOutSel = document.getElementById('ceremonyFadeOutSelect');
-  if (fadeOutSel) fadeOutSel.value = String(appState.ceremonyMashup.fadeOutSec);
+  const cm = appState.ceremonyMashup;
+  const introCheck = document.getElementById('ceremonyIntroCheck');
+  if (introCheck) introCheck.checked = cm.introCrossfade;
+  const introDur = document.getElementById('ceremonyIntroDuration');
+  if (introDur) introDur.value = String(cm.introFadeSec);
+  const introCurve = document.getElementById('ceremonyIntroCurve');
+  if (introCurve) introCurve.value = cm.introCurve || 'tri';
+
   const crossSlider = document.getElementById('ceremonyCrossfadeSlider');
-  if (crossSlider) crossSlider.value = appState.ceremonyMashup.crossfadeSec;
+  if (crossSlider) crossSlider.value = cm.crossfadeSec;
   const crossVal = document.getElementById('ceremonyCrossfadeVal');
-  if (crossVal) crossVal.innerText = `${appState.ceremonyMashup.crossfadeSec.toFixed(1)}s`;
+  if (crossVal) crossVal.innerText = `${cm.crossfadeSec.toFixed(1)}s`;
+  const blendCurve = document.getElementById('ceremonyBlendCurve');
+  if (blendCurve) blendCurve.value = cm.crossfadeCurve || 'tri';
+
+  const outroCheck = document.getElementById('ceremonyOutroCheck');
+  if (outroCheck) outroCheck.checked = cm.outroCrossfade;
+  const outroDur = document.getElementById('ceremonyOutroDuration');
+  if (outroDur) outroDur.value = String(cm.outroFadeSec);
+  const outroCurve = document.getElementById('ceremonyOutroCurve');
+  if (outroCurve) outroCurve.value = cm.outroCurve || 'tri';
+
   const normBox = document.getElementById('ceremonyNormalizeCheckbox');
-  if (normBox) normBox.checked = appState.ceremonyMashup.normalizeLoudness;
+  if (normBox) normBox.checked = cm.normalizeLoudness;
 
   renderCeremonyTrackCards();
   recalculateTrackDurations();
@@ -5802,11 +5846,23 @@ function stopCeremonyTrackClip() {
 
 function updateCeremonySettings() {
   const cm = appState.ceremonyMashup;
-  const fadeSel = document.getElementById('ceremonyFadeInSelect');
-  if (fadeSel) cm.fadeInSec = parseFloat(fadeSel.value) || 0;
 
-  const fadeOutSel = document.getElementById('ceremonyFadeOutSelect');
-  if (fadeOutSel) cm.fadeOutSec = parseFloat(fadeOutSel.value) || 0;
+  const introCheck = document.getElementById('ceremonyIntroCheck');
+  if (introCheck) cm.introCrossfade = introCheck.checked;
+  const introDur = document.getElementById('ceremonyIntroDuration');
+  if (introDur) cm.introFadeSec = parseFloat(introDur.value) || 0;
+  const introCurve = document.getElementById('ceremonyIntroCurve');
+  if (introCurve) cm.introCurve = introCurve.value || 'tri';
+
+  const blendCurve = document.getElementById('ceremonyBlendCurve');
+  if (blendCurve) cm.crossfadeCurve = blendCurve.value || 'tri';
+
+  const outroCheck = document.getElementById('ceremonyOutroCheck');
+  if (outroCheck) cm.outroCrossfade = outroCheck.checked;
+  const outroDur = document.getElementById('ceremonyOutroDuration');
+  if (outroDur) cm.outroFadeSec = parseFloat(outroDur.value) || 0;
+  const outroCurve = document.getElementById('ceremonyOutroCurve');
+  if (outroCurve) cm.outroCurve = outroCurve.value || 'tri';
 
   const normBox = document.getElementById('ceremonyNormalizeCheckbox');
   if (normBox) cm.normalizeLoudness = normBox.checked;
@@ -5909,28 +5965,48 @@ function drawCeremonyTimeline(currentPosition = null) {
     const textX = Math.max(x1 + 10, Math.min(x2 - 120, x1 + 10));
     ctx.fillText(`${t.title || `Track ${i + 1}`} (${segDur.toFixed(0)}s)`, textX, blockY + 18);
 
-    // Initial fade in indicator
-    if (i === 0 && cm.fadeInSec > 0) {
-      const fadeW = Math.min(segW * 0.5, (cm.fadeInSec / totalDur) * width);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    // Beginning Crossfade (Intro Fade) indicator on Track 1
+    if (i === 0 && cm.introCrossfade && cm.introFadeSec > 0) {
+      const fadeW = Math.min(segW * 0.45, (cm.introFadeSec / totalDur) * width);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.beginPath();
       ctx.moveTo(x1, blockY);
       ctx.lineTo(x1 + fadeW, blockY);
       ctx.lineTo(x1, blockY + blockH);
       ctx.closePath();
       ctx.fill();
+
+      // Intro badge on canvas
+      ctx.fillStyle = '#34d399';
+      ctx.font = 'bold 9.5px system-ui';
+      ctx.fillText(`▲ Intro ${cm.introFadeSec}s`, x1 + 4, blockY + blockH - 6);
     }
 
-    // Final fade out indicator
-    if (i === tracks.length - 1 && cm.fadeOutSec > 0) {
-      const fadeW = Math.min(segW * 0.5, (cm.fadeOutSec / totalDur) * width);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    // Between-Song Overlap region
+    if (i < tracks.length - 1) {
+      const overlapW = (cm.crossfadeSec / totalDur) * width;
+      const overlapStart = Math.max(x1, x2 - overlapW);
+      ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
+      ctx.fillRect(overlapStart, blockY, overlapW, blockH);
+    }
+
+    // End Crossfade (Outro Fade) indicator on Final Track
+    if (i === tracks.length - 1 && cm.outroCrossfade && cm.outroFadeSec > 0) {
+      const fadeW = Math.min(segW * 0.45, (cm.outroFadeSec / totalDur) * width);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.beginPath();
       ctx.moveTo(x2, blockY);
       ctx.lineTo(x2 - fadeW, blockY + blockH);
       ctx.lineTo(x2, blockY + blockH);
       ctx.closePath();
       ctx.fill();
+
+      // Outro badge on canvas
+      ctx.fillStyle = '#f472b6';
+      ctx.font = 'bold 9.5px system-ui';
+      ctx.textAlign = 'right';
+      ctx.fillText(`▼ Outro ${cm.outroFadeSec}s`, x2 - 4, blockY + blockH - 6);
+      ctx.textAlign = 'left';
     }
 
     currentStart = segEnd - cm.crossfadeSec;
@@ -5987,9 +6063,14 @@ async function toggleCeremonyPlayback() {
 
     showToast("💖 Rendering multi-track ceremony sequence with -16 LUFS loudness balance...");
     const renderResult = await appState.engine.renderCeremonyMashup(cm.tracks, {
-      fadeInSec: cm.fadeInSec,
+      introCrossfade: cm.introCrossfade,
+      introFadeSec: cm.introFadeSec,
+      introCurve: cm.introCurve,
       crossfadeSec: cm.crossfadeSec,
-      fadeOutSec: cm.fadeOutSec,
+      crossfadeCurve: cm.crossfadeCurve,
+      outroCrossfade: cm.outroCrossfade,
+      outroFadeSec: cm.outroFadeSec,
+      outroCurve: cm.outroCurve,
       normalizeLoudness: cm.normalizeLoudness
     });
 
@@ -6069,9 +6150,14 @@ async function exportCeremonyMashup(format) {
   }
 
   const renderResult = await appState.engine.renderCeremonyMashup(cm.tracks, {
-    fadeInSec: cm.fadeInSec,
+    introCrossfade: cm.introCrossfade,
+    introFadeSec: cm.introFadeSec,
+    introCurve: cm.introCurve,
     crossfadeSec: cm.crossfadeSec,
-    fadeOutSec: cm.fadeOutSec,
+    crossfadeCurve: cm.crossfadeCurve,
+    outroCrossfade: cm.outroCrossfade,
+    outroFadeSec: cm.outroFadeSec,
+    outroCurve: cm.outroCurve,
     normalizeLoudness: cm.normalizeLoudness
   });
 
@@ -6134,7 +6220,9 @@ function generateCeremonyBashScript() {
   }
 
   const finalStepNum = tracks.length + 2;
-  script += `# ${finalStepNum}. Normalize audio levels, crossfade all ${tracks.length} tracks (${cm.crossfadeSec}s overlap), and fade out at the end\n`;
+  const introMsg = (cm.introCrossfade && cm.introFadeSec > 0) ? `intro ${cm.introFadeSec}s crossfade, ` : '';
+  const outroMsg = (cm.outroCrossfade && cm.outroFadeSec > 0) ? `, and ${cm.outroFadeSec}s outro fade` : '';
+  script += `# ${finalStepNum}. Normalize levels (-16 LUFS), ${introMsg}crossfade all ${tracks.length} tracks (${cm.crossfadeSec}s overlap)${outroMsg}\n`;
   let inputArgs = '';
   for (let i = 0; i < tracks.length; i++) {
     inputArgs += `-i part${i + 1}.mp3 `;
@@ -6146,29 +6234,30 @@ function generateCeremonyBashScript() {
     const isFirst = (i === 0);
     const isLast = (i === tracks.length - 1);
     let filter = `[${i}:a]loudnorm=I=-16:TP=-1.5:LRA=11`;
-    if (isFirst && cm.fadeInSec > 0) {
-      filter += `,afade=t=in:st=0:d=${cm.fadeInSec}`;
+    if (isFirst && cm.introCrossfade && cm.introFadeSec > 0) {
+      filter += `,afade=t=in:curve=${cm.introCurve || 'tri'}:st=0:d=${cm.introFadeSec}`;
     }
-    if (isLast && cm.fadeOutSec > 0) {
-      const dur = tracks[i].durationSec || 80;
-      const fadeStart = Math.max(0, Math.floor(dur - cm.fadeOutSec));
-      filter += `,afade=t=out:st=${fadeStart}:d=${cm.fadeOutSec}`;
+    if (isLast && cm.outroCrossfade && cm.outroFadeSec > 0) {
+      const dur = tracks[i].durationSec || 60;
+      const fadeStart = Math.max(0, Math.floor(dur - cm.outroFadeSec));
+      filter += `,afade=t=out:curve=${cm.outroCurve || 'tri'}:st=${fadeStart}:d=${cm.outroFadeSec}`;
     }
     script += `${filter}[a${i}]; \\\n `;
   }
 
+  const blendCurve = cm.crossfadeCurve || 'tri';
   if (tracks.length === 2) {
-    script += `[a0][a1]acrossfade=d=${cm.crossfadeSec}:c1=tri:c2=tri" \\\n`;
+    script += `[a0][a1]acrossfade=d=${cm.crossfadeSec}:c1=${blendCurve}:c2=${blendCurve}" \\\n`;
   } else {
-    script += `[a0][a1]acrossfade=d=${cm.crossfadeSec}:c1=tri:c2=tri[ab]; \\\n `;
+    script += `[a0][a1]acrossfade=d=${cm.crossfadeSec}:c1=${blendCurve}:c2=${blendCurve}[ab]; \\\n `;
     let prevTag = 'ab';
     for (let i = 2; i < tracks.length; i++) {
       const isFinal = (i === tracks.length - 1);
       if (isFinal) {
-        script += `[${prevTag}][a${i}]acrossfade=d=${cm.crossfadeSec}:c1=tri:c2=tri" \\\n`;
+        script += `[${prevTag}][a${i}]acrossfade=d=${cm.crossfadeSec}:c1=${blendCurve}:c2=${blendCurve}" \\\n`;
       } else {
         const nextTag = `ab${i}`;
-        script += `[${prevTag}][a${i}]acrossfade=d=${cm.crossfadeSec}:c1=tri:c2=tri[${nextTag}]; \\\n `;
+        script += `[${prevTag}][a${i}]acrossfade=d=${cm.crossfadeSec}:c1=${blendCurve}:c2=${blendCurve}[${nextTag}]; \\\n `;
         prevTag = nextTag;
       }
     }

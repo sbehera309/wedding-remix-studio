@@ -2113,12 +2113,26 @@ class AudioRemixEngine {
     await this.ensureContext();
 
     const {
-      fadeInSec = 2.0,
+      introCrossfade = true,
+      introFadeSec = 2.0,
+      introCurve = 'tri',
       crossfadeSec = 3.0,
-      fadeOutSec = 3.0,
+      crossfadeCurve = 'tri',
+      outroCrossfade = true,
+      outroFadeSec = 3.0,
+      outroCurve = 'tri',
+      fadeInSec = 2.0, // backwards compat
+      fadeOutSec = 3.0, // backwards compat
       normalizeLoudness = true,
       targetLufs = -16.0
     } = options;
+
+    const actualIntroSec = (introCrossfade && (introFadeSec !== undefined ? introFadeSec : fadeInSec) > 0)
+      ? (introFadeSec !== undefined ? introFadeSec : fadeInSec)
+      : 0;
+    const actualOutroSec = (outroCrossfade && (outroFadeSec !== undefined ? outroFadeSec : fadeOutSec) > 0)
+      ? (outroFadeSec !== undefined ? outroFadeSec : fadeOutSec)
+      : 0;
 
     if (!tracks || tracks.length === 0) {
       throw new Error("No tracks provided for ceremony mashup.");
@@ -2220,24 +2234,41 @@ class AudioRemixEngine {
       const { mixStart, mixEnd, segDur } = item;
       const xfade = Math.min(crossfadeSec, segDur * 0.45);
 
-      // --- Volume Automation ---
+      // --- Volume Automation: Beginning Crossfade, Song-to-Song Blend & End Crossfade ---
       if (isFirst) {
-        const actualFadeIn = Math.min(fadeInSec, segDur * 0.4);
-        gainNode.gain.setValueAtTime(0.001, 0);
-        gainNode.gain.linearRampToValueAtTime(gainScale, actualFadeIn);
+        if (actualIntroSec > 0) {
+          const fadeInTime = Math.min(actualIntroSec, segDur * 0.45);
+          gainNode.gain.setValueAtTime(0.001, 0);
+          gainNode.gain.linearRampToValueAtTime(gainScale, fadeInTime);
+        } else {
+          gainNode.gain.setValueAtTime(gainScale, 0);
+        }
 
         if (!isLast) {
           gainNode.gain.setValueAtTime(gainScale, mixEnd - xfade);
           gainNode.gain.linearRampToValueAtTime(0.001, mixEnd);
+        } else {
+          // Single-song case
+          if (actualOutroSec > 0) {
+            const fadeOutTime = Math.min(actualOutroSec, segDur * 0.45);
+            gainNode.gain.setValueAtTime(gainScale, totalMixDuration - fadeOutTime);
+            gainNode.gain.linearRampToValueAtTime(0.001, totalMixDuration);
+          }
         }
       } else if (isLast) {
         gainNode.gain.setValueAtTime(0.001, mixStart);
         gainNode.gain.linearRampToValueAtTime(gainScale, mixStart + xfade);
 
-        const actualFadeOut = Math.min(fadeOutSec, segDur * 0.4);
-        gainNode.gain.setValueAtTime(gainScale, totalMixDuration - actualFadeOut);
-        gainNode.gain.linearRampToValueAtTime(0.001, totalMixDuration);
+        if (actualOutroSec > 0) {
+          const fadeOutTime = Math.min(actualOutroSec, segDur * 0.45);
+          gainNode.gain.setValueAtTime(gainScale, totalMixDuration - fadeOutTime);
+          gainNode.gain.linearRampToValueAtTime(0.001, totalMixDuration);
+        } else {
+          gainNode.gain.setValueAtTime(gainScale, totalMixDuration - 0.02);
+          gainNode.gain.linearRampToValueAtTime(0.001, totalMixDuration);
+        }
       } else {
+        // Middle track in chain
         gainNode.gain.setValueAtTime(0.001, mixStart);
         gainNode.gain.linearRampToValueAtTime(gainScale, mixStart + xfade);
         gainNode.gain.setValueAtTime(gainScale, mixEnd - xfade);
