@@ -1328,9 +1328,9 @@ const WEDDING_SONG_CATALOG = {
         songName: 'Kala Chashma',
         sourceTrack: 'A',
         subParts: [
-          { id: 'kc_bar_5', name: 'Bar 5: Snare Roll & Vocal Risers', desc: 'Pre-drop buildup roll', tag: 'BUILD', tagColor: '#ec4899', startTime: 9.013, endTime: 11.256, songName: 'Kala Chashma', sourceTrack: 'A' },
-          { id: 'kc_bar_6', name: 'Bar 6: Dhol Drop Beat 1', desc: 'Heavy Punjabi Dhol beat begins', tag: 'DROP', tagColor: '#10b981', startTime: 11.256, endTime: 13.499, songName: 'Kala Chashma', sourceTrack: 'A' },
-          { id: 'kc_bar_7', name: 'Bar 7: Dhol Drop Beat 2', desc: 'Dhol rhythm groove continuation', tag: 'DROP', tagColor: '#10b981', startTime: 13.499, endTime: 15.742, songName: 'Kala Chashma', sourceTrack: 'A' }
+          { id: 'kc_bar_5', name: 'Bar 5: Snare Roll & Vocal Risers', desc: 'Pre-drop buildup roll', tag: 'BUILD', tagColor: '#ec4899', startTime: 9.013, endTime: 11.374, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_6', name: 'Bar 6: Dhol Drop Beat 1', desc: 'Heavy Punjabi Dhol beat begins (4 full beats)', tag: 'DROP', tagColor: '#10b981', startTime: 11.374, endTime: 13.639, songName: 'Kala Chashma', sourceTrack: 'A' },
+          { id: 'kc_bar_7', name: 'Bar 7: Dhol Drop Beat 2', desc: 'Dhol rhythm groove continuation', tag: 'DROP', tagColor: '#10b981', startTime: 13.639, endTime: 15.903, songName: 'Kala Chashma', sourceTrack: 'A' }
         ]
       },
       {
