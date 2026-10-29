@@ -116,12 +116,23 @@ class AudioRemixEngine {
       } catch (e) {}
     }
 
-    // 2. Attempt native in-browser decode of the video ArrayBuffer
+    // 2. Attempt native in-browser decode of the video ArrayBuffer (both ctx and OfflineAudioContext)
     try {
       const arrayBuf = await videoFile.arrayBuffer();
-      const decoded = await this.ctx.decodeAudioData(arrayBuf.slice(0));
-      if (decoded && decoded.duration > 0) {
-        return decoded;
+      try {
+        const decoded = await this.ctx.decodeAudioData(arrayBuf.slice(0));
+        if (decoded && decoded.duration > 0) {
+          return decoded;
+        }
+      } catch (_) {}
+
+      const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (OfflineCtx) {
+        const offline = new OfflineCtx(2, 44100, 44100);
+        const decoded = await offline.decodeAudioData(arrayBuf.slice(0));
+        if (decoded && decoded.duration > 0) {
+          return decoded;
+        }
       }
     } catch (browserDecodeErr) {
       // Browser direct container decode failed, fallback to local backend or cached assets
@@ -160,7 +171,7 @@ class AudioRemixEngine {
       }
     } catch (e) {}
 
-    throw new Error(`Browser cannot decode this video codec directly on cloud deployment. Tip: Click the top button "🔥 Load Your Kala Chashma Performance + Song" to load directly!`);
+    throw new Error(`Could not decode audio from video "${videoFile.name}". Supported formats: MP4, MOV, M4V, WEBM, or export as MP3/M4A/WAV.`);
   }
 
   /**

@@ -2311,9 +2311,32 @@ async function selectMixStarter(starterId) {
     showToast("🎉 Loaded London Thumakda ➔ Sauda Khara Khara Medley!");
 
   } else if (starterId === 'custom_upload') {
-    toggleDeckUpload('A', true);
-    toggleDeckUpload('B', true);
-    showToast("📁 Drop your audio/video files or paste YouTube links in Deck 1 and Deck 2!");
+    appState.songLibrary = [
+      {
+        id: `song_custom_1`,
+        title: 'Song #1 (Upload File or Video)',
+        artist: 'Custom',
+        bpm: 120,
+        key: 'C Major',
+        durationSec: 0,
+        startTimeSec: 0,
+        endTimeSec: 0,
+        sourceType: 'file',
+        fileName: '',
+        color: '#ec4899',
+        buffer: null,
+        isUserUploaded: false
+      }
+    ];
+    appState.arrangementBlocks = [];
+    appState.userHasCustomizedBlocks = true;
+    renderSongLibraryUI();
+    renderTimelineLineUI();
+    drawWaveformTimeline();
+    showToast("📁 Choose an audio or video file for Song #1!");
+    setTimeout(() => {
+      triggerSongFileInput(0);
+    }, 100);
   }
 }
 
@@ -2936,7 +2959,8 @@ function getInitialSongLibrary() {
       audioUrl: '/kala_chashma_official.m4a',
       fileName: 'kala_chashma_official.m4a',
       color: '#a855f7',
-      buffer: null
+      buffer: null,
+      isUserUploaded: false
     },
     {
       id: 'song_tauba_tauba',
@@ -2952,7 +2976,8 @@ function getInitialSongLibrary() {
       audioUrl: '/tauba_tauba_movie1.m4a',
       fileName: 'tauba_tauba_movie1.m4a',
       color: '#06b6d4',
-      buffer: null
+      buffer: null,
+      isUserUploaded: false
     }
   ];
 }
@@ -3006,15 +3031,15 @@ function renderSongLibraryUI() {
         <!-- Segmented Source Tabs -->
         <div class="ceremony-source-tabs">
           <button type="button" class="ceremony-source-tab ${s.sourceType === 'demo' ? 'active' : ''}"
-            onclick="setSongLibrarySourceType(${i}, 'demo')">
+            onclick="setSongLibrarySourceType(${i}, 'demo')" title="Load studio demo track">
             <span>🎵</span> Demo
           </button>
           <button type="button" class="ceremony-source-tab ${s.sourceType === 'file' ? 'active' : ''}"
-            onclick="setSongLibrarySourceType(${i}, 'file')">
+            onclick="triggerSongLibraryUpload(${i})" title="Upload an audio or video file from your device">
             <span>📁</span> Upload File
           </button>
           <button type="button" class="ceremony-source-tab ${s.sourceType === 'youtube' ? 'active' : ''}"
-            onclick="setSongLibrarySourceType(${i}, 'youtube')">
+            onclick="setSongLibrarySourceType(${i}, 'youtube')" title="Paste a YouTube link">
             <span>🔴</span> YouTube
           </button>
         </div>
@@ -3030,17 +3055,32 @@ function renderSongLibraryUI() {
               </div>
             </div>
           ` : s.sourceType === 'file' ? `
-            <div class="ceremony-file-dropzone" 
+            <div class="ceremony-file-dropzone ceremony-dropzone" 
+                 id="songDropzone_${i}"
+                 onclick="triggerSongFileInput(${i})"
                  ondragover="handleCeremonyDragOver(event)"
-                 ondrop="handleSongLibraryDrop(event, ${i})">
-              <span class="dropzone-icon">📁</span>
-              <p class="dropzone-text">
-                ${s.fileName ? `<strong>✅ Loaded:</strong> ${escapeCeremonyHtml(s.fileName)}` : 'Drag & drop MP3 / WAV / M4A / Video here, or'}
+                 ondragleave="handleCeremonyDragLeave(event)"
+                 ondrop="handleSongLibraryDrop(event, ${i})"
+                 title="Click anywhere to choose an audio or video file">
+              <input type="file" 
+                     id="songFileInput_${i}"
+                     accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.mp4,.mov,.m4v,.webm,.mkv,.avi" 
+                     style="position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;" 
+                     onchange="handleSongLibraryFileInput(this, ${i})">
+              <span class="dropzone-icon" style="font-size: 26px; display: block; margin-bottom: 6px;">📁</span>
+              <p class="dropzone-text" style="margin: 0 0 10px; font-size: 13px;">
+                ${(s.sourceType === 'file' && s.isUserUploaded && s.fileName) 
+                  ? `<span style="color: var(--accent-emerald); font-weight: 700;">✅ Loaded:</span> <strong>${escapeCeremonyHtml(s.fileName)}</strong>` 
+                  : `<strong>Click to choose an Audio or Video file</strong>, or drag & drop here`}
               </p>
-              <label class="btn-ceremony-browse">
-                Browse Files
-                <input type="file" accept="audio/*,video/*" style="display:none;" onchange="handleSongLibraryFileInput(this, ${i})">
-              </label>
+              <div style="margin-bottom: 6px;">
+                <button type="button" class="btn-browse-file" onclick="event.stopPropagation(); triggerSongFileInput(${i})">
+                  <span>📂</span> Browse Files (Audio & Video)
+                </button>
+              </div>
+              <span style="font-size: 11px; color: var(--text-muted); display: block;">
+                Supports Audio (.mp3, .wav, .m4a, .aac) & Videos (.mov, .mp4, .m4v, .webm)
+              </span>
             </div>
           ` : `
             <div class="ceremony-youtube-row">
@@ -3104,6 +3144,27 @@ function setSongLibrarySourceType(idx, type) {
   if (!appState.songLibrary || !appState.songLibrary[idx]) return;
   appState.songLibrary[idx].sourceType = type;
   renderSongLibraryUI();
+}
+
+function triggerSongLibraryUpload(idx) {
+  if (!appState.songLibrary || !appState.songLibrary[idx]) return;
+  appState.songLibrary[idx].sourceType = 'file';
+  renderSongLibraryUI();
+  // Immediately trigger file picker
+  setTimeout(() => {
+    triggerSongFileInput(idx);
+  }, 40);
+}
+
+function triggerSongFileInput(idx) {
+  if (appState.songLibrary && appState.songLibrary[idx]) {
+    appState.songLibrary[idx].sourceType = 'file';
+  }
+  const input = document.getElementById(`songFileInput_${idx}`);
+  if (input) {
+    input.value = ''; // Allow selecting the same file again
+    input.click();
+  }
 }
 
 function updateSongLibraryTitle(idx, val) {
@@ -3269,6 +3330,7 @@ function stopSongLibraryClip() {
 function handleSongLibraryDrop(event, idx) {
   event.preventDefault();
   event.stopPropagation();
+  if (event.currentTarget) event.currentTarget.classList.remove('dragover');
   if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
     processSongLibraryFile(event.dataTransfer.files[0], idx);
   }
@@ -3281,25 +3343,46 @@ function handleSongLibraryFileInput(input, idx) {
 }
 
 async function processSongLibraryFile(file, idx) {
-  if (!appState.songLibrary || !appState.songLibrary[idx]) return;
+  if (!file || !appState.songLibrary || !appState.songLibrary[idx]) return;
   const s = appState.songLibrary[idx];
+  const isVideo = (file.type && file.type.startsWith('video/')) || /\.(mov|mp4|m4v|avi|webm|mkv)$/i.test(file.name || '');
+
   s.fileName = file.name;
   s.title = file.name.replace(/\.[^/.]+$/, "");
-  showToast(`Loading audio from "${file.name}"...`);
+  s.isUserUploaded = true;
+  s.sourceType = 'file';
+
+  showToast(isVideo ? `🎬 Extracting audio from video "${file.name}"...` : `🎧 Loading audio from "${file.name}"...`);
 
   try {
-    const arrayBuffer = await file.arrayBuffer();
     await appState.engine.ensureContext();
-    const audioBuffer = await appState.engine.ctx.decodeAudioData(arrayBuffer);
+    // Use engine decodeAudio which handles both audio and video files natively
+    const audioBuffer = await appState.engine.decodeAudio(file);
     s.buffer = audioBuffer;
     s.durationSec = audioBuffer.duration;
     s.startTimeSec = 0.0;
     s.endTimeSec = audioBuffer.duration;
+
+    // Detect musical characteristics
+    try {
+      const analysis = appState.engine.analyzeTrack(audioBuffer);
+      if (analysis) {
+        s.bpm = analysis.bpm;
+        if (analysis.keyInfo && analysis.keyInfo.name) {
+          s.key = analysis.keyInfo.name;
+        }
+      }
+    } catch (analysisErr) {
+      console.warn("Track analysis non-critical notice:", analysisErr);
+    }
+
     renderSongLibraryUI();
-    showToast(`✅ Loaded "${file.name}" (${audioBuffer.duration.toFixed(1)}s)`);
+    drawWaveformTimeline();
+
+    showToast(`✅ Successfully loaded "${file.name}" (${audioBuffer.duration.toFixed(1)}s • ${isVideo ? 'Video Audio Extracted' : 'Audio Track'})`);
   } catch (err) {
     console.error("Decode error:", err);
-    showToast("⚠️ Could not decode audio file: " + err.message);
+    showToast("⚠️ Could not decode file: " + (err.message || err));
   }
 }
 
@@ -3608,6 +3691,37 @@ function saveCurrentModalSeam() {
   drawWaveformTimeline();
   updateCeremonyCommandOutput();
   showToast(`⚡ Transition updated for Seam #${currentEditingSeamIndex + 1}!`);
+}
+
+async function ensureBlockBuffer(block) {
+  if (!block) return;
+  if (block.buffer) return;
+
+  if (appState.songLibrary) {
+    const matchedSong = appState.songLibrary.find(s => 
+      s.buffer && (s.id === block.songId || s.title === block.songName || s.fileName === block.songName)
+    );
+    if (matchedSong && matchedSong.buffer) {
+      block.buffer = matchedSong.buffer;
+      return;
+    }
+  }
+
+  if (block.sourceTrack === 'B' && appState.trackB && appState.trackB.buffer) {
+    block.buffer = appState.trackB.buffer;
+    return;
+  }
+  if (appState.trackA && appState.trackA.buffer) {
+    block.buffer = appState.trackA.buffer;
+    return;
+  }
+
+  try {
+    const defaultBuf = await loadSongBuffer('kala_chashma');
+    if (defaultBuf) block.buffer = defaultBuf;
+  } catch (e) {
+    console.warn("Could not ensure block buffer:", e);
+  }
 }
 
 async function auditionCurrentModalSeam() {
@@ -6393,7 +6507,15 @@ async function fetchCeremonyYouTubeTrack(idx) {
 
 function handleCeremonyDragOver(event) {
   event.preventDefault();
+  event.stopPropagation();
   event.dataTransfer.dropEffect = 'copy';
+  if (event.currentTarget) event.currentTarget.classList.add('dragover');
+}
+
+function handleCeremonyDragLeave(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.currentTarget) event.currentTarget.classList.remove('dragover');
 }
 
 async function handleCeremonyDrop(event, idx) {
