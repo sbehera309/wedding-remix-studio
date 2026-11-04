@@ -3058,6 +3058,12 @@ function renderSongLibraryUI() {
 
     html += `
       <div class="song-library-card" id="songCard_${i}" style="border-left: 4px solid ${s.color};">
+        <!-- Always-present file input for synchronous 1-tap picking on iOS Safari & desktop -->
+        <input type="file" 
+               id="songFileInput_${i}"
+               accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.mp4,.mov,.m4v,.webm,.mkv,.avi" 
+               style="position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;" 
+               onchange="handleSongLibraryFileInput(this, ${i})">
         <div class="ceremony-track-header">
           <div class="track-header-left">
             <span class="track-number-badge" style="background: ${s.color}22; color: ${s.color}; border: 1px solid ${s.color}55;">
@@ -3114,11 +3120,6 @@ function renderSongLibraryUI() {
                  ondragleave="handleCeremonyDragLeave(event)"
                  ondrop="handleSongLibraryDrop(event, ${i})"
                  title="Click anywhere to choose an audio or video file">
-              <input type="file" 
-                     id="songFileInput_${i}"
-                     accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.mp4,.mov,.m4v,.webm,.mkv,.avi" 
-                     style="position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;" 
-                     onchange="handleSongLibraryFileInput(this, ${i})">
               <span class="dropzone-icon" style="font-size: 26px; display: block; margin-bottom: 6px;">📁</span>
               <p class="dropzone-text" style="margin: 0 0 10px; font-size: 13px;">
                 ${(s.sourceType === 'file' && s.isUserUploaded && s.fileName) 
@@ -3244,10 +3245,8 @@ function triggerSongLibraryUpload(idx) {
   if (!appState.songLibrary || !appState.songLibrary[idx]) return;
   appState.songLibrary[idx].sourceType = 'file';
   renderSongLibraryUI();
-  // Immediately trigger file picker
-  setTimeout(() => {
-    triggerSongFileInput(idx);
-  }, 40);
+  // Immediately trigger file picker synchronously (trusted user interaction on iOS/mobile)
+  triggerSongFileInput(idx);
 }
 
 function triggerSongFileInput(idx) {
@@ -3372,10 +3371,77 @@ async function previewSongLibraryClip(idx) {
   }
 
   stopSongLibraryClip();
+  if (appState.isPlaying) {
+    triggerStopPlayback();
+  }
+
   appState.activeSongPreviewIdx = idx;
   renderSongLibraryUI();
 
   try {
+    // 1. Native HTML5 MediaPlayer / MediaBlobUrl (Supports all video and audio containers: .mov, .mp4, .m4a, .mp3, .wav)
+    if (s.mediaBlobUrl || s.mediaPlayer) {
+      if (!s.mediaPlayer && s.mediaBlobUrl) {
+        const isVid = s.isVideo || (s.mediaFile && s.mediaFile.type && s.mediaFile.type.startsWith('video/'));
+        const p = document.createElement(isVid ? 'video' : 'audio');
+        p.src = s.mediaBlobUrl;
+        p.preload = 'auto';
+        p.playsInline = true;
+        s.mediaPlayer = p;
+      }
+      const player = s.mediaPlayer;
+
+      if (appState.engine && typeof appState.engine.ensureContext === 'function') {
+        try { await appState.engine.ensureContext(); } catch (_) {}
+      }
+
+      if (!player.duration || isNaN(player.duration) || player.duration <= 0) {
+        if (player.readyState < 1) {
+          await new Promise((res) => {
+            player.addEventListener('loadedmetadata', res, { once: true });
+            player.addEventListener('error', res, { once: true });
+            setTimeout(res, 500);
+          });
+        }
+      }
+
+      if (player.duration && isFinite(player.duration) && (!s.durationSec || s.durationSec === 60 || s.durationSec === 30)) {
+        s.durationSec = player.duration;
+        if (!s.endTimeSec || s.endTimeSec > player.duration) {
+          s.endTimeSec = player.duration;
+        }
+      }
+
+      const start = Math.max(0, s.startTimeSec || 0);
+      const end = (s.endTimeSec && s.endTimeSec > start) ? s.endTimeSec : (player.duration || 30);
+      const dur = Math.max(0.1, end - start);
+
+      player.currentTime = start;
+      player.volume = 1.0;
+
+      const playPromise = player.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+      }
+
+      appState.activeSongLibraryMediaPlayer = player;
+
+      if (appState.songLibraryPreviewTimer) {
+        clearTimeout(appState.songLibraryPreviewTimer);
+      }
+      appState.songLibraryPreviewTimer = setTimeout(() => {
+        stopSongLibraryClip();
+        renderSongLibraryUI();
+      }, dur * 1000);
+
+      player.onended = () => {
+        stopSongLibraryClip();
+        renderSongLibraryUI();
+      };
+      return;
+    }
+
+    // 2. Web Audio Buffer playback (for preloaded catalog demos)
     let buf = s.buffer;
     if (!buf && s.audioUrl) {
       buf = await appState.engine.loadAudio(s.audioUrl);
@@ -3410,12 +3476,30 @@ async function previewSongLibraryClip(idx) {
     };
   } catch (err) {
     console.warn("Preview error:", err);
+    showToast("⚠️ Could not play preview: " + (err.message || err));
     stopSongLibraryClip();
     renderSongLibraryUI();
   }
 }
 
 function stopSongLibraryClip() {
+  if (appState.songLibraryPreviewTimer) {
+    clearTimeout(appState.songLibraryPreviewTimer);
+    appState.songLibraryPreviewTimer = null;
+  }
+  if (appState.activeSongLibraryMediaPlayer) {
+    try {
+      appState.activeSongLibraryMediaPlayer.pause();
+    } catch (e) {}
+    appState.activeSongLibraryMediaPlayer = null;
+  }
+  if (appState.songLibrary) {
+    appState.songLibrary.forEach(s => {
+      if (s.mediaPlayer) {
+        try { s.mediaPlayer.pause(); } catch (e) {}
+      }
+    });
+  }
   if (appState.songLibraryPreviewSource) {
     try { appState.songLibraryPreviewSource.stop(); } catch (e) {}
     appState.songLibraryPreviewSource = null;
@@ -3450,9 +3534,38 @@ async function processSongLibraryFile(file, idx) {
   s.audioUrl = ''; // Clear default demo URL so it never falls back
   s.detectedYtMetadata = null;
 
+  // 1. Immediately create and attach native media blob URL & player
+  const blobUrl = URL.createObjectURL(file);
+  s.mediaBlobUrl = blobUrl;
+  s.mediaFile = file;
+  s.isVideo = isVideo;
+
+  const player = document.createElement(isVideo ? 'video' : 'audio');
+  player.src = blobUrl;
+  player.preload = 'auto';
+  player.playsInline = true;
+  s.mediaPlayer = player;
+
+  player.onloadedmetadata = () => {
+    if (player.duration && isFinite(player.duration) && player.duration > 0) {
+      if (!s.durationSec || s.durationSec === 60 || s.durationSec === 30) {
+        s.durationSec = player.duration;
+        s.startTimeSec = 0.0;
+        s.endTimeSec = player.duration;
+      }
+      const durBadge = document.getElementById(`songClipDurBadge_${idx}`);
+      if (durBadge) {
+        const clipDur = Math.max(0.1, (s.endTimeSec || s.durationSec) - (s.startTimeSec || 0));
+        durBadge.innerText = `${clipDur.toFixed(1)}s clip`;
+      }
+      renderSongLibraryUI();
+      drawWaveformTimeline();
+    }
+  };
+
   showToast(isVideo ? `🎬 Extracting audio from "${file.name}"...` : `🎧 Loading audio from "${file.name}"...`);
 
-  let audioBuffer;
+  let audioBuffer = null;
   try {
     await appState.engine.ensureContext();
     audioBuffer = await appState.engine.decodeAudio(file);
@@ -3474,25 +3587,40 @@ async function processSongLibraryFile(file, idx) {
       console.warn("Track analysis notice:", analysisErr);
     }
   } catch (err) {
-    console.error("Decode error:", err);
-    showToast("⚠️ Could not decode file: " + (err.message || err));
-    return;
+    console.warn("Direct AudioBuffer decode notice (using native media player for playback):", err);
+    // If decodeAudio throws (e.g. video container .mov/.mp4 on browser Web Audio),
+    // do NOT abort! The native mediaPlayer with mediaBlobUrl handles playback natively.
+    const dur = (player.duration && isFinite(player.duration) && player.duration > 0)
+      ? player.duration
+      : (s.durationSec || 30.0);
+    s.durationSec = dur;
+    s.startTimeSec = 0.0;
+    s.endTimeSec = dur;
+
+    // Create a lightweight proxy buffer so downstream buffer references don't crash
+    try {
+      const ctx = appState.engine.ctx || new (window.AudioContext || window.webkitAudioContext)();
+      const sr = ctx.sampleRate || 44100;
+      const proxyFrames = Math.max(sr, Math.floor(sr * Math.min(dur, 180)));
+      audioBuffer = ctx.createBuffer(2, proxyFrames, sr);
+      s.buffer = audioBuffer;
+    } catch (_) {}
   }
 
   // Update trackA / trackB references
   if (idx === 0) {
     appState.trackA = {
       name: s.title,
-      buffer: audioBuffer,
+      buffer: s.buffer,
       analysis: s.analysis || null,
-      sourceUrl: ''
+      sourceUrl: s.mediaBlobUrl || ''
     };
   } else if (idx === 1) {
     appState.trackB = {
       name: s.title,
-      buffer: audioBuffer,
+      buffer: s.buffer,
       analysis: s.analysis || null,
-      sourceUrl: ''
+      sourceUrl: s.mediaBlobUrl || ''
     };
   }
 
@@ -3501,8 +3629,9 @@ async function processSongLibraryFile(file, idx) {
   if (appState.arrangementBlocks) {
     appState.arrangementBlocks.forEach(b => {
       if (b.songId === s.id || b.songName === s.title || (idx === 0 && b.sourceTrack === 'A') || (idx === 1 && b.sourceTrack === 'B')) {
-        b.buffer = audioBuffer;
+        b.buffer = s.buffer;
         b.songName = s.title;
+        b.mediaBlobUrl = s.mediaBlobUrl;
         b._audioElement = null; // Invalidate cached audio element
       }
     });
@@ -3512,10 +3641,10 @@ async function processSongLibraryFile(file, idx) {
   try {
     renderSongLibraryUI();
     drawWaveformTimeline();
-    showToast(`✅ Successfully loaded "${file.name}" (${audioBuffer.duration.toFixed(1)}s)`);
+    showToast(`✅ Successfully loaded "${file.name}" (${(s.durationSec || 0).toFixed(1)}s)`);
   } catch (uiErr) {
     console.warn("UI update notice:", uiErr);
-    showToast(`✅ Loaded "${file.name}" (${audioBuffer.duration.toFixed(1)}s)`);
+    showToast(`✅ Loaded "${file.name}" (${(s.durationSec || 0).toFixed(1)}s)`);
   }
 }
 
@@ -5203,6 +5332,29 @@ function getAudioElementForBlock(blk) {
   if (blk) {
     if (blk._audioElement) return blk._audioElement;
 
+    // 0. Priority: User-uploaded audio or video file (Direct native media playback)
+    let mediaBlobUrl = blk.mediaBlobUrl;
+    let isVideoMedia = blk.isVideo;
+    if (!mediaBlobUrl && appState.songLibrary) {
+      const match = appState.songLibrary.find(s => 
+        (s.id === blk.songId || s.title === blk.songName || s.fileName === blk.songName ||
+         (blk.sourceTrack === 'A' && s === appState.songLibrary[0]) ||
+         (blk.sourceTrack === 'B' && s === appState.songLibrary[1]))
+      );
+      if (match && match.mediaBlobUrl) {
+        mediaBlobUrl = match.mediaBlobUrl;
+        isVideoMedia = match.isVideo || (match.mediaFile && match.mediaFile.type && match.mediaFile.type.startsWith('video/'));
+      }
+    }
+    if (mediaBlobUrl) {
+      const mediaEl = document.createElement(isVideoMedia ? 'video' : 'audio');
+      mediaEl.src = mediaBlobUrl;
+      mediaEl.preload = 'auto';
+      mediaEl.playsInline = true;
+      blk._audioElement = mediaEl;
+      return mediaEl;
+    }
+
     // 1. If block has an audio buffer, create an audio element directly from the WAV blob!
     let buf = blk.buffer;
     if (!buf && appState.songLibrary) {
@@ -5247,19 +5399,29 @@ function getAudioElementForBlock(blk) {
   // 3. Fallback to track decks
   if (blk && blk.sourceTrack === 'B') {
     let audioB = document.getElementById('deckBAudioPlayer');
-    if (!audioB) {
-      audioB = new Audio((appState.trackB && appState.trackB.sourceUrl) || '/tauba_tauba_movie2.m4a');
+    const songB = appState.songLibrary && appState.songLibrary[1];
+    const bSrc = (songB && songB.mediaBlobUrl) || (appState.trackB && appState.trackB.sourceUrl) || '/tauba_tauba_movie2.m4a';
+    if (!audioB || (songB && songB.mediaBlobUrl && audioB.src !== songB.mediaBlobUrl)) {
+      if (audioB) audioB.remove();
+      audioB = document.createElement((songB && songB.isVideo) ? 'video' : 'audio');
       audioB.id = 'deckBAudioPlayer';
+      audioB.src = bSrc;
       audioB.preload = 'auto';
+      audioB.playsInline = true;
       document.body.appendChild(audioB);
     }
     return audioB;
   }
   let audioA = document.getElementById('deckAAudioPlayer');
-  if (!audioA) {
-    audioA = new Audio((appState.trackA && appState.trackA.sourceUrl) || '/kala_chashma_official.m4a');
+  const songA = appState.songLibrary && appState.songLibrary[0];
+  const aSrc = (songA && songA.mediaBlobUrl) || (appState.trackA && appState.trackA.sourceUrl) || '/kala_chashma_official.m4a';
+  if (!audioA || (songA && songA.mediaBlobUrl && audioA.src !== songA.mediaBlobUrl)) {
+    if (audioA) audioA.remove();
+    audioA = document.createElement((songA && songA.isVideo) ? 'video' : 'audio');
     audioA.id = 'deckAAudioPlayer';
+    audioA.src = aSrc;
     audioA.preload = 'auto';
+    audioA.playsInline = true;
     document.body.appendChild(audioA);
   }
   return audioA;
@@ -5312,7 +5474,8 @@ function playArrangementWithNativeAudio(fromStart = false) {
     return;
   }
 
-  // Pre-stop any ongoing audition or master player
+  // Pre-stop any ongoing audition, song preview, or master player
+  stopSongLibraryClip();
   stopAuditionPlayback();
   const masterAudio = document.getElementById('masterAudioPlayer');
   if (masterAudio && !masterAudio.paused) {
@@ -5565,11 +5728,12 @@ function triggerReplay() {
   const playBtn = document.getElementById('playFullBtn');
   const timelinePlayBtn = document.getElementById('timelinePlayBtn');
 
+  stopSongLibraryClip();
   stopAuditionPlayback();
   stopArrangementPlayback();
 
   // If user customized arrangement or uploaded songs, always use arrangement sequencer:
-  const hasUserSongs = appState.songLibrary && appState.songLibrary.some(s => s.isUserUploaded || s.buffer);
+  const hasUserSongs = appState.songLibrary && appState.songLibrary.some(s => s.isUserUploaded || s.mediaBlobUrl || s.buffer);
   if (appState.userHasCustomizedBlocks || hasUserSongs) {
     playArrangementWithNativeAudio(true);
     return;
@@ -5608,6 +5772,7 @@ function triggerPlayFullMix() {
   const playBtn = document.getElementById('playFullBtn');
   const timelinePlayBtn = document.getElementById('timelinePlayBtn');
 
+  stopSongLibraryClip();
   stopAuditionPlayback();
 
   // Toggle behavior
@@ -5618,7 +5783,7 @@ function triggerPlayFullMix() {
   }
 
   // If user customized arrangement or uploaded songs, always use arrangement sequencer:
-  const hasUserSongs = appState.songLibrary && appState.songLibrary.some(s => s.isUserUploaded || s.buffer);
+  const hasUserSongs = appState.songLibrary && appState.songLibrary.some(s => s.isUserUploaded || s.mediaBlobUrl || s.buffer);
   if (appState.userHasCustomizedBlocks || hasUserSongs) {
     playArrangementWithNativeAudio(false);
     return;
@@ -6777,6 +6942,10 @@ async function processCeremonyLocalFile(file, idx) {
   renderCeremonyTrackCards();
   showToast(`📁 Decoding "${file.name}" locally in browser (Vercel-safe)...`);
 
+  const blobUrl = URL.createObjectURL(file);
+  track.mediaBlobUrl = blobUrl;
+  track.mediaFile = file;
+
   try {
     const arrayBuffer = await file.arrayBuffer();
     await appState.engine.ensureContext();
@@ -6789,9 +6958,33 @@ async function processCeremonyLocalFile(file, idx) {
     updateCeremonyCommandOutput();
     showToast(`✅ "${file.name}" loaded (${formatTimeSec(track.buffer.duration)})!`);
   } catch (err) {
-    console.error("Error decoding local audio file:", err);
-    track.status = 'error';
-    showToast(`⚠️ Could not decode audio: ${err.message || err}`);
+    console.warn("Direct ceremony decode notice (using native media fallback):", err);
+    try {
+      const isVid = (file.type && file.type.startsWith('video/')) || /\.(mov|mp4|m4v|avi|webm|mkv)$/i.test(file.name || '');
+      const tempMedia = document.createElement(isVid ? 'video' : 'audio');
+      tempMedia.src = blobUrl;
+      tempMedia.preload = 'metadata';
+      await new Promise(r => {
+        tempMedia.onloadedmetadata = r;
+        tempMedia.onerror = r;
+        setTimeout(r, 600);
+      });
+      const dur = (tempMedia.duration && isFinite(tempMedia.duration) && tempMedia.duration > 0) ? tempMedia.duration : 60.0;
+      track.durationSec = dur;
+      const ctx = appState.engine.ctx || new (window.AudioContext || window.webkitAudioContext)();
+      const sr = ctx.sampleRate || 44100;
+      track.buffer = ctx.createBuffer(2, Math.max(sr, Math.floor(sr * Math.min(dur, 180))), sr);
+      track.status = 'ready';
+      track.sourceType = 'file';
+      recalculateTrackDurations();
+      updateCeremonyStats();
+      drawCeremonyTimeline();
+      updateCeremonyCommandOutput();
+      showToast(`✅ "${file.name}" loaded (${formatTimeSec(dur)})!`);
+    } catch (_) {
+      track.status = 'error';
+      showToast(`⚠️ Could not decode audio: ${err.message || err}`);
+    }
   }
 
   renderCeremonyTrackCards();
