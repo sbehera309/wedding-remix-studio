@@ -44,16 +44,6 @@ class AudioRemixEngine {
   async decodeAudio(fileOrBuffer) {
     await this.ensureContext();
 
-    // Check if input is a video file
-    const isVideoFile = (fileOrBuffer instanceof Blob || fileOrBuffer instanceof File) && (
-      (fileOrBuffer.type && fileOrBuffer.type.startsWith('video/')) ||
-      /\.(mov|mp4|m4v|avi|webm|mkv)$/i.test(fileOrBuffer.name || '')
-    );
-
-    if (isVideoFile) {
-      return await this._extractVideoAudioViaServer(fileOrBuffer);
-    }
-
     let arrayBuffer;
     if (fileOrBuffer instanceof Blob || fileOrBuffer instanceof File) {
       arrayBuffer = await fileOrBuffer.arrayBuffer();
@@ -80,98 +70,54 @@ class AudioRemixEngine {
       });
     };
 
+    // 1. Primary decode attempt with active AudioContext
     try {
-      return await tryDecode(this.ctx, arrayBuffer);
-    } catch (err) {
-      // Fallback 1: Try decoding with OfflineAudioContext (unaffected by autoplay suspension)
-      try {
-        const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-        if (OfflineCtx) {
-          const offline = new OfflineCtx(2, 44100, 44100);
-          return await tryDecode(offline, arrayBuffer);
-        }
-      } catch (_) {}
+      const decoded = await tryDecode(this.ctx, arrayBuffer);
+      if (decoded && decoded.duration > 0) return decoded;
+    } catch (_) {}
 
-      // Fallback 2: If direct decoding failed on a file, attempt server video extraction as fallback
-      if (fileOrBuffer instanceof Blob || fileOrBuffer instanceof File) {
-        return await this._extractVideoAudioViaServer(fileOrBuffer);
-      }
-      throw new Error(`Failed to decode audio: ${err ? err.message : 'Unknown error'}`);
-    }
-  }
-
-  /**
-   * Extracts audio from video files (.mov, .mp4) using browser Web Audio, cached stems, or local avconvert
-   */
-  async _extractVideoAudioViaServer(videoFile) {
-    // 1. Check if it's the user's specific Kala Chashma performance video
-    if (videoFile.name && (videoFile.name.includes('F416B608') || videoFile.name.toLowerCase().includes('performance'))) {
-      try {
-        let cachedResp = await fetch('/performance_audio.m4a');
-        if (!cachedResp.ok) cachedResp = await fetch('/performance_audio.wav');
-        if (cachedResp.ok) {
-          const cachedBuf = await cachedResp.arrayBuffer();
-          return await this.ctx.decodeAudioData(cachedBuf);
-        }
-      } catch (e) {}
-    }
-
-    // 2. Attempt native in-browser decode of the video ArrayBuffer (both ctx and OfflineAudioContext)
+    // 2. Fallback decode with OfflineAudioContext (isolated from hardware/autoplay states)
     try {
-      const arrayBuf = await videoFile.arrayBuffer();
-      try {
-        const decoded = await this.ctx.decodeAudioData(arrayBuf.slice(0));
-        if (decoded && decoded.duration > 0) {
-          return decoded;
-        }
-      } catch (_) {}
-
       const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
       if (OfflineCtx) {
         const offline = new OfflineCtx(2, 44100, 44100);
-        const decoded = await offline.decodeAudioData(arrayBuf.slice(0));
-        if (decoded && decoded.duration > 0) {
-          return decoded;
-        }
+        const decoded = await tryDecode(offline, arrayBuffer);
+        if (decoded && decoded.duration > 0) return decoded;
       }
-    } catch (browserDecodeErr) {
-      // Browser direct container decode failed, fallback to local backend or cached assets
+    } catch (_) {}
+
+    // 3. If file is a video container, attempt server-side extraction if local dev server is active
+    if (fileOrBuffer instanceof Blob || fileOrBuffer instanceof File) {
+      const isVideo = (fileOrBuffer.type && fileOrBuffer.type.startsWith('video/')) ||
+        /\.(mov|mp4|m4v|avi|webm|mkv)$/i.test(fileOrBuffer.name || '');
+
+      if (isVideo) {
+        try {
+          const uploadResp = await fetch('/api/extract-video-audio', {
+            method: 'POST',
+            headers: {
+              'Content-Type': fileOrBuffer.type || 'video/quicktime',
+              'X-File-Name': encodeURIComponent(fileOrBuffer.name || 'video.mov')
+            },
+            body: fileOrBuffer
+          });
+
+          if (uploadResp.ok) {
+            const result = await uploadResp.json();
+            if (result.success && result.audioUrl) {
+              const audioResp = await fetch(result.audioUrl);
+              const audioArrayBuf = await audioResp.arrayBuffer();
+              return await tryDecode(this.ctx, audioArrayBuf);
+            }
+          }
+        } catch (_) {}
+
+        throw new Error(`Could not decode audio from video file "${fileOrBuffer.name}". Please export or upload as an audio file (.mp3, .m4a, or .wav).`);
+      }
     }
 
-    // 3. Attempt local backend extraction (if running locally with /usr/bin/avconvert)
-    try {
-      const uploadResp = await fetch('/api/extract-video-audio', {
-        method: 'POST',
-        headers: {
-          'Content-Type': videoFile.type || 'video/quicktime',
-          'X-File-Name': encodeURIComponent(videoFile.name || 'performance.mov')
-        },
-        body: videoFile
-      });
-
-      if (uploadResp.ok) {
-        const result = await uploadResp.json();
-        if (result.success && result.audioUrl) {
-          const audioResp = await fetch(result.audioUrl);
-          const audioArrayBuf = await audioResp.arrayBuffer();
-          return await this.ctx.decodeAudioData(audioArrayBuf);
-        }
-      }
-    } catch (serverErr) {
-      // Server endpoint not reachable or running on cloud
-    }
-
-    // 4. Fallback: check if performance_audio.m4a exists
-    try {
-      let cachedResp = await fetch('/performance_audio.m4a');
-      if (!cachedResp.ok) cachedResp = await fetch('/performance_audio.wav');
-      if (cachedResp.ok) {
-        const cachedBuf = await cachedResp.arrayBuffer();
-        return await this.ctx.decodeAudioData(cachedBuf);
-      }
-    } catch (e) {}
-
-    throw new Error(`Could not decode audio from video "${videoFile.name}". Supported formats: MP4, MOV, M4V, WEBM, or export as MP3/M4A/WAV.`);
+    const fileName = (fileOrBuffer && fileOrBuffer.name) ? ` "${fileOrBuffer.name}"` : '';
+    throw new Error(`Could not decode audio from${fileName}. Please ensure it is a valid audio file (.mp3, .m4a, or .wav).`);
   }
 
   /**

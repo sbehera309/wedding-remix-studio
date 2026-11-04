@@ -3297,7 +3297,7 @@ function addSongClipToTimeline(idx) {
   if (!appState.arrangementBlocks) appState.arrangementBlocks = [];
   saveUndoState(`Add ${song.title} to Timeline`);
 
-  const blockBuffer = song.buffer || (song.id.includes('kala') && appState.trackA ? appState.trackA.buffer : null);
+  const blockBuffer = song.buffer || null;
 
   appState.arrangementBlocks.push({
     id: `${song.id}_clip_${Date.now()}`,
@@ -3307,8 +3307,10 @@ function addSongClipToTimeline(idx) {
     tagColor: song.color || '#10b981',
     startTime: start,
     endTime: end,
+    songId: song.id,
     songName: song.title,
-    sourceTrack: 'A',
+    audioUrl: song.audioUrl || '',
+    sourceTrack: idx === 0 ? 'A' : 'B',
     buffer: blockBuffer,
     isDuplicated: false,
     transitionAfter: { type: 'crossfade', duration: 3.0 }
@@ -3445,13 +3447,14 @@ async function processSongLibraryFile(file, idx) {
   s.title = file.name.replace(/\.[^/.]+$/, "");
   s.isUserUploaded = true;
   s.sourceType = 'file';
+  s.audioUrl = ''; // Clear default demo URL so it never falls back
+  s.detectedYtMetadata = null;
 
-  showToast(isVideo ? `🎬 Extracting audio from video "${file.name}"...` : `🎧 Loading audio from "${file.name}"...`);
+  showToast(isVideo ? `🎬 Extracting audio from "${file.name}"...` : `🎧 Loading audio from "${file.name}"...`);
 
   let audioBuffer;
   try {
     await appState.engine.ensureContext();
-    // Use engine decodeAudio which handles both audio and video files natively
     audioBuffer = await appState.engine.decodeAudio(file);
     s.buffer = audioBuffer;
     s.durationSec = audioBuffer.duration;
@@ -3468,7 +3471,7 @@ async function processSongLibraryFile(file, idx) {
         }
       }
     } catch (analysisErr) {
-      console.warn("Track analysis non-critical notice:", analysisErr);
+      console.warn("Track analysis notice:", analysisErr);
     }
   } catch (err) {
     console.error("Decode error:", err);
@@ -3476,11 +3479,40 @@ async function processSongLibraryFile(file, idx) {
     return;
   }
 
+  // Update trackA / trackB references
+  if (idx === 0) {
+    appState.trackA = {
+      name: s.title,
+      buffer: audioBuffer,
+      analysis: s.analysis || null,
+      sourceUrl: ''
+    };
+  } else if (idx === 1) {
+    appState.trackB = {
+      name: s.title,
+      buffer: audioBuffer,
+      analysis: s.analysis || null,
+      sourceUrl: ''
+    };
+  }
+
+  // Update any existing timeline blocks associated with this song slot
+  appState.userHasCustomizedBlocks = true;
+  if (appState.arrangementBlocks) {
+    appState.arrangementBlocks.forEach(b => {
+      if (b.songId === s.id || b.songName === s.title || (idx === 0 && b.sourceTrack === 'A') || (idx === 1 && b.sourceTrack === 'B')) {
+        b.buffer = audioBuffer;
+        b.songName = s.title;
+        b._audioElement = null; // Invalidate cached audio element
+      }
+    });
+  }
+
   // Safely update UI
   try {
     renderSongLibraryUI();
     drawWaveformTimeline();
-    showToast(`✅ Successfully loaded "${file.name}" (${audioBuffer.duration.toFixed(1)}s • ${isVideo ? 'Video Audio Extracted' : 'Audio Track'})`);
+    showToast(`✅ Successfully loaded "${file.name}" (${audioBuffer.duration.toFixed(1)}s)`);
   } catch (uiErr) {
     console.warn("UI update notice:", uiErr);
     showToast(`✅ Loaded "${file.name}" (${audioBuffer.duration.toFixed(1)}s)`);
@@ -3871,11 +3903,14 @@ async function ensureBlockBuffer(block) {
     return;
   }
 
-  try {
-    const defaultBuf = await loadSongBuffer('kala_chashma');
-    if (defaultBuf) block.buffer = defaultBuf;
-  } catch (e) {
-    console.warn("Could not ensure block buffer:", e);
+  // Only fallback to Kala Chashma if this block explicitly belongs to Kala Chashma
+  if (block.songName && block.songName.toLowerCase().includes('kala')) {
+    try {
+      const defaultBuf = await loadSongBuffer('kala_chashma');
+      if (defaultBuf) block.buffer = defaultBuf;
+    } catch (e) {
+      console.warn("Could not ensure block buffer:", e);
+    }
   }
 }
 
@@ -5165,9 +5200,51 @@ function getOfficialAudioElement() {
 }
 
 function getAudioElementForBlock(blk) {
-  if (appState.currentMode === 'choreo') {
-    return getOfficialAudioElement();
+  if (blk) {
+    if (blk._audioElement) return blk._audioElement;
+
+    // 1. If block has an audio buffer, create an audio element directly from the WAV blob!
+    let buf = blk.buffer;
+    if (!buf && appState.songLibrary) {
+      const match = appState.songLibrary.find(s => 
+        s.buffer && (s.id === blk.songId || s.title === blk.songName || s.fileName === blk.songName)
+      );
+      if (match) buf = match.buffer;
+    }
+
+    if (buf && appState.engine && typeof appState.engine._audioBufferToWavBlob === 'function') {
+      try {
+        const wavBlob = appState.engine._audioBufferToWavBlob(buf);
+        const audio = new Audio(URL.createObjectURL(wavBlob));
+        audio.preload = 'auto';
+        blk._audioElement = audio;
+        return audio;
+      } catch (e) {
+        console.warn("Could not create audio element from block buffer:", e);
+      }
+    }
+
+    // 2. If block has direct audioUrl or matched song has audioUrl
+    if (blk.audioUrl) {
+      const audio = new Audio(blk.audioUrl);
+      audio.preload = 'auto';
+      blk._audioElement = audio;
+      return audio;
+    }
+    if (appState.songLibrary) {
+      const match = appState.songLibrary.find(s => 
+        s.audioUrl && (s.id === blk.songId || s.title === blk.songName || s.fileName === blk.songName)
+      );
+      if (match && match.audioUrl) {
+        const audio = new Audio(match.audioUrl);
+        audio.preload = 'auto';
+        blk._audioElement = audio;
+        return audio;
+      }
+    }
   }
+
+  // 3. Fallback to track decks
   if (blk && blk.sourceTrack === 'B') {
     let audioB = document.getElementById('deckBAudioPlayer');
     if (!audioB) {
@@ -5180,7 +5257,7 @@ function getAudioElementForBlock(blk) {
   }
   let audioA = document.getElementById('deckAAudioPlayer');
   if (!audioA) {
-    audioA = new Audio((appState.trackA && appState.trackA.sourceUrl) || '/tauba_tauba_movie1.m4a');
+    audioA = new Audio((appState.trackA && appState.trackA.sourceUrl) || '/kala_chashma_official.m4a');
     audioA.id = 'deckAAudioPlayer';
     audioA.preload = 'auto';
     document.body.appendChild(audioA);
@@ -5491,9 +5568,9 @@ function triggerReplay() {
   stopAuditionPlayback();
   stopArrangementPlayback();
 
-  // If user customized arrangement (e.g. removed, duplicated, or reordered blocks),
-  // always use the native arrangement sequencer with guaranteed audible sound:
-  if (appState.userHasCustomizedBlocks) {
+  // If user customized arrangement or uploaded songs, always use arrangement sequencer:
+  const hasUserSongs = appState.songLibrary && appState.songLibrary.some(s => s.isUserUploaded || s.buffer);
+  if (appState.userHasCustomizedBlocks || hasUserSongs) {
     playArrangementWithNativeAudio(true);
     return;
   }
@@ -5513,7 +5590,7 @@ function triggerReplay() {
       }
       appState.playbackPosition = 0;
       drawWaveformTimeline(0);
-      showToast("🔁 Replaying full mix from beginning (0:00)...");
+      showToast("🔁 Replaying mix from beginning (0:00)...");
     }).catch(err => {
       console.warn("Native replay error, attempting arrangement sequencer:", err);
       playArrangementWithNativeAudio(true);
@@ -5540,9 +5617,9 @@ function triggerPlayFullMix() {
     return;
   }
 
-  // If user customized arrangement (e.g. removed, duplicated, or reordered blocks),
-  // always use the native arrangement sequencer with guaranteed audible sound:
-  if (appState.userHasCustomizedBlocks) {
+  // If user customized arrangement or uploaded songs, always use arrangement sequencer:
+  const hasUserSongs = appState.songLibrary && appState.songLibrary.some(s => s.isUserUploaded || s.buffer);
+  if (appState.userHasCustomizedBlocks || hasUserSongs) {
     playArrangementWithNativeAudio(false);
     return;
   }
@@ -5559,7 +5636,7 @@ function triggerPlayFullMix() {
         timelinePlayBtn.innerHTML = '<span>⏸</span> Pause Timeline';
         timelinePlayBtn.classList.add('active');
       }
-      showToast("▶ Playing Kala Chashma Clean Master Mix...");
+      showToast("▶ Playing Master Mix...");
     }).catch(err => {
       console.warn("Native play error, falling back to arrangement sequencer:", err);
       playArrangementWithNativeAudio(false);
