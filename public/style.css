@@ -4518,3 +4518,195 @@ canvas#waveformCanvas {
   background: #ef4444;
   color: #fff;
 }
+
+/* YouTube Input Row & Cloud Resolver Helper Styles */
+.ceremony-youtube-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.youtube-input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 0 10px;
+  transition: border-color 0.2s ease;
+}
+
+.youtube-input-wrap:focus-within {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+}
+
+.yt-prefix-icon {
+  font-size: 14px;
+  margin-right: 6px;
+  opacity: 0.7;
+}
+
+.ceremony-yt-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  padding: 10px 0;
+  font-size: 13.5px;
+  font-family: inherit;
+}
+
+.ceremony-yt-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.btn-ceremony-yt-fetch {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-ceremony-yt-fetch:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+.btn-ceremony-yt-fetch:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* YouTube Cloud Helper Card */
+.youtube-helper-card {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.helper-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.helper-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.helper-details {
+  flex: 1;
+}
+
+.helper-detected-title {
+  font-size: 13.5px;
+  color: #fbbf24;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.helper-subtext {
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.4;
+  display: block;
+}
+
+.helper-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .helper-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.btn-helper-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.btn-step-upload {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #fff;
+}
+
+.btn-step-upload:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: #10b981;
+}
+
+.btn-step-download {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #fff;
+}
+
+.btn-step-download:hover {
+  background: rgba(59, 130, 246, 0.28);
+  border-color: #3b82f6;
+}
+
+.btn-step-catalog {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #fff;
+}
+
+.btn-step-catalog:hover {
+  background: rgba(168, 85, 247, 0.28);
+  border-color: #a855f7;
+}
+
+.step-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.step-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.step-content strong {
+  font-size: 12.5px;
+  margin-bottom: 2px;
+}
+
+.step-content span {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.3;
+}

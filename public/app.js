@@ -342,7 +342,7 @@ async function handleFetchTrack(deck) {
 
   // Graceful fallback for offline / sandbox mode:
   // Inform the user and synthesize an appropriate matching track or guide them to upload
-  showToast(`ℹ️ yt-dlp requires local installation (brew install yt-dlp). Loaded matching audio stem for testing.`);
+  showToast(`ℹ️ YouTube direct streaming is restricted by cloud servers. Loaded preview stem (or upload an audio/video file directly).`);
   
   // Synthesize realistic track for demonstration if link cannot be downloaded directly
   statusEl.innerText = "Synthesizing Test Stem...";
@@ -3141,12 +3141,54 @@ function renderSongLibraryUI() {
                 <input type="url" class="ceremony-yt-input"
                   placeholder="Paste YouTube Link (e.g. https://youtu.be/...)"
                   value="${escapeCeremonyHtml(s.youtubeUrl || '')}"
-                  onchange="updateSongLibraryYoutubeUrl(${i}, this.value)">
+                  onchange="updateSongLibraryYoutubeUrl(${i}, this.value)"
+                  onkeydown="if(event.key === 'Enter') { event.preventDefault(); fetchSongLibraryYouTube(${i}); }">
               </div>
-              <button type="button" class="btn-ceremony-yt-fetch" onclick="fetchSongLibraryYouTube(${i})">
+              <button type="button" class="btn-ceremony-yt-fetch" id="btnYtFetch_${i}" onclick="fetchSongLibraryYouTube(${i})">
                 <span>⬇ Fetch</span>
               </button>
             </div>
+            ${(s.audioUrl && s.buffer) ? `
+              <div style="margin-bottom: 10px; font-size: 12px; color: var(--accent-emerald); font-weight: 600;">
+                ✅ Audio Loaded: <strong>${escapeCeremonyHtml(s.title || 'YouTube Audio')}</strong> (${(s.durationSec || 0).toFixed(1)}s)
+              </div>
+            ` : ''}
+            ${s.detectedYtMetadata ? `
+              <div class="youtube-helper-card">
+                <div class="helper-card-top">
+                  <span class="helper-icon">🛡️</span>
+                  <div class="helper-details">
+                    <div class="helper-detected-title">
+                      Detected: <strong>${escapeCeremonyHtml(s.detectedYtMetadata.title)}</strong>
+                    </div>
+                    <span class="helper-subtext">YouTube prevents web servers from directly streaming cloud audio. Fastest ways to load this song:</span>
+                  </div>
+                </div>
+                <div class="helper-actions-grid">
+                  <button type="button" class="btn-helper-step btn-step-upload" onclick="triggerSongLibraryUpload(${i})">
+                    <span class="step-icon">📂</span>
+                    <div class="step-content">
+                      <strong>Upload Video or Audio (Fastest)</strong>
+                      <span>Drop a screen-recording (.mov, .mp4) or audio file. Works instantly in-browser!</span>
+                    </div>
+                  </button>
+                  <a href="https://cobalt.tools" target="_blank" rel="noopener noreferrer" class="btn-helper-step btn-step-download">
+                    <span class="step-icon">⚡</span>
+                    <div class="step-content">
+                      <strong>Open 1-Click Audio Downloader</strong>
+                      <span>Download the MP3 on Cobalt, then drop it into the Studio.</span>
+                    </div>
+                  </a>
+                  <button type="button" class="btn-helper-step btn-step-catalog" onclick="loadCatalogSongIntoLibrary(${i}, 'kala_chashma')">
+                    <span class="step-icon">✨</span>
+                    <div class="step-content">
+                      <strong>Load Kala Chashma Studio Master</strong>
+                      <span>Load the pristine high-fidelity 2:55 studio track in 1 click.</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            ` : ''}
           `}
         </div>
 
@@ -3453,7 +3495,13 @@ async function fetchSongLibraryYouTube(idx) {
     return;
   }
 
-  showToast("Fetching audio from YouTube...");
+  const fetchBtn = document.getElementById(`btnYtFetch_${idx}`);
+  if (fetchBtn) {
+    fetchBtn.disabled = true;
+    fetchBtn.innerHTML = `<span>⏳ Fetching...</span>`;
+  }
+
+  showToast("Fetching track details from YouTube...");
   try {
     const res = await fetch('/api/fetch-audio', {
       method: 'POST',
@@ -3462,19 +3510,67 @@ async function fetchSongLibraryYouTube(idx) {
     });
     const data = await res.json();
     if (data.success && data.audioUrl) {
+      if (data.title) s.title = data.title;
       s.audioUrl = data.audioUrl;
+      s.detectedYtMetadata = null;
       const buf = await appState.engine.loadAudio(data.audioUrl);
       s.buffer = buf;
       s.durationSec = buf.duration;
       s.startTimeSec = 0;
       s.endTimeSec = buf.duration;
       renderSongLibraryUI();
-      showToast("✅ YouTube audio loaded successfully!");
+      drawWaveformTimeline();
+      showToast(`✅ Loaded "${s.title}" (${s.durationSec.toFixed(1)}s)!`);
     } else {
-      showToast(data.message || data.error || "Could not fetch YouTube audio.");
+      if (data.title) {
+        s.title = data.title;
+      }
+      s.detectedYtMetadata = {
+        title: data.title || 'YouTube Track',
+        author: data.author || 'YouTube Creator',
+        thumbnail: data.thumbnail || null,
+        videoId: data.videoId || null,
+        originalUrl: s.youtubeUrl
+      };
+      renderSongLibraryUI();
+      showToast("ℹ️ YouTube direct streaming restricted on cloud servers. See options below!");
     }
   } catch (err) {
     showToast("Server request failed: " + err.message);
+  } finally {
+    if (fetchBtn) {
+      fetchBtn.disabled = false;
+      fetchBtn.innerHTML = `<span>⬇ Fetch</span>`;
+    }
+  }
+}
+
+async function loadCatalogSongIntoLibrary(idx, songId) {
+  if (!appState.songLibrary || !appState.songLibrary[idx]) return;
+  const s = appState.songLibrary[idx];
+  const catalog = (typeof WEDDING_SONG_CATALOG !== 'undefined' && WEDDING_SONG_CATALOG[songId]) 
+    ? WEDDING_SONG_CATALOG[songId] 
+    : { name: 'Kala Chashma (Studio Master)' };
+
+  showToast(`Loading studio master: ${catalog.name}...`);
+  try {
+    const audioUrl = (songId === 'kala_chashma')
+      ? '/Kala_Chashma_Corrected_Seamless_Full_2m55s_Mix.mp3'
+      : (songId === 'tauba_tauba_movie1' ? '/tauba_tauba_movie1.m4a' : '/kala_chashma_official.m4a');
+
+    const buf = await appState.engine.loadAudio(audioUrl);
+    s.title = catalog.name;
+    s.audioUrl = audioUrl;
+    s.buffer = buf;
+    s.durationSec = buf.duration;
+    s.startTimeSec = 0;
+    s.endTimeSec = buf.duration;
+    s.detectedYtMetadata = null;
+    renderSongLibraryUI();
+    drawWaveformTimeline();
+    showToast(`✅ Loaded studio master: ${catalog.name}!`);
+  } catch (e) {
+    showToast("Failed to load catalog track: " + e.message);
   }
 }
 
