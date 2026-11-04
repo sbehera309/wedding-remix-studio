@@ -3172,11 +3172,11 @@ function renderSongLibraryUI() {
                       <span>Drop a screen-recording (.mov, .mp4) or audio file. Works instantly in-browser!</span>
                     </div>
                   </button>
-                  <a href="https://cobalt.tools" target="_blank" rel="noopener noreferrer" class="btn-helper-step btn-step-download">
+                  <a href="https://ytmp3.nu" target="_blank" rel="noopener noreferrer" class="btn-helper-step btn-step-download">
                     <span class="step-icon">⚡</span>
                     <div class="step-content">
-                      <strong>Open 1-Click Audio Downloader</strong>
-                      <span>Download the MP3 on Cobalt, then drop it into the Studio.</span>
+                      <strong>Open Web Downloader (ytmp3)</strong>
+                      <span>Download the MP3 file, then drop it into the Studio.</span>
                     </div>
                   </a>
                   <button type="button" class="btn-helper-step btn-step-catalog" onclick="loadCatalogSongIntoLibrary(${i}, 'kala_chashma')">
