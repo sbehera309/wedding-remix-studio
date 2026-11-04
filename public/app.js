@@ -132,19 +132,23 @@ function setupEventListeners() {
   // Preset and Demo buttons
   const kalaBtn = document.getElementById('loadUserKalaChashmaBtn');
   if (kalaBtn) kalaBtn.addEventListener('click', loadKalaChashmaUserTracks);
-  document.getElementById('loadChoreoDemoBtn').addEventListener('click', loadChoreoExtensionDemo);
-  document.getElementById('loadMedleyDemoBtn').addEventListener('click', loadMedleyDemo);
+  const choreoBtn = document.getElementById('loadChoreoDemoBtn');
+  if (choreoBtn) choreoBtn.addEventListener('click', loadChoreoExtensionDemo);
+  const medleyBtn = document.getElementById('loadMedleyDemoBtn');
+  if (medleyBtn) medleyBtn.addEventListener('click', loadMedleyDemo);
 
-  // Setup drag and drop for both decks
+  // Setup drag and drop for legacy decks if present
   setupDropZone('dropZoneA', 'A');
   setupDropZone('dropZoneB', 'B');
 
   // Window resize redrawing
   window.addEventListener('resize', () => {
-    drawWaveformTimeline();
-    if (typeof drawCeremonyTimeline === 'function') {
-      drawCeremonyTimeline();
-    }
+    try {
+      drawWaveformTimeline();
+      if (typeof drawCeremonyTimeline === 'function') {
+        drawCeremonyTimeline();
+      }
+    } catch (_) {}
   });
 }
 
@@ -228,6 +232,7 @@ function switchDeckInputTab(deck, tab) {
 
 function setupDropZone(zoneId, deck) {
   const zone = document.getElementById(zoneId);
+  if (!zone) return;
   zone.addEventListener('dragover', (e) => {
     e.preventDefault();
     zone.classList.add('dragover');
@@ -718,7 +723,13 @@ function updateCrossfadeSlider(val) {
 let canvas, ctx;
 function initWaveformCanvas() {
   canvas = document.getElementById('waveformCanvas');
-  ctx = canvas.getContext('2d');
+  if (!canvas) return;
+  try {
+    ctx = canvas.getContext('2d');
+  } catch (e) {
+    console.warn("Could not get 2D context for waveform canvas:", e);
+    return;
+  }
 
   canvas.addEventListener('click', (e) => {
     if (!appState.trackA || !appState.trackB) return;
@@ -726,10 +737,11 @@ function initWaveformCanvas() {
     const clickX = e.clientX - rect.left;
     const ratio = clickX / rect.width;
 
-    const totalDuration = appState.trackA.buffer.duration + Math.max(0, appState.trackB.buffer.duration - appState.activeTransitionConfig.spliceTimeB);
+    const totalDuration = (appState.trackA?.buffer?.duration || 0) + Math.max(0, (appState.trackB?.buffer?.duration || 0) - (appState.activeTransitionConfig?.spliceTimeB || 0));
+    if (totalDuration <= 0) return;
     const clickedTime = ratio * totalDuration;
 
-    if (clickedTime <= appState.trackA.buffer.duration) {
+    if (clickedTime <= (appState.trackA?.buffer?.duration || 0)) {
       updateCutState(clickedTime, false);
       showToast(`✂️ Cut Point relocated to ${clickedTime.toFixed(2)}s`);
     }
@@ -739,11 +751,26 @@ function initWaveformCanvas() {
 }
 
 function drawPlaceholderWaveform() {
-  const width = canvas.parentElement.clientWidth;
-  const height = canvas.parentElement.clientHeight;
-  canvas.width = width * window.devicePixelRatio;
-  canvas.height = height * window.devicePixelRatio;
-  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  if (!canvas) canvas = document.getElementById('waveformCanvas');
+  if (!canvas) return;
+  const parent = canvas.parentElement;
+  if (!parent) return;
+
+  if (!ctx) {
+    try { ctx = canvas.getContext('2d'); } catch (_) {}
+  }
+  if (!ctx) return;
+
+  const width = parent.clientWidth || 300;
+  const height = parent.clientHeight || 120;
+  if (width <= 0 || height <= 0) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  if (ctx.resetTransform) ctx.resetTransform();
+  else ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
 
   ctx.fillStyle = '#090b10';
   ctx.fillRect(0, 0, width, height);
@@ -755,23 +782,39 @@ function drawPlaceholderWaveform() {
 }
 
 function drawWaveformTimeline(currentPlayheadTime = null) {
-  if (!appState.trackA || !appState.trackB) {
+  if (!canvas) canvas = document.getElementById('waveformCanvas');
+  if (!canvas) return;
+  const parent = canvas.parentElement;
+  if (!parent) return;
+
+  if (!ctx) {
+    try { ctx = canvas.getContext('2d'); } catch (_) {}
+  }
+  if (!ctx) return;
+
+  const hasBlocks = appState.arrangementBlocks && appState.arrangementBlocks.length > 0;
+  if (!hasBlocks && (!appState.trackA || !appState.trackB)) {
     drawPlaceholderWaveform();
     return;
   }
 
-  const width = canvas.parentElement.clientWidth;
-  const height = canvas.parentElement.clientHeight;
-  canvas.width = width * window.devicePixelRatio;
-  canvas.height = height * window.devicePixelRatio;
-  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  const width = parent.clientWidth || 300;
+  const height = parent.clientHeight || 120;
+  if (width <= 0 || height <= 0) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  if (ctx.resetTransform) ctx.resetTransform();
+  else ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
 
   // Background
   ctx.fillStyle = '#090b10';
   ctx.fillRect(0, 0, width, height);
 
   // If using interactive arranged blocks, render each block's waveform slices and boundaries
-  if (appState.arrangementBlocks && appState.arrangementBlocks.length > 0) {
+  if (hasBlocks) {
     let totalDuration = 0;
     for (let b of appState.arrangementBlocks) {
       totalDuration += Math.max(0.01, b.endTime - b.startTime);
@@ -840,6 +883,7 @@ function drawWaveformTimeline(currentPlayheadTime = null) {
     }
 
     // Playhead
+    const playheadTimeEl = document.getElementById('playheadTimeDisplay');
     if (currentPlayheadTime !== null) {
       const playheadX = (currentPlayheadTime / totalDuration) * width;
       ctx.strokeStyle = '#ffffff';
@@ -849,11 +893,13 @@ function drawWaveformTimeline(currentPlayheadTime = null) {
       ctx.lineTo(playheadX, height);
       ctx.stroke();
 
-      document.getElementById('playheadTimeDisplay').innerText = 
-        `${appState.engine.formatTime(currentPlayheadTime)} / ${appState.engine.formatTime(totalDuration)}`;
+      if (playheadTimeEl) {
+        playheadTimeEl.innerText = `${appState.engine.formatTime(currentPlayheadTime)} / ${appState.engine.formatTime(totalDuration)}`;
+      }
     } else {
-      document.getElementById('playheadTimeDisplay').innerText = 
-        `Total Master: ${appState.engine.formatTime(totalDuration)}`;
+      if (playheadTimeEl) {
+        playheadTimeEl.innerText = `Total Master: ${appState.engine.formatTime(totalDuration)}`;
+      }
     }
 
     return;
@@ -1002,12 +1048,15 @@ function drawWaveformTimeline(currentPlayheadTime = null) {
       ctx.moveTo(playheadX, 0);
       ctx.lineTo(playheadX, height);
       ctx.stroke();
+    }
 
-      document.getElementById('playheadTimeDisplay').innerText = 
-        `${appState.engine.formatTime(currentPlayheadTime)} / ${appState.engine.formatTime(totalDuration)}`;
-    } else {
-      document.getElementById('playheadTimeDisplay').innerText = 
-        `Total Master: ${appState.engine.formatTime(totalDuration)}`;
+    const playheadTimeEl2 = document.getElementById('playheadTimeDisplay');
+    if (playheadTimeEl2) {
+      if (currentPlayheadTime !== null) {
+        playheadTimeEl2.innerText = `${appState.engine.formatTime(currentPlayheadTime)} / ${appState.engine.formatTime(totalDuration)}`;
+      } else {
+        playheadTimeEl2.innerText = `Total Master: ${appState.engine.formatTime(totalDuration)}`;
+      }
     }
 
   } else {
@@ -1077,12 +1126,15 @@ function drawWaveformTimeline(currentPlayheadTime = null) {
       ctx.moveTo(playheadX, 0);
       ctx.lineTo(playheadX, height);
       ctx.stroke();
+    }
 
-      document.getElementById('playheadTimeDisplay').innerText = 
-        `${appState.engine.formatTime(currentPlayheadTime)} / ${appState.engine.formatTime(totalDuration)}`;
-    } else {
-      document.getElementById('playheadTimeDisplay').innerText = 
-        `Total Mix: ${appState.engine.formatTime(totalDuration)}`;
+    const playheadTimeEl3 = document.getElementById('playheadTimeDisplay');
+    if (playheadTimeEl3) {
+      if (currentPlayheadTime !== null) {
+        playheadTimeEl3.innerText = `${appState.engine.formatTime(currentPlayheadTime)} / ${appState.engine.formatTime(totalDuration)}`;
+      } else {
+        playheadTimeEl3.innerText = `Total Mix: ${appState.engine.formatTime(totalDuration)}`;
+      }
     }
   }
 }
@@ -3354,10 +3406,11 @@ async function processSongLibraryFile(file, idx) {
 
   showToast(isVideo ? `🎬 Extracting audio from video "${file.name}"...` : `🎧 Loading audio from "${file.name}"...`);
 
+  let audioBuffer;
   try {
     await appState.engine.ensureContext();
     // Use engine decodeAudio which handles both audio and video files natively
-    const audioBuffer = await appState.engine.decodeAudio(file);
+    audioBuffer = await appState.engine.decodeAudio(file);
     s.buffer = audioBuffer;
     s.durationSec = audioBuffer.duration;
     s.startTimeSec = 0.0;
@@ -3375,14 +3428,20 @@ async function processSongLibraryFile(file, idx) {
     } catch (analysisErr) {
       console.warn("Track analysis non-critical notice:", analysisErr);
     }
-
-    renderSongLibraryUI();
-    drawWaveformTimeline();
-
-    showToast(`✅ Successfully loaded "${file.name}" (${audioBuffer.duration.toFixed(1)}s • ${isVideo ? 'Video Audio Extracted' : 'Audio Track'})`);
   } catch (err) {
     console.error("Decode error:", err);
     showToast("⚠️ Could not decode file: " + (err.message || err));
+    return;
+  }
+
+  // Safely update UI
+  try {
+    renderSongLibraryUI();
+    drawWaveformTimeline();
+    showToast(`✅ Successfully loaded "${file.name}" (${audioBuffer.duration.toFixed(1)}s • ${isVideo ? 'Video Audio Extracted' : 'Audio Track'})`);
+  } catch (uiErr) {
+    console.warn("UI update notice:", uiErr);
+    showToast(`✅ Loaded "${file.name}" (${audioBuffer.duration.toFixed(1)}s)`);
   }
 }
 
